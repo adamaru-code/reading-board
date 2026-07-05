@@ -1,0 +1,21 @@
+# ローカル開発用の MySQL。アプリ本体（Rails/Vue）はローカルで起動し、DB だけコンテナで動かす。
+# 起動: docker compose up -d / 停止: docker compose down / データも消す: docker compose down -v
+services:
+  db:
+    image: mysql:8
+    container_name: reading-board-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password        # ローカル開発専用。本番は環境変数で上書き
+      MYSQL_DATABASE: reading_board_development
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
