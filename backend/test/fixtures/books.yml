@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+readable_code:
+  title: リーダブルコード
+  author: Dustin Boswell
+  status: 1
+  rating: 4
+  memo: 分かりやすい
+  position: 1
+
+want_to_read_sample:
+  title: 達人プログラマー
+  status: 0
