@@ -1,0 +1,247 @@
+/* 読書管理ボード — 画面プロトタイプ用スタイル
+   フレームワーク不使用の素の CSS。本番実装(Vue)ではなく画面イメージ確認用。 */
+
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --text: #172b4d;
+  --text-sub: #5e6c84;
+  --border: #dfe1e6;
+  --primary: #0c66e4;
+  --primary-hover: #0055cc;
+  --danger: #c9372c;
+  --star: #f5b301;
+  --star-empty: #d5d8dd;
+
+  /* カラムごとのアクセント */
+  --col-want: #6554c0;
+  --col-reading: #0c66e4;
+  --col-read: #22a06b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+    "Noto Sans JP", Meiryo, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- ヘッダー ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mock-badge {
+  font-size: 12px;
+  color: var(--text-sub);
+  background: #fff4e5;
+  border: 1px solid #ffd8a8;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* ---------- ボタン ---------- */
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-ghost { background: transparent; color: var(--text-sub); border-color: var(--border); }
+.btn-ghost:hover { background: #ebecf0; }
+.btn-danger { background: transparent; color: var(--danger); border-color: #f5c2c0; }
+.btn-danger:hover { background: #ffeceb; }
+
+/* ---------- ボード（S1） ---------- */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 24px;
+  align-items: start;
+}
+
+.column {
+  background: #ebecf0;
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 120px;
+  border-top: 3px solid var(--col-accent, var(--border));
+}
+.column[data-status="want_to_read"] { --col-accent: var(--col-want); }
+.column[data-status="reading"]      { --col-accent: var(--col-reading); }
+.column[data-status="read"]         { --col-accent: var(--col-read); }
+
+.column-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px 10px;
+}
+.column-title { font-size: 14px; font-weight: 700; }
+.column-count {
+  font-size: 12px;
+  color: var(--text-sub);
+  background: #dfe1e6;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 40px;
+}
+
+/* ドラッグ中にドロップ先を示す */
+.column.drag-over .card-list {
+  outline: 2px dashed var(--col-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- 書籍カード（S2） ---------- */
+.card {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.15);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.card:hover { border-color: var(--primary); }
+.card.dragging { opacity: 0.5; }
+
+.card-title { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.card-author { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.card-stars { margin-top: 6px; font-size: 13px; letter-spacing: 1px; }
+.card-stars .on { color: var(--star); }
+.card-stars .off { color: var(--star-empty); }
+
+/* ---------- モーダル（S3 / S4） ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.54);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 60px 16px;
+  z-index: 100;
+}
+.modal-overlay[hidden] { display: none; }
+
+.modal {
+  background: var(--surface);
+  width: 100%;
+  max-width: 460px;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.35);
+}
+.modal-title { margin: 0 0 18px; font-size: 18px; }
+
+.field { margin-bottom: 16px; }
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-sub);
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fafbfc;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+}
+.field textarea { resize: vertical; }
+.field input.invalid { border-color: var(--danger); background: #fff; }
+
+.required { color: var(--danger); font-size: 11px; font-weight: 600; }
+.error-text { color: var(--danger); font-size: 12px; margin: 6px 0 0; }
+
+/* ★入力 */
+.star-input { display: flex; align-items: center; gap: 2px; }
+.star-input .star {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--star-empty);
+  cursor: pointer;
+  padding: 0 2px;
+}
+.star-input .star.on { color: var(--star); }
+.star-clear {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-sub);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.modal-actions .spacer { flex: 1; }
+
+/* 追加モード時は編集専用フィールドを隠す */
+.modal[data-mode="add"] .edit-only { display: none; }
+
+/* ---------- レスポンシブ：スマホは縦積み ---------- */
+@media (max-width: 640px) {
+  .board { grid-template-columns: 1fr; }
+  .app-header { flex-wrap: wrap; }
+  .mock-badge { display: none; }
+}
