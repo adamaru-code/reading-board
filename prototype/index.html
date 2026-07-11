@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>読書管理ボード（プロトタイプ）</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- S1: カンバンボード -->
+  <header class="app-header">
+    <h1 class="app-title">📚 読書管理ボード</h1>
+    <div class="header-right">
+      <span class="mock-badge">プロトタイプ（保存されません）</span>
+      <button id="add-book-btn" class="btn btn-primary">＋ 追加</button>
+    </div>
+  </header>
+
+  <main class="board" id="board">
+    <!-- カラムは app.js が描画する -->
+  </main>
+
+  <!-- S3/S4: 追加・編集モーダル（雛形。app.js が中身を切り替える） -->
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 class="modal-title" id="modal-title">書籍を追加</h2>
+
+      <form id="book-form" novalidate>
+        <div class="field">
+          <label for="f-title">タイトル <span class="required">必須</span></label>
+          <input type="text" id="f-title" name="title" autocomplete="off">
+          <p class="error-text" id="title-error" hidden>タイトルを入力してください。</p>
+        </div>
+
+        <div class="field">
+          <label for="f-author">著者</label>
+          <input type="text" id="f-author" name="author" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="f-status">ステータス</label>
+          <select id="f-status" name="status">
+            <option value="want_to_read">読みたい</option>
+            <option value="reading">読書中</option>
+            <option value="read">読了</option>
+          </select>
+        </div>
+
+        <!-- ★評価・感想メモは編集時のみ表示 -->
+        <div class="field edit-only">
+          <label>評価</label>
+          <div class="star-input" id="star-input" role="radiogroup" aria-label="評価">
+            <button type="button" class="star" data-value="1" aria-label="星1">★</button>
+            <button type="button" class="star" data-value="2" aria-label="星2">★</button>
+            <button type="button" class="star" data-value="3" aria-label="星3">★</button>
+            <button type="button" class="star" data-value="4" aria-label="星4">★</button>
+            <button type="button" class="star" data-value="5" aria-label="星5">★</button>
+            <button type="button" class="star-clear" id="star-clear">クリア</button>
+          </div>
+        </div>
+
+        <div class="field edit-only">
+          <label for="f-memo">感想メモ</label>
+          <textarea id="f-memo" name="memo" rows="4"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger edit-only" id="delete-btn">削除</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" id="cancel-btn">キャンセル</button>
+          <button type="submit" class="btn btn-primary" id="save-btn">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
