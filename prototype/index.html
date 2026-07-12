@@ -26,6 +26,35 @@
       <h2 class="modal-title" id="modal-title">書籍を追加</h2>
 
       <form id="book-form" novalidate>
+        <!-- コードから登録（追加時のみ表示） -->
+        <div class="code-register add-only">
+          <label for="f-isbn">ISBN / バーコードで登録</label>
+          <div class="code-row">
+            <input type="text" id="f-isbn" name="isbn" inputmode="numeric"
+                   autocomplete="off" placeholder="ISBN / JAN（13桁 or 10桁）">
+            <button type="button" class="btn btn-ghost" id="lookup-btn">検索</button>
+            <button type="button" class="btn btn-ghost" id="scan-btn" hidden>📷 読取</button>
+          </div>
+          <p class="code-hint" id="scan-hint" hidden>
+            📷 読取はカメラ対応ブラウザ（Chrome/Edge）を localhost で開いた場合に使えます。
+          </p>
+
+          <!-- カメラプレビュー -->
+          <div class="scanner" id="scanner" hidden>
+            <video id="scan-video" playsinline muted></video>
+            <button type="button" class="btn btn-ghost scan-stop" id="scan-stop">読取をやめる</button>
+          </div>
+
+          <!-- 取得結果 -->
+          <div class="lookup-result" id="lookup-result" hidden>
+            <img id="cover-img" class="cover-thumb" alt="書影" hidden>
+            <div class="lookup-status">
+              <span class="type-badge" id="type-badge" hidden></span>
+              <span id="lookup-message"></span>
+            </div>
+          </div>
+        </div>
+
         <div class="field">
           <label for="f-title">タイトル <span class="required">必須</span></label>
           <input type="text" id="f-title" name="title" autocomplete="off">
