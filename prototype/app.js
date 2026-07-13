@@ -99,6 +99,24 @@ function cardDateHtml(book) {
   return `<div class="card-date">${label} ${dates}</div>`;
 }
 
+// 開始（最初の reading 日）から読了（最初の read 日）までの所要日数
+function readingDurationDays(book) {
+  const starts = book.dates && book.dates.reading;
+  const ends = book.dates && book.dates.read;
+  if (!starts || !starts.length || !ends || !ends.length) return null;
+  const ms = new Date(ends[0]) - new Date(starts[0]);
+  if (isNaN(ms) || ms < 0) return null;
+  return Math.round(ms / 86400000);
+}
+
+// 読了カードに「開始→読了 ◯日」を表示（計算できない場合は非表示）
+function cardDurationHtml(book) {
+  if (book.status !== "read") return "";
+  const days = readingDurationDays(book);
+  if (days === null) return "";
+  return `<div class="card-duration">開始→読了 ${days}日</div>`;
+}
+
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
@@ -153,7 +171,8 @@ function createCard(book) {
     <div class="card-title">${escapeHtml(book.title)}</div>
     ${book.author ? `<div class="card-author">${escapeHtml(book.author)}</div>` : ""}
     ${starsHtml(book.rating)}
-    ${cardDateHtml(book)}`;
+    ${cardDateHtml(book)}
+    ${cardDurationHtml(book)}`;
 
   card.addEventListener("click", () => openEditModal(book.id));
   card.addEventListener("dragstart", (e) => {
