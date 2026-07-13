@@ -11,17 +11,37 @@ const STATUSES = [
   { key: "read", label: "読了" },
 ];
 const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.key, s.label]));
+// カード上の日付ラベル（各カラムに入った日）: 読みたい=登録日 / 読書中=開始日 / 読了=読了日
+const STATUS_DATE_LABEL = { want_to_read: "登録", reading: "開始", read: "読了" };
 
 // ---------- インメモリ状態（サンプルデータ） ----------
+// dates: 各ステータスに入った日（YYYY-MM-DD）。カードは現在のステータスの日付を表示する。
 let nextId = 7;
 let books = [
-  { id: 1, title: "リーダブルコード", author: "Dustin Boswell", status: "want_to_read", rating: 0, memo: "" },
-  { id: 2, title: "達人プログラマー", author: "Andrew Hunt", status: "want_to_read", rating: 0, memo: "" },
-  { id: 3, title: "Webを支える技術", author: "山本 陽平", status: "want_to_read", rating: 0, memo: "" },
-  { id: 4, title: "オブジェクト指向設計実践ガイド", author: "Sandi Metz", status: "reading", rating: 0, memo: "後半のリファクタ章が濃い。" },
-  { id: 5, title: "テスト駆動開発", author: "Kent Beck", status: "reading", rating: 0, memo: "" },
-  { id: 6, title: "SQLアンチパターン", author: "Bill Karwin", status: "read", rating: 5, memo: "実務で刺さる例が多く再読したい。" },
+  { id: 1, title: "リーダブルコード", author: "Dustin Boswell", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: "2026-07-10" } },
+  { id: 2, title: "達人プログラマー", author: "Andrew Hunt", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: "2026-07-11" } },
+  { id: 3, title: "Webを支える技術", author: "山本 陽平", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: "2026-07-12" } },
+  { id: 4, title: "オブジェクト指向設計実践ガイド", author: "Sandi Metz", status: "reading", rating: 0, memo: "後半のリファクタ章が濃い。", dates: { want_to_read: "2026-06-28", reading: "2026-07-05" } },
+  { id: 5, title: "テスト駆動開発", author: "Kent Beck", status: "reading", rating: 0, memo: "", dates: { want_to_read: "2026-06-30", reading: "2026-07-08" } },
+  { id: 6, title: "SQLアンチパターン", author: "Bill Karwin", status: "read", rating: 5, memo: "実務で刺さる例が多く再読したい。", dates: { want_to_read: "2026-05-15", reading: "2026-05-20", read: "2026-06-10" } },
 ];
+
+// ---------- 日付ユーティリティ ----------
+// ローカルの今日を YYYY-MM-DD で返す
+function todayISO() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+// YYYY-MM-DD → YYYY/MM/DD 表示
+function formatDate(iso) {
+  return iso ? iso.replace(/-/g, "/") : "";
+}
+// 指定ステータスに入った日を今日で記録する
+function stampStatus(book, status) {
+  if (!book.dates) book.dates = {};
+  book.dates[status] = todayISO();
+}
 
 // 編集中の書籍 id（追加モードは null）
 let editingId = null;
@@ -65,6 +85,14 @@ function starsHtml(rating) {
     html += `<span class="${i <= rating ? "on" : "off"}">★</span>`;
   }
   return html + "</span>";
+}
+
+// 現在のステータス（＝カードがいる列）に入った日を表示
+function cardDateHtml(book) {
+  const iso = book.dates && book.dates[book.status];
+  if (!iso) return "";
+  const label = STATUS_DATE_LABEL[book.status] || "";
+  return `<div class="card-date">${label} ${formatDate(iso)}</div>`;
 }
 
 function escapeHtml(str) {
@@ -120,7 +148,8 @@ function createCard(book) {
   card.innerHTML = `
     <div class="card-title">${escapeHtml(book.title)}</div>
     ${book.author ? `<div class="card-author">${escapeHtml(book.author)}</div>` : ""}
-    ${starsHtml(book.rating)}`;
+    ${starsHtml(book.rating)}
+    ${cardDateHtml(book)}`;
 
   card.addEventListener("click", () => openEditModal(book.id));
   card.addEventListener("dragstart", (e) => {
@@ -137,6 +166,7 @@ function moveBook(id, newStatus) {
   const book = books.find((b) => b.id === id);
   if (book && book.status !== newStatus) {
     book.status = newStatus; // = status を PATCH で更新するイメージ
+    stampStatus(book, newStatus); // 移動先カラムに入った日を記録
     render();
   }
 }
@@ -216,10 +246,16 @@ function submitForm(e) {
   if (editingId === null) {
     // 追加時のみ、コードから登録した ISBN/JAN を保持（プロトタイプ限定の表示用）
     const ean13 = toEan13(fIsbn.value);
-    books.push({ id: nextId++, ...data, isbn: ean13 || "" });
+    const newBook = { id: nextId++, ...data, isbn: ean13 || "", dates: {} };
+    stampStatus(newBook, newBook.status); // 初期ステータスに入った日を記録
+    books.push(newBook);
   } else {
     const book = books.find((b) => b.id === editingId);
-    if (book) Object.assign(book, data);
+    if (book) {
+      const statusChanged = book.status !== data.status;
+      Object.assign(book, data);
+      if (statusChanged) stampStatus(book, data.status); // 編集で変更した先の日付を更新
+    }
   }
 
   closeModal();
