@@ -152,6 +152,11 @@ body {
 .card-stars { margin-top: 6px; font-size: 13px; letter-spacing: 1px; }
 .card-stars .on { color: var(--star); }
 .card-stars .off { color: var(--star-empty); }
+.card-date {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-sub);
+}
 
 /* ---------- モーダル（S3 / S4） ---------- */
 .modal-overlay {
