@@ -15,15 +15,16 @@ const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.key, s.label]));
 const STATUS_DATE_LABEL = { want_to_read: "登録", reading: "開始", read: "読了" };
 
 // ---------- インメモリ状態（サンプルデータ） ----------
-// dates: 各ステータスに入った日（YYYY-MM-DD）。カードは現在のステータスの日付を表示する。
+// dates: 各ステータスに入った日の履歴（YYYY-MM-DD の配列）。カードは現在ステータスの日付を全件表示する。
 let nextId = 7;
 let books = [
-  { id: 1, title: "リーダブルコード", author: "Dustin Boswell", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: "2026-07-10" } },
-  { id: 2, title: "達人プログラマー", author: "Andrew Hunt", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: "2026-07-11" } },
-  { id: 3, title: "Webを支える技術", author: "山本 陽平", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: "2026-07-12" } },
-  { id: 4, title: "オブジェクト指向設計実践ガイド", author: "Sandi Metz", status: "reading", rating: 0, memo: "後半のリファクタ章が濃い。", dates: { want_to_read: "2026-06-28", reading: "2026-07-05" } },
-  { id: 5, title: "テスト駆動開発", author: "Kent Beck", status: "reading", rating: 0, memo: "", dates: { want_to_read: "2026-06-30", reading: "2026-07-08" } },
-  { id: 6, title: "SQLアンチパターン", author: "Bill Karwin", status: "read", rating: 5, memo: "実務で刺さる例が多く再読したい。", dates: { want_to_read: "2026-05-15", reading: "2026-05-20", read: "2026-06-10" } },
+  { id: 1, title: "リーダブルコード", author: "Dustin Boswell", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-10"] } },
+  { id: 2, title: "達人プログラマー", author: "Andrew Hunt", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-11"] } },
+  { id: 3, title: "Webを支える技術", author: "山本 陽平", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-12"] } },
+  { id: 4, title: "オブジェクト指向設計実践ガイド", author: "Sandi Metz", status: "reading", rating: 0, memo: "後半のリファクタ章が濃い。", dates: { want_to_read: ["2026-06-28"], reading: ["2026-07-05"] } },
+  { id: 5, title: "テスト駆動開発", author: "Kent Beck", status: "reading", rating: 0, memo: "", dates: { want_to_read: ["2026-06-30"], reading: ["2026-07-08"] } },
+  // 再読の例：読了に2回入った履歴を持つ
+  { id: 6, title: "SQLアンチパターン", author: "Bill Karwin", status: "read", rating: 5, memo: "実務で刺さる例が多く再読したい。", dates: { want_to_read: ["2026-05-15"], reading: ["2026-05-20"], read: ["2026-06-10", "2026-07-01"] } },
 ];
 
 // ---------- 日付ユーティリティ ----------
@@ -37,10 +38,12 @@ function todayISO() {
 function formatDate(iso) {
   return iso ? iso.replace(/-/g, "/") : "";
 }
-// 指定ステータスに入った日を今日で記録する
+// 指定ステータスに入った日を履歴に追加する（同一日付の重複は追加しない）
 function stampStatus(book, status) {
   if (!book.dates) book.dates = {};
-  book.dates[status] = todayISO();
+  if (!Array.isArray(book.dates[status])) book.dates[status] = [];
+  const today = todayISO();
+  if (!book.dates[status].includes(today)) book.dates[status].push(today);
 }
 
 // 編集中の書籍 id（追加モードは null）
@@ -87,12 +90,13 @@ function starsHtml(rating) {
   return html + "</span>";
 }
 
-// 現在のステータス（＝カードがいる列）に入った日を表示
+// 現在のステータス（＝カードがいる列）に入った日を全件表示（履歴）
 function cardDateHtml(book) {
-  const iso = book.dates && book.dates[book.status];
-  if (!iso) return "";
+  const list = book.dates && book.dates[book.status];
+  if (!list || !list.length) return "";
   const label = STATUS_DATE_LABEL[book.status] || "";
-  return `<div class="card-date">${label} ${formatDate(iso)}</div>`;
+  const dates = list.map(formatDate).join("、");
+  return `<div class="card-date">${label} ${dates}</div>`;
 }
 
 function escapeHtml(str) {
