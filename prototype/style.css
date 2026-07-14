@@ -121,6 +121,37 @@ body {
   padding: 1px 8px;
 }
 
+/* 読了列の並び替えコントロール */
+.sort-control {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sort-control .sort-key {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.sort-control .sort-dir {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.sort-control .sort-dir:hover { background: #ebecf0; }
+
 .card-list {
   display: flex;
   flex-direction: column;
