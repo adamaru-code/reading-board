@@ -212,8 +212,8 @@ body {
   white-space: nowrap;
 }
 /* ジャンルごとの色（カラム見出し色 violet/blue/green とは別系統。白文字で AA 準拠） */
-.genre-classic_novel { background: #7a4a34; } /* セピア（古書の茶） */
-.genre-liberal_arts  { background: #9b3d8e; } /* プラム */
+.genre-classic_novel { background: #a4506e; } /* ダスティローズ（落ち着いたピンク） */
+.genre-liberal_arts  { background: #305a7d; } /* スチールブルー（洗練されたブルー） */
 .genre-health_body   { background: #0e7c74; } /* ティール */
 .genre-practical     { background: #9a6400; } /* アンバー */
 .genre-other         { background: #6b7280; } /* グレー */
