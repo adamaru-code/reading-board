@@ -16,7 +16,7 @@ const STATUS_DATE_LABEL = { want_to_read: "登録", reading: "開始", read: "�
 
 // ---------- インメモリ状態（サンプルデータ） ----------
 // dates: 各ステータスに入った日の履歴（YYYY-MM-DD の配列）。カードは現在ステータスの日付を全件表示する。
-let nextId = 7;
+let nextId = 9;
 let books = [
   { id: 1, title: "リーダブルコード", author: "Dustin Boswell", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-10"] } },
   { id: 2, title: "達人プログラマー", author: "Andrew Hunt", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-11"] } },
@@ -25,6 +25,8 @@ let books = [
   { id: 5, title: "テスト駆動開発", author: "Kent Beck", status: "reading", rating: 0, memo: "", dates: { want_to_read: ["2026-06-30"], reading: ["2026-07-08"] } },
   // 再読の例：読了に2回入った履歴を持つ
   { id: 6, title: "SQLアンチパターン", author: "Bill Karwin", status: "read", rating: 5, memo: "実務で刺さる例が多く再読したい。", dates: { want_to_read: ["2026-05-15"], reading: ["2026-05-20"], read: ["2026-06-10", "2026-07-01"] } },
+  { id: 7, title: "ハッカーと画家", author: "Paul Graham", status: "read", rating: 4, memo: "", dates: { want_to_read: ["2026-04-01"], reading: ["2026-04-10"], read: ["2026-04-20"] } },
+  { id: 8, title: "アルゴリズム図鑑", author: "石田 保輝", status: "read", rating: 3, memo: "", dates: { want_to_read: ["2026-06-01"], reading: ["2026-06-15"], read: ["2026-06-18"] } },
 ];
 
 // ---------- 日付ユーティリティ ----------
@@ -123,10 +125,84 @@ function escapeHtml(str) {
   ));
 }
 
+// ---------- 読了カラムの並び替え ----------
+// read=読了日 / rating=評価 / want_to_read=登録日 / duration=所要日数
+const READ_SORT_OPTIONS = [
+  { key: "read", label: "読了日" },
+  { key: "rating", label: "評価" },
+  { key: "want_to_read", label: "登録日" },
+  { key: "duration", label: "所要日数" },
+];
+let readSortKey = "read";
+let readSortDir = "desc"; // desc=降順（新しい/高い/長い順）/ asc=昇順
+
+// 並び替えキーに対応する比較値（算出不可は null）
+function readSortValue(book, key) {
+  if (key === "rating") return book.rating || 0;
+  if (key === "duration") return readingDurationDays(book);
+  const list = book.dates && book.dates[key];
+  if (!list || !list.length) return null;
+  // 読了日は最新（末尾）、登録日は最初（先頭）を使う
+  const iso = key === "read" ? list[list.length - 1] : list[0];
+  const t = Date.parse(iso);
+  return isNaN(t) ? null : t;
+}
+
+// read 列の配列をその場でソート（null は方向に関わらず末尾）
+function sortReadBooks(arr) {
+  const dir = readSortDir === "asc" ? 1 : -1;
+  arr.sort((x, y) => {
+    const vx = readSortValue(x, readSortKey);
+    const vy = readSortValue(y, readSortKey);
+    if (vx === null && vy === null) return 0;
+    if (vx === null) return 1;
+    if (vy === null) return -1;
+    if (vx === vy) return 0;
+    return (vx < vy ? -1 : 1) * dir;
+  });
+}
+
+// read 列ヘッダに差し込む並び替えUIを生成
+function buildSortControl(column) {
+  const control = document.createElement("div");
+  control.className = "sort-control";
+
+  const select = document.createElement("select");
+  select.className = "sort-key";
+  select.setAttribute("aria-label", "並び替え");
+  for (const opt of READ_SORT_OPTIONS) {
+    const o = document.createElement("option");
+    o.value = opt.key;
+    o.textContent = opt.label;
+    if (opt.key === readSortKey) o.selected = true;
+    select.appendChild(o);
+  }
+  select.addEventListener("change", () => {
+    readSortKey = select.value;
+    render();
+  });
+
+  const dirBtn = document.createElement("button");
+  dirBtn.type = "button";
+  dirBtn.className = "sort-dir";
+  dirBtn.textContent = readSortDir === "asc" ? "↑" : "↓";
+  dirBtn.title = readSortDir === "asc" ? "昇順" : "降順";
+  dirBtn.setAttribute("aria-label", dirBtn.title);
+  dirBtn.addEventListener("click", () => {
+    readSortDir = readSortDir === "asc" ? "desc" : "asc";
+    render();
+  });
+
+  control.appendChild(select);
+  control.appendChild(dirBtn);
+  column.querySelector(".column-header").appendChild(control);
+}
+
 function render() {
   board.innerHTML = "";
   for (const { key, label } of STATUSES) {
     const inColumn = books.filter((b) => b.status === key);
+    if (key === "read") sortReadBooks(inColumn); // 読了列のみ並び替え
 
     const column = document.createElement("section");
     column.className = "column";
@@ -137,6 +213,8 @@ function render() {
         <span class="column-count">${inColumn.length}</span>
       </div>
       <div class="card-list"></div>`;
+
+    if (key === "read") buildSortControl(column); // 読了列ヘッダに並び替えUI
 
     const list = column.querySelector(".card-list");
     for (const book of inColumn) {
