@@ -14,20 +14,46 @@ const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.key, s.label]));
 // カード上の日付ラベル（各カラムに入った日）: 読みたい=登録日 / 読書中=開始日 / 読了=読了日
 const STATUS_DATE_LABEL = { want_to_read: "登録", reading: "開始", read: "読了" };
 
+// ---------- 種別（ジャンル・形態） ----------
+// 主ジャンル（単一）。既定は other。
+const GENRES = [
+  { key: "classic_novel", label: "古典・名作小説" },
+  { key: "liberal_arts", label: "教養・人文・思想" },
+  { key: "health_body", label: "健康・身体" },
+  { key: "practical", label: "実用・暮らし" },
+  { key: "other", label: "その他・未分類" },
+];
+const GENRE_LABEL = Object.fromEntries(GENRES.map((g) => [g.key, g.label]));
+// 形態（単一）。書籍 / 雑誌
+const FORMAT_LABEL = { book: "書籍", magazine: "雑誌" };
+
 // ---------- インメモリ状態（サンプルデータ） ----------
 // dates: 各ステータスに入った日の履歴（YYYY-MM-DD の配列）。カードは現在ステータスの日付を全件表示する。
+// genre: 主ジャンル(key) / format: "book"|"magazine" / tags: 文字列配列
 let nextId = 9;
 let books = [
-  { id: 1, title: "リーダブルコード", author: "Dustin Boswell", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-10"] } },
-  { id: 2, title: "達人プログラマー", author: "Andrew Hunt", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-11"] } },
-  { id: 3, title: "Webを支える技術", author: "山本 陽平", status: "want_to_read", rating: 0, memo: "", dates: { want_to_read: ["2026-07-12"] } },
-  { id: 4, title: "オブジェクト指向設計実践ガイド", author: "Sandi Metz", status: "reading", rating: 0, memo: "後半のリファクタ章が濃い。", dates: { want_to_read: ["2026-06-28"], reading: ["2026-07-05"] } },
-  { id: 5, title: "テスト駆動開発", author: "Kent Beck", status: "reading", rating: 0, memo: "", dates: { want_to_read: ["2026-06-30"], reading: ["2026-07-08"] } },
+  { id: 1, title: "罪と罰", author: "ドストエフスキー", status: "want_to_read", rating: 0, memo: "", genre: "classic_novel", format: "book", tags: ["古典"], dates: { want_to_read: ["2026-07-10"] } },
+  { id: 2, title: "表現者クライテリオン 2026年7月号", author: "", status: "want_to_read", rating: 0, memo: "", genre: "liberal_arts", format: "magazine", tags: ["評論"], dates: { want_to_read: ["2026-07-11"] } },
+  { id: 3, title: "整体入門", author: "野口 晴哉", status: "want_to_read", rating: 0, memo: "", genre: "health_body", format: "book", tags: ["整体", "入門"], dates: { want_to_read: ["2026-07-12"] } },
+  { id: 4, title: "NHK100分de名著 論語", author: "", status: "reading", rating: 0, memo: "名著解説がわかりやすい。", genre: "liberal_arts", format: "magazine", tags: ["名著"], dates: { want_to_read: ["2026-06-28"], reading: ["2026-07-05"] } },
+  { id: 5, title: "論語", author: "孔子", status: "reading", rating: 0, memo: "", genre: "liberal_arts", format: "book", tags: ["古典"], dates: { want_to_read: ["2026-06-30"], reading: ["2026-07-08"] } },
   // 再読の例：読了に2回入った履歴を持つ
-  { id: 6, title: "SQLアンチパターン", author: "Bill Karwin", status: "read", rating: 5, memo: "実務で刺さる例が多く再読したい。", dates: { want_to_read: ["2026-05-15"], reading: ["2026-05-20"], read: ["2026-06-10", "2026-07-01"] } },
-  { id: 7, title: "ハッカーと画家", author: "Paul Graham", status: "read", rating: 4, memo: "", dates: { want_to_read: ["2026-04-01"], reading: ["2026-04-10"], read: ["2026-04-20"] } },
-  { id: 8, title: "アルゴリズム図鑑", author: "石田 保輝", status: "read", rating: 3, memo: "", dates: { want_to_read: ["2026-06-01"], reading: ["2026-06-15"], read: ["2026-06-18"] } },
+  { id: 6, title: "こころ", author: "夏目 漱石", status: "read", rating: 5, memo: "何度読んでも発見がある。再読したい。", genre: "classic_novel", format: "book", tags: ["名著", "再読したい"], dates: { want_to_read: ["2026-05-15"], reading: ["2026-05-20"], read: ["2026-06-10", "2026-07-01"] } },
+  { id: 7, title: "武士道", author: "新渡戸 稲造", status: "read", rating: 4, memo: "", genre: "liberal_arts", format: "book", tags: ["古典", "教養"], dates: { want_to_read: ["2026-04-01"], reading: ["2026-04-10"], read: ["2026-04-20"] } },
+  { id: 8, title: "養生訓", author: "貝原 益軒", status: "read", rating: 3, memo: "", genre: "health_body", format: "book", tags: ["養生"], dates: { want_to_read: ["2026-06-01"], reading: ["2026-06-15"], read: ["2026-06-18"] } },
 ];
+
+// 種別のデフォルトを補完（後方互換）
+function normalizeBook(book) {
+  if (!book.genre) book.genre = "other";
+  if (!book.format) book.format = "book";
+  if (!Array.isArray(book.tags)) book.tags = [];
+  return book;
+}
+books.forEach(normalizeBook);
+
+// 現在のジャンル絞り込み（"all" or genre key）
+let genreFilter = "all";
 
 // ---------- 日付ユーティリティ ----------
 // ローカルの今日を YYYY-MM-DD で返す
@@ -81,6 +107,12 @@ const lookupMessage = document.getElementById("lookup-message");
 const lookupStatus = lookupResult.querySelector(".lookup-status");
 const coverImg = document.getElementById("cover-img");
 const typeBadge = document.getElementById("type-badge");
+
+// 種別入力
+const fGenre = document.getElementById("f-genre");
+const fFormat = document.getElementById("f-format");
+const fTags = document.getElementById("f-tags");
+const genreFilterSelect = document.getElementById("genre-filter");
 
 // ---------- 描画 ----------
 function starsHtml(rating) {
@@ -201,7 +233,9 @@ function buildSortControl(column) {
 function render() {
   board.innerHTML = "";
   for (const { key, label } of STATUSES) {
-    const inColumn = books.filter((b) => b.status === key);
+    const inColumn = books.filter(
+      (b) => b.status === key && (genreFilter === "all" || b.genre === genreFilter)
+    );
     if (key === "read") sortReadBooks(inColumn); // 読了列のみ並び替え
 
     const column = document.createElement("section");
@@ -240,15 +274,36 @@ function render() {
   }
 }
 
+// 種別バッジ（主ジャンル ＋ 雑誌なら形態バッジ）
+function cardBadgesHtml(book) {
+  const genre = book.genre || "other";
+  let html = `<span class="genre-badge genre-${genre}">${GENRE_LABEL[genre]}</span>`;
+  if (book.format === "magazine") {
+    html += `<span class="format-badge">雑誌</span>`;
+  }
+  return `<div class="card-badges">${html}</div>`;
+}
+
+// タグ chip
+function cardTagsHtml(book) {
+  if (!book.tags || !book.tags.length) return "";
+  const chips = book.tags
+    .map((t) => `<span class="tag-chip">${escapeHtml(t)}</span>`)
+    .join("");
+  return `<div class="card-tags">${chips}</div>`;
+}
+
 function createCard(book) {
   const card = document.createElement("article");
   card.className = "card";
   card.draggable = true;
   card.dataset.id = book.id;
   card.innerHTML = `
+    ${cardBadgesHtml(book)}
     <div class="card-title">${escapeHtml(book.title)}</div>
     ${book.author ? `<div class="card-author">${escapeHtml(book.author)}</div>` : ""}
     ${starsHtml(book.rating)}
+    ${cardTagsHtml(book)}
     ${cardDateHtml(book)}
     ${cardDurationHtml(book)}`;
 
@@ -280,6 +335,9 @@ function openAddModal() {
   modalTitle.textContent = "書籍を追加";
   form.reset();
   fStatus.value = "want_to_read";
+  fGenre.value = "other";
+  fFormat.value = "book";
+  fTags.value = "";
   clearTitleError();
   resetCodeSection();
   syncStars();
@@ -298,10 +356,23 @@ function openEditModal(id) {
   fAuthor.value = book.author || "";
   fStatus.value = book.status;
   fMemo.value = book.memo || "";
+  fGenre.value = book.genre || "other";
+  fFormat.value = book.format || "book";
+  fTags.value = (book.tags || []).join(", ");
   clearTitleError();
   syncStars();
   showModal();
   fTitle.focus();
+}
+
+// タグ入力（カンマ/読点区切り）→ 配列（空・重複を除去）
+function parseTags(raw) {
+  return [...new Set(
+    String(raw)
+      .split(/[,、]/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+  )];
 }
 
 function showModal() {
@@ -342,6 +413,9 @@ function submitForm(e) {
     status: fStatus.value,
     rating: ratingDraft,
     memo: fMemo.value.trim(),
+    genre: fGenre.value,
+    format: fFormat.value,
+    tags: parseTags(fTags.value),
   };
 
   if (editingId === null) {
@@ -452,6 +526,9 @@ async function lookupCode() {
 
   const type = codeType(ean13);
   setTypeBadge(type);
+  // 形態を自動セット：491=雑誌 / 978・979=書籍
+  if (type === "magazine") fFormat.value = "magazine";
+  else if (type === "book") fFormat.value = "book";
   showLookupMessage("warn", "検索中…");
 
   try {
@@ -593,6 +670,30 @@ overlay.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !overlay.hidden) closeModal();
+});
+
+// ---------- ジャンル select / フィルタの初期化 ----------
+// 追加/編集モーダルのジャンル select（GENRES を単一ソースに）
+for (const g of GENRES) {
+  const o = document.createElement("option");
+  o.value = g.key;
+  o.textContent = g.label;
+  fGenre.appendChild(o);
+}
+// ヘッダのジャンル絞り込み（すべて + 各ジャンル）
+const allOpt = document.createElement("option");
+allOpt.value = "all";
+allOpt.textContent = "すべて";
+genreFilterSelect.appendChild(allOpt);
+for (const g of GENRES) {
+  const o = document.createElement("option");
+  o.value = g.key;
+  o.textContent = g.label;
+  genreFilterSelect.appendChild(o);
+}
+genreFilterSelect.addEventListener("change", () => {
+  genreFilter = genreFilterSelect.value;
+  render();
 });
 
 // ---------- 初期描画 ----------

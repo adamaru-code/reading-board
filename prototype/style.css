@@ -195,6 +195,79 @@ body {
   color: var(--col-read);
 }
 
+/* 種別バッジ（ジャンル・形態） */
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.genre-badge,
+.format-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+}
+/* ジャンルごとの色 */
+.genre-classic_novel { background: #6554c0; }
+.genre-liberal_arts  { background: #0c66e4; }
+.genre-health_body   { background: #22a06b; }
+.genre-practical     { background: #b06a00; }
+.genre-other         { background: #8993a4; }
+/* 形態（雑誌）は枠線バッジで区別 */
+.format-badge {
+  background: transparent;
+  color: var(--text-sub);
+  border: 1px solid var(--border);
+}
+
+/* タグ chip */
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.tag-chip {
+  font-size: 10px;
+  color: var(--text-sub);
+  background: #ebecf0;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+/* ヘッダのジャンル絞り込み */
+.genre-filter-label {
+  font-size: 12px;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.genre-filter-label select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* モーダル：2カラム並びのフィールド */
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row .field {
+  flex: 1;
+  margin-bottom: 16px;
+}
+
 /* ---------- モーダル（S3 / S4） ---------- */
 .modal-overlay {
   position: fixed;
