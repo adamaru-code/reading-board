@@ -11,6 +11,10 @@
   <header class="app-header">
     <h1 class="app-title">📚 読書管理ボード</h1>
     <div class="header-right">
+      <label class="genre-filter-label">
+        ジャンル
+        <select id="genre-filter" aria-label="ジャンルで絞り込み"><!-- app.js が生成 --></select>
+      </label>
       <span class="mock-badge">プロトタイプ（保存されません）</span>
       <button id="add-book-btn" class="btn btn-primary">＋ 追加</button>
     </div>
@@ -73,6 +77,25 @@
             <option value="reading">読書中</option>
             <option value="read">読了</option>
           </select>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f-genre">ジャンル</label>
+            <select id="f-genre" name="genre"><!-- app.js が生成 --></select>
+          </div>
+          <div class="field">
+            <label for="f-format">形態</label>
+            <select id="f-format" name="format">
+              <option value="book">書籍</option>
+              <option value="magazine">雑誌</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-tags">タグ（カンマ区切り）</label>
+          <input type="text" id="f-tags" name="tags" autocomplete="off" placeholder="例: 入門, 名著, 再読したい">
         </div>
 
         <!-- ★評価・感想メモは編集時のみ表示 -->
