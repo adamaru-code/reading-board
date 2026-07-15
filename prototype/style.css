@@ -212,7 +212,7 @@ body {
   white-space: nowrap;
 }
 /* ジャンルごとの色（カラム見出し色 violet/blue/green とは別系統。白文字で AA 準拠） */
-.genre-classic_novel { background: #a8478f; } /* オーキッド（紫ピンク） */
+.genre-classic_novel { background: #ff5cae; color: #172b4d; } /* ネオンピンク（蛍光ピンク・濃文字） */
 .genre-liberal_arts  { background: #356599; } /* スチールブルー（深め） */
 .genre-health_body   { background: #66c6b4; color: #0b3f39; } /* 明るいミントティール（濃文字） */
 .genre-practical     { background: #c0561a; } /* バーントオレンジ */
