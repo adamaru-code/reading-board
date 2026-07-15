@@ -214,7 +214,7 @@ body {
 /* ジャンルごとの色（カラム見出し色 violet/blue/green とは別系統。白文字で AA 準拠） */
 .genre-classic_novel { background: #a4506e; } /* ダスティローズ（落ち着いたピンク） */
 .genre-liberal_arts  { background: #356599; } /* スチールブルー（深め） */
-.genre-health_body   { background: #0f8177; } /* ティール（明るめ） */
+.genre-health_body   { background: #66c6b4; color: #0b3f39; } /* 明るいミントティール（濃文字） */
 .genre-practical     { background: #9a6400; } /* アンバー */
 .genre-other         { background: #6b7280; } /* グレー */
 /* 形態（雑誌）は枠線バッジで区別 */
