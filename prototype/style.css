@@ -215,7 +215,7 @@ body {
 .genre-classic_novel { background: #a8478f; } /* オーキッド（紫ピンク） */
 .genre-liberal_arts  { background: #356599; } /* スチールブルー（深め） */
 .genre-health_body   { background: #66c6b4; color: #0b3f39; } /* 明るいミントティール（濃文字） */
-.genre-practical     { background: #9a6400; } /* アンバー */
+.genre-practical     { background: #c0561a; } /* バーントオレンジ */
 .genre-other         { background: #6b7280; } /* グレー */
 /* 形態（雑誌）は枠線バッジで区別 */
 .format-badge {
