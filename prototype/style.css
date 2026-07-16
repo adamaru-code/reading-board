@@ -208,20 +208,16 @@ body {
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 999px;
-  color: #fff;
   white-space: nowrap;
 }
-/* ジャンルごとの色（カラム見出し色 violet/blue/green とは別系統。白文字で AA 準拠） */
-.genre-classic_novel { background: #ff5cae; color: #172b4d; } /* ネオンピンク（蛍光ピンク・濃文字） */
-.genre-liberal_arts  { background: #356599; } /* スチールブルー（深め） */
-.genre-health_body   { background: #66c6b4; color: #0b3f39; } /* 明るいミントティール（濃文字） */
-.genre-practical     { background: #c0561a; } /* バーントオレンジ */
-.genre-other         { background: #6b7280; } /* グレー */
-/* 形態（雑誌）は黄色バッジ（濃文字）で区別 */
-.format-badge {
-  background: #f5c518;
-  color: #172b4d;
-}
+/* 明るいパステル地＋同系の濃文字でトーン統一（全色 文字コントラスト AA） */
+.genre-classic_novel { background: #ffe1ef; color: #b01b62; } /* ピンク */
+.genre-liberal_arts  { background: #dfe9f6; color: #2b5a8c; } /* ブルー */
+.genre-health_body   { background: #d6f1ea; color: #0d6b62; } /* ティール */
+.genre-practical     { background: #fce4d5; color: #9c3d0f; } /* オレンジ */
+.genre-other         { background: #e7e9ec; color: #4b5563; } /* グレー */
+/* 形態（雑誌）も同トーンの黄色パステル */
+.format-badge        { background: #fdf1c2; color: #7d5c00; } /* イエロー */
 
 /* タグ chip */
 .card-tags {
