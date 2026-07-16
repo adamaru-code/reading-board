@@ -234,6 +234,34 @@ body {
   padding: 1px 6px;
 }
 
+/* おすすめタグ（クリックで追加） */
+.tag-suggest {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tag-suggest-label {
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.tag-suggest-chip {
+  font: inherit;
+  font-size: 11px;
+  color: var(--primary);
+  background: #e9f0fb;
+  border: 1px dashed var(--primary);
+  border-radius: 999px;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+.tag-suggest-chip:hover {
+  background: var(--primary);
+  color: #fff;
+  border-style: solid;
+}
+
 /* ヘッダのジャンル絞り込み */
 .genre-filter-label {
   font-size: 12px;
