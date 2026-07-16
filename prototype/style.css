@@ -262,6 +262,19 @@ body {
   border-style: solid;
 }
 
+/* ヘッダの著者絞り込み */
+.author-filter {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  width: 160px;
+}
+.author-filter:focus { outline: none; border-color: var(--primary); }
+
 /* ヘッダのジャンル絞り込み */
 .genre-filter-label {
   font-size: 12px;
