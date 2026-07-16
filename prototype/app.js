@@ -54,6 +54,8 @@ books.forEach(normalizeBook);
 
 // 現在のジャンル絞り込み（"all" or genre key）
 let genreFilter = "all";
+// 現在の著者絞り込み（部分一致・小文字化。空なら絞り込みなし）
+let authorFilter = "";
 
 // ---------- 日付ユーティリティ ----------
 // ローカルの今日を YYYY-MM-DD で返す
@@ -115,6 +117,7 @@ const fTags = document.getElementById("f-tags");
 const tagSuggest = document.getElementById("tag-suggest");
 const tagSuggestList = document.getElementById("tag-suggest-list");
 const genreFilterSelect = document.getElementById("genre-filter");
+const authorFilterInput = document.getElementById("author-filter");
 
 // ---------- 描画 ----------
 function starsHtml(rating) {
@@ -236,7 +239,11 @@ function render() {
   board.innerHTML = "";
   for (const { key, label } of STATUSES) {
     const inColumn = books.filter(
-      (b) => b.status === key && (genreFilter === "all" || b.genre === genreFilter)
+      (b) =>
+        b.status === key &&
+        (genreFilter === "all" || b.genre === genreFilter) &&
+        (authorFilter === "" ||
+          (b.author && b.author.toLowerCase().includes(authorFilter)))
     );
     if (key === "read") sortReadBooks(inColumn); // 読了列のみ並び替え
 
@@ -769,6 +776,10 @@ for (const g of GENRES) {
 }
 genreFilterSelect.addEventListener("change", () => {
   genreFilter = genreFilterSelect.value;
+  render();
+});
+authorFilterInput.addEventListener("input", () => {
+  authorFilter = authorFilterInput.value.trim().toLowerCase();
   render();
 });
 
