@@ -96,6 +96,10 @@
         <div class="field">
           <label for="f-tags">タグ（カンマ区切り）</label>
           <input type="text" id="f-tags" name="tags" autocomplete="off" placeholder="例: 入門, 名著, 再読したい">
+          <div class="tag-suggest" id="tag-suggest" hidden>
+            <span class="tag-suggest-label">おすすめ：</span>
+            <span id="tag-suggest-list"><!-- app.js が生成 --></span>
+          </div>
         </div>
 
         <!-- ★評価・感想メモは編集時のみ表示 -->

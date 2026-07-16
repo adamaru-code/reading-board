@@ -112,6 +112,8 @@ const typeBadge = document.getElementById("type-badge");
 const fGenre = document.getElementById("f-genre");
 const fFormat = document.getElementById("f-format");
 const fTags = document.getElementById("f-tags");
+const tagSuggest = document.getElementById("tag-suggest");
+const tagSuggestList = document.getElementById("tag-suggest-list");
 const genreFilterSelect = document.getElementById("genre-filter");
 
 // ---------- 描画 ----------
@@ -341,6 +343,7 @@ function openAddModal() {
   clearTitleError();
   resetCodeSection();
   syncStars();
+  renderTagSuggest();
   showModal();
   fIsbn.focus();
 }
@@ -361,6 +364,7 @@ function openEditModal(id) {
   fTags.value = (book.tags || []).join(", ");
   clearTitleError();
   syncStars();
+  renderTagSuggest();
   showModal();
   fTitle.focus();
 }
@@ -373,6 +377,73 @@ function parseTags(raw) {
       .map((t) => t.trim())
       .filter((t) => t.length > 0)
   )];
+}
+
+// ---------- タイトルからのタグ提案 ----------
+// キーワード → 提案タグ（辞書ベース。タイトルと著者名の両方を照合。本番ではこの照合を AI/API 呼び出しに差し替え可能）
+const TAG_RULES = [
+  // --- タイトル・内容から ---
+  { kw: ["入門", "はじめて", "やさしい"], tags: ["入門"] },
+  { kw: ["論語", "老子", "荘子", "孟子"], tags: ["東洋思想", "古典"] },
+  { kw: ["整体", "養生", "呼吸", "身体", "健康"], tags: ["健康法", "実践したい"] },
+  { kw: ["100分de名著", "名著"], tags: ["名著解説", "シリーズ"] },
+  { kw: ["クライテリオン", "表現者"], tags: ["評論", "定期購読"] },
+  { kw: ["文庫"], tags: ["文庫"] },
+  { kw: ["新書"], tags: ["新書"] },
+  { kw: ["罪と罰", "カラマーゾフ", "戦争と平和"], tags: ["海外文学", "名著"] },
+  { kw: ["こころ", "坊っちゃん"], tags: ["日本文学", "名著"] },
+  // --- 著者名から ---
+  { kw: ["漱石", "鴎外", "太宰", "芥川"], tags: ["日本文学", "名著"] },
+  { kw: ["ドストエフスキー", "トルストイ"], tags: ["海外文学", "ロシア文学"] },
+  { kw: ["孔子", "老子"], tags: ["東洋思想", "古典"] },
+  { kw: ["野口", "晴哉"], tags: ["野口整体", "健康法"] },
+  { kw: ["新渡戸", "稲造"], tags: ["教養", "古典"] },
+  { kw: ["貝原", "益軒"], tags: ["養生", "古典"] },
+];
+const GENERIC_TAGS = ["名著", "再読したい", "積読"]; // 常に候補に加える定番タグ
+const MAX_SUGGEST = 8;
+
+// タイトル・著者から提案タグを返す（入力済みタグは除外・重複除去・上限あり）
+function suggestTags(title, author, currentTags) {
+  const hay = `${title || ""} ${author || ""}`;
+  const has = new Set(currentTags);
+  const out = [];
+  const push = (t) => {
+    if (!has.has(t) && !out.includes(t)) out.push(t);
+  };
+  for (const rule of TAG_RULES) {
+    if (rule.kw.some((k) => hay.includes(k))) rule.tags.forEach(push);
+  }
+  GENERIC_TAGS.forEach(push);
+  return out.slice(0, MAX_SUGGEST);
+}
+
+// 提案タグ chip を描画（クリックで入力欄に追加）
+function renderTagSuggest() {
+  const current = parseTags(fTags.value);
+  const suggestions = suggestTags(fTitle.value, fAuthor.value, current);
+  tagSuggestList.innerHTML = "";
+  if (!suggestions.length) {
+    tagSuggest.hidden = true;
+    return;
+  }
+  for (const tag of suggestions) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "tag-suggest-chip";
+    chip.textContent = "＋ " + tag;
+    chip.addEventListener("click", () => addTag(tag));
+    tagSuggestList.appendChild(chip);
+  }
+  tagSuggest.hidden = false;
+}
+
+// 提案タグを入力欄に追加（既存形式を維持・重複除去）して再描画
+function addTag(tag) {
+  const tags = parseTags(fTags.value);
+  if (!tags.includes(tag)) tags.push(tag);
+  fTags.value = tags.join(", ");
+  renderTagSuggest();
 }
 
 function showModal() {
@@ -540,6 +611,7 @@ async function lookupCode() {
       fTitle.value = summary.title;
       fAuthor.value = summary.author || "";
       clearTitleError();
+      renderTagSuggest(); // 取得したタイトル・著者から提案を更新
       if (summary.cover) {
         coverImg.src = summary.cover;
         coverImg.hidden = false;
@@ -650,7 +722,11 @@ deleteBtn.addEventListener("click", deleteCurrent);
 form.addEventListener("submit", submitForm);
 fTitle.addEventListener("input", () => {
   if (fTitle.value.trim()) clearTitleError();
+  renderTagSuggest(); // タイトルから提案を更新
 });
+// 著者・タグの変更でも提案を更新（入力済みタグは提案から除外）
+fAuthor.addEventListener("input", renderTagSuggest);
+fTags.addEventListener("input", renderTagSuggest);
 
 // ★入力
 stars.forEach((star) => {
