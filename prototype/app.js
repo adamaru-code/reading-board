@@ -56,6 +56,8 @@ books.forEach(normalizeBook);
 let genreFilter = "all";
 // 現在の著者絞り込み（部分一致・小文字化。空なら絞り込みなし）
 let authorFilter = "";
+// 現在のタグ絞り込み（"all" or タグ名）
+let tagFilter = "all";
 
 // ---------- 日付ユーティリティ ----------
 // ローカルの今日を YYYY-MM-DD で返す
@@ -118,6 +120,7 @@ const tagSuggest = document.getElementById("tag-suggest");
 const tagSuggestList = document.getElementById("tag-suggest-list");
 const genreFilterSelect = document.getElementById("genre-filter");
 const authorFilterInput = document.getElementById("author-filter");
+const tagFilterSelect = document.getElementById("tag-filter");
 
 // ---------- 描画 ----------
 function starsHtml(rating) {
@@ -235,7 +238,33 @@ function buildSortControl(column) {
   column.querySelector(".column-header").appendChild(control);
 }
 
+// 使用中の全タグ（ソート済み・重複なし）
+function allTags() {
+  const set = new Set();
+  books.forEach((b) => (b.tags || []).forEach((t) => set.add(t)));
+  return [...set].sort((a, b) => a.localeCompare(b, "ja"));
+}
+
+// ヘッダのタグ絞り込みの選択肢を現在のタグから再構築（選択は維持）
+function refreshTagFilterOptions() {
+  const tags = allTags();
+  if (tagFilter !== "all" && !tags.includes(tagFilter)) tagFilter = "all";
+  tagFilterSelect.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "all";
+  optAll.textContent = "すべて";
+  tagFilterSelect.appendChild(optAll);
+  for (const t of tags) {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t;
+    tagFilterSelect.appendChild(o);
+  }
+  tagFilterSelect.value = tagFilter;
+}
+
 function render() {
+  refreshTagFilterOptions(); // 追加/編集で増減したタグを選択肢に反映
   board.innerHTML = "";
   for (const { key, label } of STATUSES) {
     const inColumn = books.filter(
@@ -243,7 +272,8 @@ function render() {
         b.status === key &&
         (genreFilter === "all" || b.genre === genreFilter) &&
         (authorFilter === "" ||
-          (b.author && b.author.toLowerCase().includes(authorFilter)))
+          (b.author && b.author.toLowerCase().includes(authorFilter))) &&
+        (tagFilter === "all" || (b.tags && b.tags.includes(tagFilter)))
     );
     if (key === "read") sortReadBooks(inColumn); // 読了列のみ並び替え
 
@@ -780,6 +810,10 @@ genreFilterSelect.addEventListener("change", () => {
 });
 authorFilterInput.addEventListener("input", () => {
   authorFilter = authorFilterInput.value.trim().toLowerCase();
+  render();
+});
+tagFilterSelect.addEventListener("change", () => {
+  tagFilter = tagFilterSelect.value;
   render();
 });
 
