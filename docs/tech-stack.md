@@ -23,3 +23,24 @@
 ## 2. システム構成
 
 構成図（フロント → Vite プロキシ → Rails API → MySQL）と各層の役割は [基本設計（図）](basic-design.md) §1 を参照。
+
+---
+
+## 3. ビルド・依存管理
+
+### フロントエンド（Vue 3 + TypeScript）
+
+ビルドツールは **Vite 8**（`@vitejs/plugin-vue`）。コマンドは `frontend/package.json` の scripts に定義。
+
+| コマンド | 内容 | 用途 |
+|---|---|---|
+| `npm run dev` | Vite Dev Server を :5173 で起動 | ローカル開発（`/api` プロキシ含む） |
+| `npm run build` | `vue-tsc -b`（型チェック）→ `vite build`（バンドル） | 本番ビルド。成果物は `frontend/dist/` に出力 |
+| `npm run preview` | ビルド成果物をローカル配信 | 本番ビルドの動作確認 |
+
+### バックエンド（Rails 8 API モード）
+
+**ビルド工程なし**。API モードのためアセットパイプライン（Sprockets / jsbundling 等）は使用しない。
+
+- 依存管理: **Bundler**（`backend/Gemfile`）
+- セットアップ: `bundle install` → `bin/rails server` で起動（ポートは [CLAUDE.md](../CLAUDE.md) §8 参照）
