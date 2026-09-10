@@ -36,7 +36,7 @@ Issue 作成 → Branch 作成 → 実装 → Push → Pull Request → セル�
 gh issue create --title "<簡潔な要約>" --body "<本文>"
 ```
 
-- タイトルは命令形・簡潔に（例: `Add POST /api/books endpoint`）
+- タイトルは**日本語**・簡潔に。`.github/ISSUE_TEMPLATE/` に沿って `[Feature]` / `[Fix]` / `[Chore]` / `[Docs]` などのプレフィックスを付ける（例: `[Feature] 追加/編集フォームを実装`）
 - 本文は `.github/ISSUE_TEMPLATE/` のテンプレートに沿う
 - ラベルは付けなくて良い
 
