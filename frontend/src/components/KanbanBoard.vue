@@ -5,6 +5,7 @@ import { ApiError } from '../api/http'
 import { BOOK_STATUSES } from '../types/book'
 import type { Book, BookStatus } from '../types/book'
 import BookCard from './BookCard.vue'
+import BookFormModal from './BookFormModal.vue'
 
 // カラムの見出しラベル
 const COLUMN_LABELS: Record<BookStatus, string> = {
@@ -57,9 +58,16 @@ function onDragStart(event: DragEvent, book: Book) {
   }
 }
 
+// ドラッグ直後に発火する click を抑止するためのフラグ
+let justDragged = false
+
 function onDragEnd() {
   draggingId.value = null
   dragOverStatus.value = null
+  justDragged = true
+  setTimeout(() => {
+    justDragged = false
+  }, 0)
 }
 
 async function onDrop(status: BookStatus) {
@@ -82,12 +90,39 @@ async function onDrop(status: BookStatus) {
       e instanceof ApiError ? e.message : 'ステータスの更新に失敗しました。時間をおいて再度お試しください。'
   }
 }
+
+// ---------- 追加/編集/削除モーダル ----------
+const modalOpen = ref(false)
+const editingBook = ref<Book | null>(null)
+
+function openAdd() {
+  editingBook.value = null
+  modalOpen.value = true
+}
+
+function openEdit(book: Book) {
+  if (justDragged) return // ドラッグ直後のクリックは無視
+  editingBook.value = book
+  modalOpen.value = true
+}
+
+function closeModal() {
+  modalOpen.value = false
+  editingBook.value = null
+}
+
+// 保存/削除後はボードを再取得して反映
+function onModalDone() {
+  closeModal()
+  loadBooks()
+}
 </script>
 
 <template>
   <div class="app">
     <header class="app-header">
       <h1 class="app-title">📚 読書管理ボード</h1>
+      <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
     </header>
 
     <p v-if="loading" class="board-state">読み込み中…</p>
@@ -121,16 +156,29 @@ async function onDrop(status: BookStatus) {
             :class="{ dragging: draggingId === book.id }"
             @dragstart="onDragStart($event, book)"
             @dragend="onDragEnd"
+            @click="openEdit(book)"
           />
           <p v-if="booksByStatus[status].length === 0" class="column-empty">まだありません</p>
         </div>
       </section>
     </main>
+
+    <BookFormModal
+      v-if="modalOpen"
+      :book="editingBook"
+      @close="closeModal"
+      @saved="onModalDone"
+      @deleted="onModalDone"
+    />
   </div>
 </template>
 
 <style scoped>
 .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding: 14px 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -138,6 +186,15 @@ async function onDrop(status: BookStatus) {
 .app-title {
   font-size: 20px;
   font-weight: 700;
+}
+.add-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font: inherit;
+  cursor: pointer;
 }
 
 .board-state {
