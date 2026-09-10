@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { listBooks } from '../api/books'
+import { listBooks, updateBook } from '../api/books'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES } from '../types/book'
 import type { Book, BookStatus } from '../types/book'
@@ -44,6 +44,44 @@ async function loadBooks() {
 }
 
 onMounted(loadBooks)
+
+// ---------- ドラッグ&ドロップでのステータス更新 ----------
+const draggingId = ref<number | null>(null)
+const dragOverStatus = ref<BookStatus | null>(null)
+
+function onDragStart(event: DragEvent, book: Book) {
+  draggingId.value = book.id
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(book.id))
+  }
+}
+
+function onDragEnd() {
+  draggingId.value = null
+  dragOverStatus.value = null
+}
+
+async function onDrop(status: BookStatus) {
+  const id = draggingId.value
+  draggingId.value = null
+  dragOverStatus.value = null
+  if (id === null) return
+
+  const book = books.value.find((b) => b.id === id)
+  if (!book || book.status === status) return
+
+  // 楽観的更新：先に画面を書き換え、失敗したら元に戻す
+  const previous = book.status
+  book.status = status
+  try {
+    await updateBook(id, { status })
+  } catch (e) {
+    book.status = previous
+    error.value =
+      e instanceof ApiError ? e.message : 'ステータスの更新に失敗しました。時間をおいて再度お試しください。'
+  }
+}
 </script>
 
 <template>
@@ -64,14 +102,26 @@ onMounted(loadBooks)
         v-for="status in BOOK_STATUSES"
         :key="status"
         class="column"
+        :class="{ 'drag-over': dragOverStatus === status }"
         :data-status="status"
+        @dragover.prevent="dragOverStatus = status"
+        @dragleave="dragOverStatus = null"
+        @drop.prevent="onDrop(status)"
       >
         <div class="column-header">
           <span class="column-title">{{ COLUMN_LABELS[status] }}</span>
           <span class="column-count">{{ booksByStatus[status].length }}</span>
         </div>
         <div class="card-list">
-          <BookCard v-for="book in booksByStatus[status]" :key="book.id" :book="book" />
+          <BookCard
+            v-for="book in booksByStatus[status]"
+            :key="book.id"
+            :book="book"
+            draggable="true"
+            :class="{ dragging: draggingId === book.id }"
+            @dragstart="onDragStart($event, book)"
+            @dragend="onDragEnd"
+          />
           <p v-if="booksByStatus[status].length === 0" class="column-empty">まだありません</p>
         </div>
       </section>
@@ -157,6 +207,21 @@ onMounted(loadBooks)
   gap: 8px;
   min-height: 40px;
 }
+
+/* ドラッグ&ドロップの視覚フィードバック */
+.column.drag-over .card-list {
+  outline: 2px dashed var(--col-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.card-list :deep(.card) {
+  cursor: grab;
+}
+.card-list :deep(.card.dragging) {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
 .column-empty {
   color: var(--text-sub);
   font-size: 13px;
