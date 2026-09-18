@@ -49,6 +49,42 @@ class BookTest < ActiveSupport::TestCase
     assert_empty book.reload.tags
   end
 
+  test "作成時に初期 status のイベントを当日で記録する" do
+    book = Book.create!(title: "x", status: :reading)
+    assert_equal 1, book.status_events.size
+    assert_equal "reading", book.status_events.first.status
+    assert_equal Date.current, book.status_events.first.occurred_on
+  end
+
+  test "status 変更で新しいイベントを記録する" do
+    book = Book.create!(title: "x", status: :want_to_read)
+    book.update!(status: :reading)
+    assert_equal %w[reading want_to_read], book.status_events.map(&:status).sort
+  end
+
+  test "status 以外の更新や同一状態ではイベントを増やさない" do
+    book = Book.create!(title: "x", status: :reading)
+    book.update!(rating: 3)
+    book.update!(status: :reading)
+    assert_equal 1, book.status_events.count
+  end
+
+  test "導出日付と所要日数を算出する" do
+    book = Book.create!(title: "x", status: :want_to_read)
+    book.status_events.create!(status: :reading, occurred_on: Date.new(2026, 1, 10))
+    book.status_events.create!(status: :read, occurred_on: Date.new(2026, 1, 20))
+    book.reload
+    assert_equal Date.current, book.registered_on
+    assert_equal Date.new(2026, 1, 10), book.started_on
+    assert_equal Date.new(2026, 1, 20), book.finished_on
+    assert_equal 10, book.duration_days
+  end
+
+  test "開始日が無ければ所要日数は nil" do
+    book = Book.create!(title: "x", status: :want_to_read)
+    assert_nil book.duration_days
+  end
+
   test "title が無いと無効" do
     book = Book.new(title: nil)
     assert_not book.valid?

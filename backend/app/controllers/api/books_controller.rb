@@ -7,7 +7,7 @@ module Api
     # GET /api/books
     # status（enum キー）・author（部分一致）で絞り込める。併用は AND。
     def index
-      books = Book.includes(:tags) # タグの N+1 を回避
+      books = Book.includes(:tags, :status_events) # タグ・日付の N+1 を回避
       books = books.where(status: params[:status]) if valid_status?(params[:status])
       books = books.where(genre: params[:genre]) if valid_genre?(params[:genre])
       books = books.where("author LIKE ?", "%#{params[:author]}%") if params[:author].present?
@@ -86,6 +86,10 @@ module Api
         memo: book.memo,
         position: book.position,
         tags: book.tags.map(&:name),
+        registered_on: book.registered_on,
+        started_on: book.started_on,
+        finished_on: book.finished_on,
+        duration_days: book.duration_days,
         created_at: book.created_at,
         updated_at: book.updated_at
       }

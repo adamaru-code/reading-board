@@ -43,6 +43,11 @@ export interface Book {
   memo: string | null
   position: number | null
   tags: string[]
+  // 各状態に最初に入った日（YYYY-MM-DD）。未到達は null
+  registered_on: string | null
+  started_on: string | null
+  finished_on: string | null
+  duration_days: number | null
   created_at: string
   updated_at: string
 }

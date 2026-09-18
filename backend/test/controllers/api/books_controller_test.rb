@@ -135,6 +135,15 @@ module Api
       assert_includes JSON.parse(response.body)["tags"], "既読"
     end
 
+    test "JSON は導出日付フィールドを含み、作成した状態の日付が入る" do
+      post api_books_url, params: { book: { title: "d", status: "reading" } }
+      assert_response :created
+      body = JSON.parse(response.body)
+      assert body.key?("started_on")
+      assert body.key?("duration_days")
+      assert_equal Date.current.to_s, body["started_on"]
+    end
+
     test "update で tags を差し替えられる" do
       @book.update!(tag_names: ["旧"])
       patch api_book_url(@book), params: { book: { tags: ["新A", "新B"] } }
