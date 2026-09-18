@@ -68,6 +68,15 @@ export interface BookCreateInput {
 // 更新時の入力（全項目任意）
 export type BookUpdateInput = Partial<BookCreateInput>
 
+// ISBN 照会（openBD）の結果。found=false は該当なし（手入力フォールバック）
+export interface BookLookupResult {
+  isbn: string
+  found: boolean
+  title: string | null
+  author: string | null
+  media_type: BookMediaType
+}
+
 // 一覧の絞り込み条件（互いに AND。author は部分一致、genre/tag は完全一致）
 export interface BookListParams {
   status?: BookStatus

@@ -24,6 +24,24 @@ module Api
       render json: book_json(find_book)
     end
 
+    # GET /api/books/lookup?isbn=
+    # openBD を照会し、フォーム自動入力用に書誌情報を返す
+    def lookup
+      isbn = OpenbdClient.normalize(params[:isbn])
+      unless OpenbdClient.valid?(isbn)
+        return render json: { errors: ["ISBN が不正です"] }, status: :unprocessable_content
+      end
+
+      info = OpenbdClient.fetch(isbn)
+      render json: {
+        isbn: isbn,
+        found: info.present?,
+        title: info && info[:title],
+        author: info && info[:author],
+        media_type: OpenbdClient.media_type_for(isbn)
+      }
+    end
+
     # POST /api/books
     def create
       book = Book.new(book_params)

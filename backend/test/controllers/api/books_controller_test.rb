@@ -170,5 +170,42 @@ module Api
       end
       assert_response :no_content
     end
+
+    # 外部 API（openBD）の呼び出しをブロック内だけ固定値に差し替える
+    def stub_openbd_fetch(result)
+      original = OpenbdClient.method(:fetch)
+      OpenbdClient.define_singleton_method(:fetch) { |*| result }
+      yield
+    ensure
+      OpenbdClient.define_singleton_method(:fetch, original)
+    end
+
+    test "lookup は openBD の結果と形態判定を返す" do
+      stub_openbd_fetch({ title: "リーダブルコード", author: "Dustin Boswell" }) do
+        get lookup_api_books_url, params: { isbn: "978-4-87311-565-8" }
+      end
+      assert_response :success
+      body = JSON.parse(response.body)
+      assert_equal "9784873115658", body["isbn"]
+      assert_equal true, body["found"]
+      assert_equal "リーダブルコード", body["title"]
+      assert_equal "book", body["media_type"]
+    end
+
+    test "lookup は該当なしでも found:false と形態判定を返す（雑誌）" do
+      stub_openbd_fetch(nil) do
+        get lookup_api_books_url, params: { isbn: "4910000000000" }
+      end
+      assert_response :success
+      body = JSON.parse(response.body)
+      assert_equal false, body["found"]
+      assert_nil body["title"]
+      assert_equal "magazine", body["media_type"]
+    end
+
+    test "lookup は不正な ISBN で 422" do
+      get lookup_api_books_url, params: { isbn: "123" }
+      assert_response :unprocessable_content
+    end
   end
 end

@@ -7,7 +7,11 @@ Rails.application.routes.draw do
 
   # アプリ API（フロントは Vite プロキシ経由で /api/* を叩く）
   namespace :api do
-    resources :books, only: %i[index show create update destroy]
+    resources :books, only: %i[index show create update destroy] do
+      collection do
+        get :lookup # GET /api/books/lookup?isbn=（openBD 照会）
+      end
+    end
   end
 
   # Defines the root path route ("/")
