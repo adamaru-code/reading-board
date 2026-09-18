@@ -42,6 +42,7 @@ export interface Book {
   rating: number | null
   memo: string | null
   position: number | null
+  tags: string[]
   created_at: string
   updated_at: string
 }
@@ -56,6 +57,7 @@ export interface BookCreateInput {
   rating?: number | null
   memo?: string | null
   position?: number | null
+  tags?: string[]
 }
 
 // 更新時の入力（全項目任意）

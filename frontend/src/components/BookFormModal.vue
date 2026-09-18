@@ -38,6 +38,20 @@ const form = reactive({
   memo: props.book?.memo ?? '',
 })
 
+// タグ（チップ入力）
+const tags = ref<string[]>([...(props.book?.tags ?? [])])
+const tagInput = ref('')
+
+function addTag() {
+  const name = tagInput.value.trim()
+  if (name !== '' && !tags.value.includes(name)) tags.value.push(name)
+  tagInput.value = ''
+}
+
+function removeTag(name: string) {
+  tags.value = tags.value.filter((t) => t !== name)
+}
+
 const errors = ref<string[]>([])
 const submitting = ref(false)
 
@@ -50,6 +64,7 @@ function buildInput(): BookCreateInput {
     media_type: form.media_type,
     rating: form.rating === 0 ? null : form.rating,
     memo: form.memo.trim() === '' ? null : form.memo.trim(),
+    tags: tags.value,
   }
 }
 
@@ -146,6 +161,23 @@ async function onDelete() {
           <textarea v-model="form.memo" rows="3"></textarea>
         </label>
 
+        <div class="field">
+          <span class="field-label">タグ</span>
+          <div v-if="tags.length" class="tag-list">
+            <span v-for="tag in tags" :key="tag" class="tag-chip">
+              {{ tag }}
+              <button type="button" class="tag-remove" :aria-label="`${tag} を削除`" @click="removeTag(tag)">×</button>
+            </span>
+          </div>
+          <input
+            v-model="tagInput"
+            type="text"
+            placeholder="タグを入力して Enter"
+            @keydown.enter.prevent="addTag"
+            @keydown.,.prevent="addTag"
+          />
+        </div>
+
         <div class="modal-actions">
           <button
             v-if="isEdit"
@@ -231,6 +263,32 @@ async function onDelete() {
 }
 .field textarea {
   resize: vertical;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  background: #ebecf0;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.tag-remove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
 }
 
 .modal-actions {

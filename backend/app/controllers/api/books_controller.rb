@@ -7,7 +7,7 @@ module Api
     # GET /api/books
     # status（enum キー）・author（部分一致）で絞り込める。併用は AND。
     def index
-      books = Book.all
+      books = Book.includes(:tags) # タグの N+1 を回避
       books = books.where(status: params[:status]) if valid_status?(params[:status])
       books = books.where("author LIKE ?", "%#{params[:author]}%") if params[:author].present?
       books = books.order(:position, :created_at)
@@ -52,7 +52,12 @@ module Api
     end
 
     def book_params
-      params.require(:book).permit(:title, :author, :status, :rating, :memo, :position, :genre, :media_type)
+      permitted = params.require(:book).permit(
+        :title, :author, :status, :rating, :memo, :position, :genre, :media_type, tags: []
+      )
+      # API の tags(名称配列) はモデルの tag_names= で受ける
+      permitted[:tag_names] = permitted.delete(:tags) if permitted.key?(:tags)
+      permitted
     end
 
     # enum に存在するキーのみ絞り込み条件に使う（不正値は無視）
@@ -71,6 +76,7 @@ module Api
         rating: book.rating,
         memo: book.memo,
         position: book.position,
+        tags: book.tags.map(&:name),
         created_at: book.created_at,
         updated_at: book.updated_at
       }

@@ -25,6 +25,9 @@ const stars = () => {
     <div v-if="book.rating" class="card-stars" :aria-label="`評価 ${book.rating} / 5`">
       <span v-for="(on, i) in stars()" :key="i" :class="on ? 'on' : 'off'">★</span>
     </div>
+    <div v-if="book.tags.length" class="card-tags">
+      <span v-for="tag in book.tags" :key="tag" class="tag-chip">{{ tag }}</span>
+    </div>
   </article>
 </template>
 
@@ -100,5 +103,19 @@ const stars = () => {
 }
 .card-stars .off {
   color: var(--star-empty);
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.tag-chip {
+  font-size: 10px;
+  color: var(--text-sub);
+  background: #ebecf0;
+  border-radius: 4px;
+  padding: 1px 6px;
 }
 </style>
