@@ -8,6 +8,20 @@ class Book < ApplicationRecord
   # 形態（書籍 / 雑誌）。値名 book が scope 名と紛らわしいため prefix を付ける
   enum :media_type, { book: 0, magazine: 1 }, default: :book, prefix: :media
 
+  # タグ（多対多）。API とは名称配列でやり取りする
+  has_many :book_tags, dependent: :destroy
+  has_many :tags, through: :book_tags
+
   validates :title, presence: true, length: { maximum: 255 }
   validates :rating, inclusion: { in: 0..5 }, allow_nil: true
+
+  # tags: string[] を受け取り、正規化して find_or_create で紐づける
+  def tag_names=(names)
+    cleaned = Array(names).map { |name| name.to_s.strip }.reject(&:blank?).uniq
+    self.tags = cleaned.map { |name| Tag.find_or_create_by(name: name) }
+  end
+
+  def tag_names
+    tags.map(&:name)
+  end
 end

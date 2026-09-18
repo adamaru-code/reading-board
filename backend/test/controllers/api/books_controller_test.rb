@@ -92,6 +92,25 @@ module Api
       assert_response :unprocessable_content
     end
 
+    test "create は tags を保存し、JSON に名称配列で含む" do
+      post api_books_url, params: { book: { title: "タグ本", tags: ["名著", "入門"] } }
+      assert_response :created
+      assert_equal %w[名著 入門], JSON.parse(response.body)["tags"]
+    end
+
+    test "index / show の JSON は tags を含む" do
+      @book.tags << Tag.create!(name: "既読")
+      get api_book_url(@book)
+      assert_includes JSON.parse(response.body)["tags"], "既読"
+    end
+
+    test "update で tags を差し替えられる" do
+      @book.update!(tag_names: ["旧"])
+      patch api_book_url(@book), params: { book: { tags: ["新A", "新B"] } }
+      assert_response :success
+      assert_equal %w[新A 新B], @book.reload.tags.map(&:name)
+    end
+
     test "update は属性を更新する" do
       patch api_book_url(@book), params: { book: { status: "read", rating: 5 } }
       assert_response :success
