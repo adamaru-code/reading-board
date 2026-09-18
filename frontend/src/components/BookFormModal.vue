@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { createBook, updateBook, deleteBook } from '../api/books'
+import { createBook, updateBook, deleteBook, lookupBook } from '../api/books'
 import { ApiError } from '../api/http'
 import {
   BOOK_STATUSES,
@@ -50,6 +50,35 @@ function addTag() {
 
 function removeTag(name: string) {
   tags.value = tags.value.filter((t) => t !== name)
+}
+
+// ISBN 照会（追加時のみ）。成功でタイトル/著者/形態を反映
+const isbnInput = ref('')
+const lookingUp = ref(false)
+const lookupMessage = ref('')
+
+async function onLookup() {
+  const isbn = isbnInput.value.trim()
+  if (isbn === '') return
+  lookingUp.value = true
+  lookupMessage.value = ''
+  errors.value = []
+  try {
+    const result = await lookupBook(isbn)
+    form.media_type = result.media_type
+    if (result.found) {
+      if (result.title) form.title = result.title
+      if (result.author) form.author = result.author
+      lookupMessage.value = '書誌情報を取得しました。'
+    } else {
+      lookupMessage.value = '該当が見つかりませんでした。タイトルを手入力してください。'
+    }
+  } catch (e) {
+    errors.value =
+      e instanceof ApiError && e.errors.length > 0 ? e.errors : ['ISBN 照会に失敗しました。']
+  } finally {
+    lookingUp.value = false
+  }
 }
 
 const errors = ref<string[]>([])
@@ -117,6 +146,23 @@ async function onDelete() {
       </ul>
 
       <form @submit.prevent="onSubmit">
+        <div v-if="!isEdit" class="field isbn-lookup">
+          <span class="field-label">ISBN / バーコードで登録</span>
+          <div class="isbn-row">
+            <input
+              v-model="isbnInput"
+              type="text"
+              inputmode="numeric"
+              placeholder="ISBN / JAN（13桁 or 10桁）"
+              @keydown.enter.prevent="onLookup"
+            />
+            <button type="button" class="btn btn-ghost" :disabled="lookingUp" @click="onLookup">
+              {{ lookingUp ? '照会中…' : '検索' }}
+            </button>
+          </div>
+          <p v-if="lookupMessage" class="isbn-message">{{ lookupMessage }}</p>
+        </div>
+
         <label class="field">
           <span class="field-label">タイトル<span class="required">必須</span></span>
           <input v-model="form.title" type="text" required autofocus />
@@ -239,6 +285,23 @@ async function onDelete() {
 .field {
   display: block;
   margin-bottom: 14px;
+}
+.isbn-lookup {
+  padding: 10px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+.isbn-row {
+  display: flex;
+  gap: 8px;
+}
+.isbn-row input {
+  flex: 1;
+}
+.isbn-message {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-sub);
 }
 .field-label {
   display: block;

@@ -5,6 +5,7 @@ import type {
   BookCreateInput,
   BookUpdateInput,
   BookListParams,
+  BookLookupResult,
 } from '../types/book'
 
 // GET /api/books （status・author で絞り込み可）
@@ -37,4 +38,9 @@ export function updateBook(id: number, input: BookUpdateInput): Promise<Book> {
 // DELETE /api/books/:id
 export function deleteBook(id: number): Promise<void> {
   return request<void>(`/books/${id}`, { method: 'DELETE' })
+}
+
+// GET /api/books/lookup?isbn= （openBD 照会）
+export function lookupBook(isbn: string): Promise<BookLookupResult> {
+  return request<BookLookupResult>('/books/lookup', { query: { isbn } })
 }
