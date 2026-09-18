@@ -91,6 +91,46 @@ onMounted(() => {
   loadTagOptions()
 })
 
+// ---------- 読了カラムの並び替え ----------
+const SORT_KEYS = [
+  { key: 'finished_on', label: '読了日' },
+  { key: 'rating', label: '評価' },
+  { key: 'registered_on', label: '登録日' },
+  { key: 'duration_days', label: '所要日数' },
+] as const
+type SortKey = (typeof SORT_KEYS)[number]['key']
+
+const readSort = reactive<{ key: SortKey; dir: 'asc' | 'desc' }>({
+  key: 'finished_on',
+  dir: 'desc',
+})
+
+function toggleSortDir() {
+  readSort.dir = readSort.dir === 'asc' ? 'desc' : 'asc'
+}
+
+function sortValue(book: Book, key: SortKey): number | string | null {
+  return book[key]
+}
+
+// 読了カラムだけ並び替え、他はそのまま。値が無いカードは常に末尾。
+function columnBooks(status: BookStatus): Book[] {
+  const list = booksByStatus.value[status]
+  if (status !== 'read') return list
+
+  const factor = readSort.dir === 'asc' ? 1 : -1
+  return [...list].sort((a, b) => {
+    const av = sortValue(a, readSort.key)
+    const bv = sortValue(b, readSort.key)
+    if (av === null && bv === null) return 0
+    if (av === null) return 1
+    if (bv === null) return -1
+    if (av < bv) return -1 * factor
+    if (av > bv) return 1 * factor
+    return 0
+  })
+}
+
 // ---------- ドラッグ&ドロップでのステータス更新 ----------
 const draggingId = ref<number | null>(null)
 const dragOverStatus = ref<BookStatus | null>(null)
@@ -217,10 +257,23 @@ function onModalDone() {
         <div class="column-header">
           <span class="column-title">{{ COLUMN_LABELS[status] }}</span>
           <span class="column-count">{{ booksByStatus[status].length }}</span>
+          <div v-if="status === 'read'" class="sort-control">
+            <select v-model="readSort.key" aria-label="読了カラムの並び替え">
+              <option v-for="s in SORT_KEYS" :key="s.key" :value="s.key">{{ s.label }}</option>
+            </select>
+            <button
+              type="button"
+              class="sort-dir"
+              :aria-label="readSort.dir === 'asc' ? '昇順' : '降順'"
+              @click="toggleSortDir"
+            >
+              {{ readSort.dir === 'asc' ? '▲' : '▼' }}
+            </button>
+          </div>
         </div>
         <div class="card-list">
           <BookCard
-            v-for="book in booksByStatus[status]"
+            v-for="book in columnBooks(status)"
             :key="book.id"
             :book="book"
             draggable="true"
@@ -360,6 +413,29 @@ function onModalDone() {
   background: #dfe1e6;
   border-radius: 999px;
   padding: 1px 8px;
+}
+
+.sort-control {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sort-control select {
+  font-size: 11px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.sort-dir {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
 }
 
 .card-list {
