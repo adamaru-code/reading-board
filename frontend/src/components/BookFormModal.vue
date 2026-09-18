@@ -10,6 +10,7 @@ import {
   MEDIA_TYPE_LABELS,
 } from '../types/book'
 import type { Book, BookStatus, BookGenre, BookMediaType, BookCreateInput } from '../types/book'
+import { suggestTags } from '../lib/tagSuggestions'
 
 // book が渡されれば編集モード、null なら新規追加モード
 const props = defineProps<{ book: Book | null }>()
@@ -50,6 +51,13 @@ function addTag() {
 
 function removeTag(name: string) {
   tags.value = tags.value.filter((t) => t !== name)
+}
+
+// タイトル・著者からの候補タグ（入力済みは除外）
+const suggestedTags = computed(() => suggestTags(form.title, form.author, tags.value))
+
+function addSuggestedTag(tag: string) {
+  if (!tags.value.includes(tag)) tags.value.push(tag)
 }
 
 // ISBN 照会（追加時のみ）。成功でタイトル/著者/形態を反映
@@ -222,6 +230,18 @@ async function onDelete() {
             @keydown.enter.prevent="addTag"
             @keydown.,.prevent="addTag"
           />
+          <div v-if="suggestedTags.length" class="tag-suggest">
+            <span class="tag-suggest-label">候補:</span>
+            <button
+              v-for="tag in suggestedTags"
+              :key="tag"
+              type="button"
+              class="tag-suggest-chip"
+              @click="addSuggestedTag(tag)"
+            >
+              ＋ {{ tag }}
+            </button>
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -352,6 +372,27 @@ async function onDelete() {
   font-size: 14px;
   line-height: 1;
   padding: 0;
+}
+
+.tag-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tag-suggest-label {
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.tag-suggest-chip {
+  font-size: 12px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  color: var(--primary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
 }
 
 .modal-actions {
