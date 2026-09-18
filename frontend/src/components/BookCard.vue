@@ -10,6 +10,19 @@ const stars = () => {
   if (!rating) return []
   return [1, 2, 3, 4, 5].map((n) => n <= rating)
 }
+
+// カードが居るカラム（status）に対応する日付ラベルと値
+const columnDate = () => {
+  const b = props.book
+  switch (b.status) {
+    case 'want_to_read':
+      return b.registered_on ? { label: '登録', on: b.registered_on } : null
+    case 'reading':
+      return b.started_on ? { label: '開始', on: b.started_on } : null
+    case 'read':
+      return b.finished_on ? { label: '読了', on: b.finished_on } : null
+  }
+}
 </script>
 
 <template>
@@ -27,6 +40,12 @@ const stars = () => {
     </div>
     <div v-if="book.tags.length" class="card-tags">
       <span v-for="tag in book.tags" :key="tag" class="tag-chip">{{ tag }}</span>
+    </div>
+    <div v-if="columnDate() || book.duration_days !== null" class="card-meta">
+      <span v-if="columnDate()">{{ columnDate()!.label }} {{ columnDate()!.on }}</span>
+      <span v-if="book.status === 'read' && book.duration_days !== null" class="duration">
+        {{ book.duration_days }}日で読了
+      </span>
     </div>
   </article>
 </template>
@@ -117,5 +136,18 @@ const stars = () => {
   background: #ebecf0;
   border-radius: 4px;
   padding: 1px 6px;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.card-meta .duration {
+  color: var(--col-read);
+  font-weight: 700;
 }
 </style>
