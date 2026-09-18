@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, nextTick, onBeforeUnmount } from 'vue'
 import { createBook, updateBook, deleteBook, lookupBook } from '../api/books'
 import { ApiError } from '../api/http'
 import {
@@ -89,6 +89,71 @@ async function onLookup() {
   }
 }
 
+// バーコード（EAN-13）カメラ読取。対応環境（BarcodeDetector + secure context）でのみ有効
+const scanSupported =
+  typeof window !== 'undefined' &&
+  'BarcodeDetector' in window &&
+  !!navigator.mediaDevices?.getUserMedia &&
+  window.isSecureContext
+
+const scanning = ref(false)
+const scanError = ref('')
+const videoEl = ref<HTMLVideoElement | null>(null)
+let mediaStream: MediaStream | null = null
+let barcodeDetector: BarcodeDetector | null = null
+let scanRAF: number | undefined
+
+async function startScan() {
+  if (!scanSupported) return
+  scanError.value = ''
+  try {
+    barcodeDetector ||= new BarcodeDetector({ formats: ['ean_13'] })
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    scanning.value = true
+    await nextTick() // video 要素が描画されてから接続
+    if (videoEl.value) {
+      videoEl.value.srcObject = mediaStream
+      await videoEl.value.play()
+    }
+    scanLoop()
+  } catch {
+    scanError.value = 'カメラを起動できませんでした。ISBN手入力をご利用ください。'
+    stopScan()
+  }
+}
+
+async function scanLoop() {
+  if (!mediaStream || !barcodeDetector || !videoEl.value) return
+  try {
+    const codes = await barcodeDetector.detect(videoEl.value)
+    if (codes.length > 0) {
+      isbnInput.value = codes[0].rawValue
+      stopScan()
+      onLookup() // 読み取ったら即照会
+      return
+    }
+  } catch {
+    // 一時的な検出失敗は無視して次フレームへ
+  }
+  scanRAF = requestAnimationFrame(scanLoop)
+}
+
+function stopScan() {
+  if (scanRAF !== undefined) {
+    cancelAnimationFrame(scanRAF)
+    scanRAF = undefined
+  }
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((track) => track.stop())
+    mediaStream = null
+  }
+  if (videoEl.value) videoEl.value.srcObject = null
+  scanning.value = false
+}
+
+// モーダル破棄時にカメラを確実に停止
+onBeforeUnmount(stopScan)
+
 const errors = ref<string[]>([])
 const submitting = ref(false)
 
@@ -167,8 +232,22 @@ async function onDelete() {
             <button type="button" class="btn btn-ghost" :disabled="lookingUp" @click="onLookup">
               {{ lookingUp ? '照会中…' : '検索' }}
             </button>
+            <button
+              v-if="scanSupported && !scanning"
+              type="button"
+              class="btn btn-ghost"
+              @click="startScan"
+            >
+              📷 カメラ
+            </button>
+            <button v-if="scanning" type="button" class="btn btn-ghost" @click="stopScan">停止</button>
+          </div>
+          <div v-if="scanning" class="scanner">
+            <video ref="videoEl" class="scan-video" playsinline muted></video>
+            <p class="isbn-message">バーコードを枠内に写してください</p>
           </div>
           <p v-if="lookupMessage" class="isbn-message">{{ lookupMessage }}</p>
+          <p v-if="scanError" class="isbn-message scan-error">{{ scanError }}</p>
         </div>
 
         <label class="field">
@@ -322,6 +401,19 @@ async function onDelete() {
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--text-sub);
+}
+.scan-error {
+  color: var(--danger);
+}
+.scanner {
+  margin-top: 8px;
+}
+.scan-video {
+  width: 100%;
+  max-height: 220px;
+  background: #000;
+  border-radius: 6px;
+  object-fit: cover;
 }
 .field-label {
   display: block;
