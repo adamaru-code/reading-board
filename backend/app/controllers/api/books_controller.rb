@@ -9,7 +9,12 @@ module Api
     def index
       books = Book.includes(:tags) # タグの N+1 を回避
       books = books.where(status: params[:status]) if valid_status?(params[:status])
+      books = books.where(genre: params[:genre]) if valid_genre?(params[:genre])
       books = books.where("author LIKE ?", "%#{params[:author]}%") if params[:author].present?
+      # タグは名称で完全一致。includes と二重 JOIN しないよう id サブクエリで絞る
+      if params[:tag].present?
+        books = books.where(id: Book.joins(:tags).where(tags: { name: params[:tag] }))
+      end
       books = books.order(:position, :created_at)
       render json: books.map { |book| book_json(book) }
     end
@@ -63,6 +68,10 @@ module Api
     # enum に存在するキーのみ絞り込み条件に使う（不正値は無視）
     def valid_status?(status)
       status.present? && Book.statuses.key?(status)
+    end
+
+    def valid_genre?(genre)
+      genre.present? && Book.genres.key?(genre)
     end
 
     def book_json(book)

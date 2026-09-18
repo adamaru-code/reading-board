@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { listBooks, updateBook } from '../api/books'
 import { ApiError } from '../api/http'
-import { BOOK_STATUSES } from '../types/book'
-import type { Book, BookStatus } from '../types/book'
+import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
+import type { Book, BookStatus, BookGenre, BookListParams } from '../types/book'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
 
@@ -17,6 +17,48 @@ const COLUMN_LABELS: Record<BookStatus, string> = {
 const books = ref<Book[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+// ---------- 絞り込み ----------
+const filters = reactive<{ genre: '' | BookGenre; author: string; tag: string }>({
+  genre: '',
+  author: '',
+  tag: '',
+})
+// タグ選択肢は絞り込みで痩せないよう、未絞り込みの一覧から集める
+const tagOptions = ref<string[]>([])
+const hasFilters = computed(
+  () => filters.genre !== '' || filters.author.trim() !== '' || filters.tag !== '',
+)
+
+function activeParams(): BookListParams {
+  const params: BookListParams = {}
+  if (filters.genre !== '') params.genre = filters.genre
+  if (filters.author.trim() !== '') params.author = filters.author.trim()
+  if (filters.tag !== '') params.tag = filters.tag
+  return params
+}
+
+let authorTimer: ReturnType<typeof setTimeout> | undefined
+function onAuthorInput() {
+  clearTimeout(authorTimer)
+  authorTimer = setTimeout(loadBooks, 300) // 入力が落ち着いてから再取得
+}
+
+function clearFilters() {
+  filters.genre = ''
+  filters.author = ''
+  filters.tag = ''
+  loadBooks()
+}
+
+async function loadTagOptions() {
+  try {
+    const all = await listBooks()
+    tagOptions.value = [...new Set(all.flatMap((b) => b.tags))].sort()
+  } catch {
+    // タグ選択肢の取得失敗はボード表示を妨げないので黙って諦める
+  }
+}
 
 // status ごとに書籍を振り分ける
 const booksByStatus = computed<Record<BookStatus, Book[]>>(() => {
@@ -35,7 +77,7 @@ async function loadBooks() {
   loading.value = true
   error.value = null
   try {
-    books.value = await listBooks()
+    books.value = await listBooks(activeParams())
   } catch (e) {
     error.value =
       e instanceof ApiError ? e.message : '書籍の取得に失敗しました。時間をおいて再度お試しください。'
@@ -44,7 +86,10 @@ async function loadBooks() {
   }
 }
 
-onMounted(loadBooks)
+onMounted(() => {
+  loadBooks()
+  loadTagOptions()
+})
 
 // ---------- ドラッグ&ドロップでのステータス更新 ----------
 const draggingId = ref<number | null>(null)
@@ -111,10 +156,11 @@ function closeModal() {
   editingBook.value = null
 }
 
-// 保存/削除後はボードを再取得して反映
+// 保存/削除後はボードとタグ選択肢を再取得して反映
 function onModalDone() {
   closeModal()
   loadBooks()
+  loadTagOptions()
 }
 </script>
 
@@ -122,7 +168,32 @@ function onModalDone() {
   <div class="app">
     <header class="app-header">
       <h1 class="app-title">📚 読書管理ボード</h1>
-      <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
+      <div class="filters">
+        <input
+          v-model="filters.author"
+          type="search"
+          class="filter-author"
+          placeholder="著者名で絞り込み"
+          aria-label="著者名で絞り込み"
+          @input="onAuthorInput"
+        />
+        <label class="filter-field">
+          ジャンル
+          <select v-model="filters.genre" @change="loadBooks">
+            <option value="">すべて</option>
+            <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          タグ
+          <select v-model="filters.tag" @change="loadBooks">
+            <option value="">すべて</option>
+            <option v-for="t in tagOptions" :key="t" :value="t">{{ t }}</option>
+          </select>
+        </label>
+        <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">クリア</button>
+        <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
+      </div>
     </header>
 
     <p v-if="loading" class="board-state">読み込み中…</p>
@@ -186,6 +257,39 @@ function onModalDone() {
 .app-title {
   font-size: 20px;
   font-weight: 700;
+}
+.filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.filter-author {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.filter-field select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+.clear-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font: inherit;
+  cursor: pointer;
 }
 .add-btn {
   background: var(--primary);

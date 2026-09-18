@@ -63,8 +63,10 @@ export interface BookCreateInput {
 // 更新時の入力（全項目任意）
 export type BookUpdateInput = Partial<BookCreateInput>
 
-// 一覧の絞り込み条件（status・author の部分一致。互いに AND）
+// 一覧の絞り込み条件（互いに AND。author は部分一致、genre/tag は完全一致）
 export interface BookListParams {
   status?: BookStatus
+  genre?: BookGenre
   author?: string
+  tag?: string
 }

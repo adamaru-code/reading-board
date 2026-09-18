@@ -10,7 +10,12 @@ import type {
 // GET /api/books （status・author で絞り込み可）
 export function listBooks(params: BookListParams = {}): Promise<Book[]> {
   return request<Book[]>('/books', {
-    query: { status: params.status, author: params.author },
+    query: {
+      status: params.status,
+      genre: params.genre,
+      author: params.author,
+      tag: params.tag,
+    },
   })
 }
 
