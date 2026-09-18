@@ -35,6 +35,37 @@ module Api
       assert_equal [@book.id], body.map { |b| b["id"] }
     end
 
+    test "index は genre で絞り込める" do
+      target = Book.create!(title: "教養本", genre: :liberal_arts)
+      get api_books_url, params: { genre: "liberal_arts" }
+      assert_response :success
+      ids = JSON.parse(response.body).map { |b| b["id"] }
+      assert_includes ids, target.id
+      assert_not_includes ids, @book.id # fixture は既定 other
+    end
+
+    test "index は不正な genre を無視して全件返す" do
+      get api_books_url, params: { genre: "sci_fi" }
+      assert_response :success
+      assert_equal Book.count, JSON.parse(response.body).size
+    end
+
+    test "index は tag（名称）で絞り込める" do
+      tagged = Book.create!(title: "名著本", tag_names: ["名著"])
+      get api_books_url, params: { tag: "名著" }
+      assert_response :success
+      ids = JSON.parse(response.body).map { |b| b["id"] }
+      assert_equal [tagged.id], ids
+    end
+
+    test "index は複数条件を AND で併用できる" do
+      hit = Book.create!(title: "hit", status: :reading, genre: :liberal_arts, author: "Ada")
+      Book.create!(title: "miss", status: :read, genre: :liberal_arts, author: "Ada")
+      get api_books_url, params: { status: "reading", genre: "liberal_arts", author: "Ada" }
+      assert_response :success
+      assert_equal [hit.id], JSON.parse(response.body).map { |b| b["id"] }
+    end
+
     test "show は書籍を返す" do
       get api_book_url(@book)
       assert_response :success
