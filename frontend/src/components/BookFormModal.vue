@@ -2,8 +2,14 @@
 import { ref, reactive, computed } from 'vue'
 import { createBook, updateBook, deleteBook } from '../api/books'
 import { ApiError } from '../api/http'
-import { BOOK_STATUSES } from '../types/book'
-import type { Book, BookStatus, BookCreateInput } from '../types/book'
+import {
+  BOOK_STATUSES,
+  BOOK_GENRES,
+  GENRE_LABELS,
+  BOOK_MEDIA_TYPES,
+  MEDIA_TYPE_LABELS,
+} from '../types/book'
+import type { Book, BookStatus, BookGenre, BookMediaType, BookCreateInput } from '../types/book'
 
 // book が渡されれば編集モード、null なら新規追加モード
 const props = defineProps<{ book: Book | null }>()
@@ -26,6 +32,8 @@ const form = reactive({
   title: props.book?.title ?? '',
   author: props.book?.author ?? '',
   status: props.book?.status ?? ('want_to_read' as BookStatus),
+  genre: props.book?.genre ?? ('other' as BookGenre),
+  media_type: props.book?.media_type ?? ('book' as BookMediaType),
   rating: props.book?.rating ?? 0, // 0 = 未評価
   memo: props.book?.memo ?? '',
 })
@@ -38,6 +46,8 @@ function buildInput(): BookCreateInput {
     title: form.title.trim(),
     author: form.author.trim() === '' ? null : form.author.trim(),
     status: form.status,
+    genre: form.genre,
+    media_type: form.media_type,
     rating: form.rating === 0 ? null : form.rating,
     memo: form.memo.trim() === '' ? null : form.memo.trim(),
   }
@@ -106,6 +116,20 @@ async function onDelete() {
           <span class="field-label">ステータス</span>
           <select v-model="form.status">
             <option v-for="s in BOOK_STATUSES" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">ジャンル</span>
+          <select v-model="form.genre">
+            <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">形態</span>
+          <select v-model="form.media_type">
+            <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">{{ MEDIA_TYPE_LABELS[m] }}</option>
           </select>
         </label>
 

@@ -52,7 +52,7 @@ module Api
     end
 
     def book_params
-      params.require(:book).permit(:title, :author, :status, :rating, :memo, :position)
+      params.require(:book).permit(:title, :author, :status, :rating, :memo, :position, :genre, :media_type)
     end
 
     # enum に存在するキーのみ絞り込み条件に使う（不正値は無視）
@@ -66,6 +66,8 @@ module Api
         title: book.title,
         author: book.author,
         status: book.status,
+        genre: book.genre,
+        media_type: book.media_type,
         rating: book.rating,
         memo: book.memo,
         position: book.position,

@@ -69,6 +69,29 @@ module Api
       assert_response :unprocessable_content
     end
 
+    test "create は genre / media_type を保存し、JSON に含む" do
+      post api_books_url, params: { book: { title: "雑誌サンプル", genre: "liberal_arts", media_type: "magazine" } }
+      assert_response :created
+      body = JSON.parse(response.body)
+      assert_equal "liberal_arts", body["genre"]
+      assert_equal "magazine", body["media_type"]
+    end
+
+    test "genre / media_type 未指定なら既定値になる" do
+      post api_books_url, params: { book: { title: "既定サンプル" } }
+      assert_response :created
+      body = JSON.parse(response.body)
+      assert_equal "other", body["genre"]
+      assert_equal "book", body["media_type"]
+    end
+
+    test "create は不正な genre で 422" do
+      assert_no_difference "Book.count" do
+        post api_books_url, params: { book: { title: "x", genre: "sci_fi" } }
+      end
+      assert_response :unprocessable_content
+    end
+
     test "update は属性を更新する" do
       patch api_book_url(@book), params: { book: { status: "read", rating: 5 } }
       assert_response :success

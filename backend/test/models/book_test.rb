@@ -19,6 +19,18 @@ class BookTest < ActiveSupport::TestCase
     assert_equal "want_to_read", Book.new.status
   end
 
+  test "genre は 5 種を扱え、デフォルトは other" do
+    assert_equal %w[classic_novel liberal_arts health_body practical other], Book.genres.keys
+    assert_equal "other", Book.new.genre
+    assert Book.new(title: "x", genre: :liberal_arts).liberal_arts?
+  end
+
+  test "media_type は書籍/雑誌を扱え、デフォルトは book" do
+    assert_equal %w[book magazine], Book.media_types.keys
+    assert_equal "book", Book.new.media_type
+    assert Book.new(title: "x", media_type: :magazine).media_magazine?
+  end
+
   test "title が無いと無効" do
     book = Book.new(title: nil)
     assert_not book.valid?
