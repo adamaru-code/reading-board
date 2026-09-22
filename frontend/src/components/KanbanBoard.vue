@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { listBooks, updateBook } from '../api/books'
+import { listBooks, updateBook, reorderBooks } from '../api/books'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type { Book, BookStatus, BookGenre, BookListParams } from '../types/book'
@@ -60,7 +60,7 @@ async function loadTagOptions() {
   }
 }
 
-// status ごとに書籍を振り分ける
+// status ごとに書籍を振り分ける（各カラムは position 昇順・未設定は後ろ→ created_at）
 const booksByStatus = computed<Record<BookStatus, Book[]>>(() => {
   const grouped: Record<BookStatus, Book[]> = {
     want_to_read: [],
@@ -69,6 +69,10 @@ const booksByStatus = computed<Record<BookStatus, Book[]>>(() => {
   }
   for (const book of books.value) {
     grouped[book.status].push(book)
+  }
+  const pos = (b: Book) => (b.position ?? Number.MAX_SAFE_INTEGER)
+  for (const status of BOOK_STATUSES) {
+    grouped[status].sort((a, b) => pos(a) - pos(b) || a.created_at.localeCompare(b.created_at))
   }
   return grouped
 })
@@ -155,24 +159,53 @@ function onDragEnd() {
   }, 0)
 }
 
-async function onDrop(status: BookStatus) {
+// ドロップ位置（カーソル Y）から、移動カードを除いた挿入インデックスを求める
+function dropIndex(section: HTMLElement, status: BookStatus, movedId: number, clientY: number): number {
+  const displayed = columnBooks(status)
+  const cardEls = Array.from(section.querySelectorAll<HTMLElement>('.card'))
+  let index = 0
+  for (let i = 0; i < cardEls.length; i++) {
+    const book = displayed[i]
+    if (!book || book.id === movedId) continue // 移動中のカード自身は無視
+    const rect = cardEls[i].getBoundingClientRect()
+    if (clientY < rect.top + rect.height / 2) break
+    index++
+  }
+  return index
+}
+
+async function onDrop(status: BookStatus, event: DragEvent) {
   const id = draggingId.value
   draggingId.value = null
   dragOverStatus.value = null
   if (id === null) return
 
   const book = books.value.find((b) => b.id === id)
-  if (!book || book.status === status) return
+  if (!book) return
 
-  // 楽観的更新：先に画面を書き換え、失敗したら元に戻す
-  const previous = book.status
-  book.status = status
+  const statusChanged = book.status !== status
+  const index = dropIndex(event.currentTarget as HTMLElement, status, id, event.clientY)
+
+  // 対象カラムの新しい id 順（移動カードを除いて挿入位置へ）
+  const targetIds = booksByStatus.value[status].map((b) => b.id).filter((x) => x !== id)
+  targetIds.splice(index, 0, id)
+
+  // 楽観的更新：status と position をローカルに反映（失敗時はサーバーから再取得）
+  const previousStatus = book.status
+  if (statusChanged) book.status = status
+  targetIds.forEach((bookId, i) => {
+    const target = books.value.find((b) => b.id === bookId)
+    if (target) target.position = i
+  })
+
   try {
-    await updateBook(id, { status })
+    if (statusChanged) await updateBook(id, { status })
+    await reorderBooks(targetIds)
   } catch (e) {
-    book.status = previous
+    if (statusChanged) book.status = previousStatus
     error.value =
-      e instanceof ApiError ? e.message : 'ステータスの更新に失敗しました。時間をおいて再度お試しください。'
+      e instanceof ApiError ? e.message : '並び替えに失敗しました。時間をおいて再度お試しください。'
+    loadBooks() // 状態を確実に元へ戻す
   }
 }
 
@@ -252,7 +285,7 @@ function onModalDone() {
         :data-status="status"
         @dragover.prevent="dragOverStatus = status"
         @dragleave="dragOverStatus = null"
-        @drop.prevent="onDrop(status)"
+        @drop.prevent="onDrop(status, $event)"
       >
         <div class="column-header">
           <span class="column-title">{{ COLUMN_LABELS[status] }}</span>

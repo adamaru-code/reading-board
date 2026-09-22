@@ -15,7 +15,8 @@ module Api
       if params[:tag].present?
         books = books.where(id: Book.joins(:tags).where(tags: { name: params[:tag] }))
       end
-      books = books.order(:position, :created_at)
+      # position 昇順（未設定は後ろ）→ created_at
+      books = books.order(Arel.sql("position IS NULL, position ASC, created_at ASC"))
       render json: books.map { |book| book_json(book) }
     end
 
@@ -65,6 +66,18 @@ module Api
     # DELETE /api/books/:id
     def destroy
       find_book.destroy
+      head :no_content
+    end
+
+    # PATCH /api/books/reorder
+    # 渡された id 順に position を 0..n-1 で保存（カラム内の並び順）
+    def reorder
+      ids = Array(params[:ids]).map(&:to_i)
+      Book.transaction do
+        ids.each_with_index do |id, index|
+          Book.where(id: id).update_all(position: index)
+        end
+      end
       head :no_content
     end
 

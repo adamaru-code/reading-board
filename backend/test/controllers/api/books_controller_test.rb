@@ -207,5 +207,27 @@ module Api
       get lookup_api_books_url, params: { isbn: "123" }
       assert_response :unprocessable_content
     end
+
+    test "reorder は渡した id 順に position を保存する" do
+      a = Book.create!(title: "A")
+      b = Book.create!(title: "B")
+      c = Book.create!(title: "C")
+      patch reorder_api_books_url, params: { ids: [c.id, a.id, b.id] }
+      assert_response :no_content
+      assert_equal 0, c.reload.position
+      assert_equal 1, a.reload.position
+      assert_equal 2, b.reload.position
+    end
+
+    test "index は position 昇順（未設定は後ろ）で返る" do
+      Book.delete_all
+      old = Book.create!(title: "古い未設定")
+      a = Book.create!(title: "後で1番")
+      b = Book.create!(title: "後で2番")
+      patch reorder_api_books_url, params: { ids: [b.id, a.id] }
+      get api_books_url
+      ids = JSON.parse(response.body).map { |x| x["id"] }
+      assert_equal [b.id, a.id, old.id], ids # position 付き→未設定の順
+    end
   end
 end

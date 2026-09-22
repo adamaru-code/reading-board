@@ -10,6 +10,7 @@ Rails.application.routes.draw do
     resources :books, only: %i[index show create update destroy] do
       collection do
         get :lookup # GET /api/books/lookup?isbn=（openBD 照会）
+        patch :reorder # PATCH /api/books/reorder（カラム内の並び順を保存）
       end
     end
   end
