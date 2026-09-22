@@ -1,17 +1,40 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { listAllBooks, updateBook, reorderBooks } from '../api/books'
+import { logout } from '../api/session'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type { Book, BookStatus, BookGenre, BookListParams } from '../types/book'
+import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
+
+defineProps<{ user: User }>()
+const emit = defineEmits<{ logout: [] }>()
 
 // カラムの見出しラベル
 const COLUMN_LABELS: Record<BookStatus, string> = {
   want_to_read: '読みたい',
   reading: '読書中',
   read: '読了',
+}
+
+// 操作中に 401 になったらログイン画面へ戻す
+function handleAuthError(e: unknown): boolean {
+  if (e instanceof ApiError && e.status === 401) {
+    emit('logout')
+    return true
+  }
+  return false
+}
+
+async function onLogout() {
+  try {
+    await logout()
+  } catch {
+    // 失敗してもフロントの状態はログアウト扱いにする
+  }
+  emit('logout')
 }
 
 const books = ref<Book[]>([])
@@ -83,6 +106,7 @@ async function loadBooks() {
   try {
     books.value = await listAllBooks(activeParams())
   } catch (e) {
+    if (handleAuthError(e)) return
     error.value =
       e instanceof ApiError ? e.message : '書籍の取得に失敗しました。時間をおいて再度お試しください。'
   } finally {
@@ -266,6 +290,8 @@ function onModalDone() {
         </label>
         <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">クリア</button>
         <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
+        <span class="user-email" :title="user.email">{{ user.email }}</span>
+        <button type="button" class="logout-btn" @click="onLogout">ログアウト</button>
       </div>
     </header>
 
@@ -388,6 +414,22 @@ function onModalDone() {
   border: none;
   border-radius: 6px;
   padding: 8px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+.user-email {
+  font-size: 12px;
+  color: var(--text-sub);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logout-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
   font: inherit;
   cursor: pointer;
 }
