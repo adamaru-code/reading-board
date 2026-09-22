@@ -7,6 +7,8 @@ Rails.application.routes.draw do
 
   # アプリ API（フロントは Vite プロキシ経由で /api/* を叩く）
   namespace :api do
+    resource :session, only: %i[show create destroy] # ログイン状態 / ログイン / ログアウト
+
     resources :books, only: %i[index show create update destroy] do
       collection do
         get :lookup # GET /api/books/lookup?isbn=（openBD 照会）

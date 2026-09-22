@@ -1,6 +1,7 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 readable_code:
+  user: owner
   title: リーダブルコード
   author: Dustin Boswell
   status: 1
@@ -9,5 +10,6 @@ readable_code:
   position: 1
 
 want_to_read_sample:
+  user: owner
   title: 達人プログラマー
   status: 0

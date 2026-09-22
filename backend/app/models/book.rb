@@ -1,4 +1,7 @@
 class Book < ApplicationRecord
+  # 所有者（単一ユーザー認証。1 対多）
+  belongs_to :user
+
   # カンバンのカラムに対応する状態（読みたい / 読書中 / 読了）
   enum :status, { want_to_read: 0, reading: 1, read: 2 }
 

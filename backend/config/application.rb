@@ -28,5 +28,9 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # セッション Cookie 認証のため Cookie ミドルウェアを明示的に有効化
+    # （api_only では既定で外れるため）
+    config.middleware.use ActionDispatch::Cookies
   end
 end

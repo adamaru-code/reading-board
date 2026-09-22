@@ -3,7 +3,10 @@ require "test_helper"
 module Api
   class BooksControllerTest < ActionDispatch::IntegrationTest
     setup do
-      @book = books(:readable_code) # status: reading, author: Dustin Boswell
+      @owner = users(:owner)
+      @book = books(:readable_code) # owner の本（status: reading, author: Dustin Boswell）
+      # 以降のリクエストは owner でログイン済み（Cookie がテスト内で維持される）
+      post api_session_url, params: { email: @owner.email, password: "password" }
     end
 
     test "index は items とページ情報を返す" do
@@ -38,7 +41,7 @@ module Api
     end
 
     test "index は genre で絞り込める" do
-      target = Book.create!(title: "教養本", genre: :liberal_arts)
+      target = @owner.books.create!(title: "教養本", genre: :liberal_arts)
       get api_books_url, params: { genre: "liberal_arts" }
       assert_response :success
       ids = JSON.parse(response.body)["items"].map { |b| b["id"] }
@@ -53,7 +56,7 @@ module Api
     end
 
     test "index は tag（名称）で絞り込める" do
-      tagged = Book.create!(title: "名著本", tag_names: ["名著"])
+      tagged = @owner.books.create!(title: "名著本", tag_names: ["名著"])
       get api_books_url, params: { tag: "名著" }
       assert_response :success
       ids = JSON.parse(response.body)["items"].map { |b| b["id"] }
@@ -61,8 +64,8 @@ module Api
     end
 
     test "index は複数条件を AND で併用できる" do
-      hit = Book.create!(title: "hit", status: :reading, genre: :liberal_arts, author: "Ada")
-      Book.create!(title: "miss", status: :read, genre: :liberal_arts, author: "Ada")
+      hit = @owner.books.create!(title: "hit", status: :reading, genre: :liberal_arts, author: "Ada")
+      @owner.books.create!(title: "miss", status: :read, genre: :liberal_arts, author: "Ada")
       get api_books_url, params: { status: "reading", genre: "liberal_arts", author: "Ada" }
       assert_response :success
       assert_equal [hit.id], JSON.parse(response.body)["items"].map { |b| b["id"] }
@@ -70,7 +73,7 @@ module Api
 
     test "index は per_page と page で分割し total を返す" do
       Book.delete_all
-      5.times { |i| Book.create!(title: "本#{i}") }
+      5.times { |i| @owner.books.create!(title: "本#{i}") }
       get api_books_url, params: { per_page: 2, page: 1 }
       body = JSON.parse(response.body)
       assert_equal 2, body["items"].size
@@ -86,6 +89,19 @@ module Api
       pagination = JSON.parse(response.body)["pagination"]
       assert_equal 200, pagination["per_page"]
       assert_equal 1, pagination["page"]
+    end
+
+    test "index は他ユーザーの本を含まない（所有者スコープ）" do
+      others = users(:other).books.create!(title: "他人の本")
+      get api_books_url
+      ids = JSON.parse(response.body)["items"].map { |b| b["id"] }
+      assert_not_includes ids, others.id
+    end
+
+    test "show は他ユーザーの本だと 404" do
+      others = users(:other).books.create!(title: "他人の本")
+      get api_book_url(others)
+      assert_response :not_found
     end
 
     test "show は書籍を返す" do
@@ -231,9 +247,9 @@ module Api
     end
 
     test "reorder は渡した id 順に position を保存する" do
-      a = Book.create!(title: "A")
-      b = Book.create!(title: "B")
-      c = Book.create!(title: "C")
+      a = @owner.books.create!(title: "A")
+      b = @owner.books.create!(title: "B")
+      c = @owner.books.create!(title: "C")
       patch reorder_api_books_url, params: { ids: [c.id, a.id, b.id] }
       assert_response :no_content
       assert_equal 0, c.reload.position
@@ -243,9 +259,9 @@ module Api
 
     test "index は position 昇順（未設定は後ろ）で返る" do
       Book.delete_all
-      old = Book.create!(title: "古い未設定")
-      a = Book.create!(title: "後で1番")
-      b = Book.create!(title: "後で2番")
+      old = @owner.books.create!(title: "古い未設定")
+      a = @owner.books.create!(title: "後で1番")
+      b = @owner.books.create!(title: "後で2番")
       patch reorder_api_books_url, params: { ids: [b.id, a.id] }
       get api_books_url
       ids = JSON.parse(response.body)["items"].map { |x| x["id"] }
