@@ -1,9 +1,80 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+# デモ / 動作確認用の初期データ。`bin/rails db:seed` で投入する。
+# タイトルをキーに find_or_create するので、複数回実行しても重複しない（冪等）。
+
+books = [
+  {
+    title: "リーダブルコード",
+    author: "Dustin Boswell",
+    status: :reading,
+    genre: :practical,
+    media_type: :book,
+    rating: 4,
+    memo: "命名と関数分割の章が特に良い。",
+    tags: %w[実践したい 名著],
+    events: { reading: 5.days.ago.to_date }
+  },
+  {
+    title: "達人プログラマー",
+    author: "Andrew Hunt",
+    status: :want_to_read,
+    genre: :practical,
+    media_type: :book,
+    tags: %w[積読]
+  },
+  {
+    title: "論語",
+    author: "孔子",
+    status: :read,
+    genre: :classic_novel,
+    media_type: :book,
+    rating: 5,
+    memo: "折に触れて読み返したい。",
+    tags: %w[東洋思想 古典 再読したい],
+    events: { reading: 30.days.ago.to_date, read: 10.days.ago.to_date }
+  },
+  {
+    title: "こころ",
+    author: "夏目漱石",
+    status: :read,
+    genre: :classic_novel,
+    media_type: :book,
+    rating: 4,
+    tags: %w[日本文学 名著],
+    events: { reading: 20.days.ago.to_date, read: 14.days.ago.to_date }
+  },
+  {
+    title: "整体入門",
+    author: "野口晴哉",
+    status: :reading,
+    genre: :health_body,
+    media_type: :book,
+    rating: 3,
+    tags: %w[野口整体 健康法],
+    events: { reading: 3.days.ago.to_date }
+  },
+  {
+    title: "表現者クライテリオン 2026年9月号",
+    author: "",
+    status: :want_to_read,
+    genre: :liberal_arts,
+    media_type: :magazine,
+    tags: %w[評論 定期購読]
+  }
+]
+
+books.each do |attrs|
+  events = attrs.delete(:events) || {}
+  tags = attrs.delete(:tags)
+
+  book = Book.find_or_initialize_by(title: attrs[:title])
+  book.assign_attributes(attrs)
+  book.tag_names = tags if tags
+  book.save!
+
+  # 過去日の状態イベント（所要日数を見せるため）。冪等に追加する。
+  events.each do |status, occurred_on|
+    book.status_events.find_or_create_by!(status: status, occurred_on: occurred_on)
+  end
+end
+
+puts "Seeded: books=#{Book.count}, tags=#{Tag.count}, status_events=#{BookStatusEvent.count}"
