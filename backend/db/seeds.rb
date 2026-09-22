@@ -1,6 +1,13 @@
 # デモ / 動作確認用の初期データ。`bin/rails db:seed` で投入する。
 # タイトルをキーに find_or_create するので、複数回実行しても重複しない（冪等）。
 
+# 単一ユーザー（公開登録なし。認証情報は環境変数で上書き可）
+user = User.find_or_initialize_by(email: ENV.fetch("SEED_USER_EMAIL", "owner@example.com"))
+user.password = ENV.fetch("SEED_USER_PASSWORD", "password123") if user.new_record?
+user.save!
+# user_id 未設定の既存書籍はこのユーザーへ backfill
+Book.where(user_id: nil).update_all(user_id: user.id)
+
 books = [
   {
     title: "リーダブルコード",
@@ -66,7 +73,7 @@ books.each do |attrs|
   events = attrs.delete(:events) || {}
   tags = attrs.delete(:tags)
 
-  book = Book.find_or_initialize_by(title: attrs[:title])
+  book = user.books.find_or_initialize_by(title: attrs[:title])
   book.assign_attributes(attrs)
   book.tag_names = tags if tags
   book.save!
@@ -77,4 +84,4 @@ books.each do |attrs|
   end
 end
 
-puts "Seeded: books=#{Book.count}, tags=#{Tag.count}, status_events=#{BookStatusEvent.count}"
+puts "Seeded: users=#{User.count}, books=#{Book.count}, tags=#{Tag.count}, status_events=#{BookStatusEvent.count}"

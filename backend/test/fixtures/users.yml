@@ -1,0 +1,8 @@
+# password は "password" （テストのログイン用）
+owner:
+  email: owner@example.com
+  password_digest: <%= BCrypt::Password.create("password") %>
+
+other:
+  email: other@example.com
+  password_digest: <%= BCrypt::Password.create("password") %>
