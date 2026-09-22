@@ -310,10 +310,15 @@ function onModalDone() {
             :key="book.id"
             :book="book"
             draggable="true"
+            role="button"
+            tabindex="0"
+            :aria-label="`${book.title} を編集`"
             :class="{ dragging: draggingId === book.id }"
             @dragstart="onDragStart($event, book)"
             @dragend="onDragEnd"
             @click="openEdit(book)"
+            @keydown.enter="openEdit(book)"
+            @keydown.space.prevent="openEdit(book)"
           />
           <p v-if="booksByStatus[status].length === 0" class="column-empty">まだありません</p>
         </div>

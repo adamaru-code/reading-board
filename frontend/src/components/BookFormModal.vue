@@ -220,9 +220,10 @@ async function onDelete() {
 
       <form @submit.prevent="onSubmit">
         <div v-if="!isEdit" class="field isbn-lookup">
-          <span class="field-label">ISBN / バーコードで登録</span>
+          <label for="isbn-input" class="field-label">ISBN / バーコードで登録</label>
           <div class="isbn-row">
             <input
+              id="isbn-input"
               v-model="isbnInput"
               type="text"
               inputmode="numeric"
