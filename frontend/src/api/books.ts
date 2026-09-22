@@ -44,3 +44,8 @@ export function deleteBook(id: number): Promise<void> {
 export function lookupBook(isbn: string): Promise<BookLookupResult> {
   return request<BookLookupResult>('/books/lookup', { query: { isbn } })
 }
+
+// PATCH /api/books/reorder （渡した id 順に position を保存）
+export function reorderBooks(ids: number[]): Promise<void> {
+  return request<void>('/books/reorder', { method: 'PATCH', body: { ids } })
+}
