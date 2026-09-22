@@ -57,6 +57,11 @@ const columnDate = () => {
   padding: 10px 12px;
   box-shadow: 0 1px 2px rgba(9, 30, 66, 0.15);
   border: 1px solid transparent;
+  cursor: pointer;
+}
+.card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .card-badges {
