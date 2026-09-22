@@ -125,12 +125,15 @@ sequenceDiagram
     participant R as Rails API
     participant D as MySQL
     U->>V: ボードを開く
-    V->>R: GET /api/books
-    R->>D: SELECT * FROM books
-    D-->>R: 全書籍
-    R-->>V: 200 [books...]
+    V->>R: GET /api/books?page=1&per_page=100
+    R->>D: SELECT ... LIMIT/OFFSET（+ COUNT で total）
+    D-->>R: 該当ページの書籍 + 総件数
+    R-->>V: 200 { items:[...], pagination:{ page, per_page, total, total_pages } }
     V-->>U: status ごとに 3 カラムへ振り分けて表示
 ```
+
+- 一覧はページング対応（`page` 既定1・下限1、`per_page` 既定100・1〜200 にクランプ）。レスポンスは `{ items, pagination }` エンベロープ。
+- カンバンは全件を 3 カラムに振り分けるため、フロントは `total_pages` を見て**全ページを集約**して表示する（`listAllBooks`）。
 
 ### 4.2 カード移動＝ステータス変更（カンバンの中心操作）
 
@@ -158,7 +161,8 @@ sequenceDiagram
 | 登録 | S3 追加フォーム | POST /api/books（種別・タグ含む） | INSERT（+ book_tags / status_event） |
 | 編集（評価・メモ・種別・タグ含む） | S4 編集フォーム | PATCH /api/books/:id | UPDATE（+ book_tags 同期） |
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
-| 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&author=&tag= | SELECT（AND 条件） |
+| 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&author=&tag=&page=&per_page= | SELECT（AND 条件・LIMIT/OFFSET） |
+| カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（0..n-1・1トランザクション） |
 
 ### 4.4 ISBN/バーコードから登録
 
@@ -186,8 +190,8 @@ sequenceDiagram
 
 | 画面/要素 | 主な構成要素 | 使う API | 備考 |
 |---|---|---|---|
-| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（著者/ジャンル/タグ）、読了の並び替え | GET /api/books?status=&genre=&author=&tag= | 絞り込みは AND。並び替えはクライアント側でも可 |
-| S2 書籍カード | ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録 |
+| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（著者/ジャンル/タグ）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&author=&tag=&page=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。一覧はページング（フロントは全ページ集約）。読了のキー並び替えはクライアント側、カラム内の手動順は position に保存 |
+| S2 書籍カード | ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
 | S3 追加フォーム | ISBN/バーコード登録、タイトル(必須)・著者・初期ステータス・ジャンル・形態・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
 | S4 編集フォーム | 全項目入力（種別・タグ含む）、更新/削除/キャンセル | PATCH・DELETE /api/books/:id | 削除は確認の上 |
 
