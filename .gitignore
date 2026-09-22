@@ -15,6 +15,9 @@
 *.log
 tmp/
 
+# Bundler のローカル設定（マシン固有。mysql2 のビルドパス等）
+backend/.bundle/
+
 # 将来 infra/(Terraform) を追加した時用
 **/.terraform/
 *.tfstate
