@@ -17,7 +17,21 @@ module Api
       end
       # position 昇順（未設定は後ろ）→ created_at
       books = books.order(Arel.sql("position IS NULL, position ASC, created_at ASC"))
-      render json: books.map { |book| book_json(book) }
+
+      total = books.count
+      page = pagination_page
+      per_page = pagination_per_page
+      items = books.limit(per_page).offset((page - 1) * per_page)
+
+      render json: {
+        items: items.map { |book| book_json(book) },
+        pagination: {
+          page: page,
+          per_page: per_page,
+          total: total,
+          total_pages: total.zero? ? 0 : (total.to_f / per_page).ceil
+        }
+      }
     end
 
     # GET /api/books/:id
@@ -103,6 +117,17 @@ module Api
 
     def valid_genre?(genre)
       genre.present? && Book.genres.key?(genre)
+    end
+
+    # ページ番号（1 以上）
+    def pagination_page
+      [params[:page].to_i, 1].max
+    end
+
+    # 1 ページ件数（既定 100・1〜200 にクランプ）
+    def pagination_per_page
+      requested = params[:per_page].presence&.to_i || 100
+      requested.clamp(1, 200)
     end
 
     def book_json(book)

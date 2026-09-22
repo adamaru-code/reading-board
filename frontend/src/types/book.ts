@@ -84,3 +84,17 @@ export interface BookListParams {
   author?: string
   tag?: string
 }
+
+// ページ情報
+export interface Pagination {
+  page: number
+  per_page: number
+  total: number
+  total_pages: number
+}
+
+// 一覧 API のレスポンス（items ＋ ページ情報）
+export interface BookListResult {
+  items: Book[]
+  pagination: Pagination
+}

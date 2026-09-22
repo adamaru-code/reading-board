@@ -5,19 +5,38 @@ import type {
   BookCreateInput,
   BookUpdateInput,
   BookListParams,
+  BookListResult,
   BookLookupResult,
 } from '../types/book'
 
-// GET /api/books （status・author で絞り込み可）
-export function listBooks(params: BookListParams = {}): Promise<Book[]> {
-  return request<Book[]>('/books', {
+// GET /api/books （絞り込み＋ページング。1ページ分を返す）
+export function listBooks(
+  params: BookListParams = {},
+  page = 1,
+  perPage = 100,
+): Promise<BookListResult> {
+  return request<BookListResult>('/books', {
     query: {
       status: params.status,
       genre: params.genre,
       author: params.author,
       tag: params.tag,
+      page: String(page),
+      per_page: String(perPage),
     },
   })
+}
+
+// 全ページを集約して全件を返す（カンバンは全件をカラムに振り分けるため）
+export async function listAllBooks(params: BookListParams = {}): Promise<Book[]> {
+  const perPage = 100
+  const first = await listBooks(params, 1, perPage)
+  const items = [...first.items]
+  for (let page = 2; page <= first.pagination.total_pages; page++) {
+    const next = await listBooks(params, page, perPage)
+    items.push(...next.items)
+  }
+  return items
 }
 
 // GET /api/books/:id

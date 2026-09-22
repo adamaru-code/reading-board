@@ -6,40 +6,42 @@ module Api
       @book = books(:readable_code) # status: reading, author: Dustin Boswell
     end
 
-    test "index は全件を JSON で返す" do
+    test "index は items とページ情報を返す" do
       get api_books_url
       assert_response :success
       body = JSON.parse(response.body)
-      assert_equal Book.count, body.size
-      assert body.first.key?("status")
+      assert_equal Book.count, body["items"].size
+      assert body["items"].first.key?("status")
+      assert_equal Book.count, body["pagination"]["total"]
+      assert_equal 1, body["pagination"]["page"]
     end
 
     test "index は status で絞り込める" do
       get api_books_url, params: { status: "reading" }
       assert_response :success
-      body = JSON.parse(response.body)
-      assert body.all? { |b| b["status"] == "reading" }
-      assert_includes body.map { |b| b["id"] }, @book.id
+      items = JSON.parse(response.body)["items"]
+      assert items.all? { |b| b["status"] == "reading" }
+      assert_includes items.map { |b| b["id"] }, @book.id
     end
 
     test "index は不正な status を無視して全件返す" do
       get api_books_url, params: { status: "unknown" }
       assert_response :success
-      assert_equal Book.count, JSON.parse(response.body).size
+      assert_equal Book.count, JSON.parse(response.body)["items"].size
     end
 
     test "index は author の部分一致で絞り込める" do
       get api_books_url, params: { author: "Boswell" }
       assert_response :success
-      body = JSON.parse(response.body)
-      assert_equal [@book.id], body.map { |b| b["id"] }
+      items = JSON.parse(response.body)["items"]
+      assert_equal [@book.id], items.map { |b| b["id"] }
     end
 
     test "index は genre で絞り込める" do
       target = Book.create!(title: "教養本", genre: :liberal_arts)
       get api_books_url, params: { genre: "liberal_arts" }
       assert_response :success
-      ids = JSON.parse(response.body).map { |b| b["id"] }
+      ids = JSON.parse(response.body)["items"].map { |b| b["id"] }
       assert_includes ids, target.id
       assert_not_includes ids, @book.id # fixture は既定 other
     end
@@ -47,14 +49,14 @@ module Api
     test "index は不正な genre を無視して全件返す" do
       get api_books_url, params: { genre: "sci_fi" }
       assert_response :success
-      assert_equal Book.count, JSON.parse(response.body).size
+      assert_equal Book.count, JSON.parse(response.body)["items"].size
     end
 
     test "index は tag（名称）で絞り込める" do
       tagged = Book.create!(title: "名著本", tag_names: ["名著"])
       get api_books_url, params: { tag: "名著" }
       assert_response :success
-      ids = JSON.parse(response.body).map { |b| b["id"] }
+      ids = JSON.parse(response.body)["items"].map { |b| b["id"] }
       assert_equal [tagged.id], ids
     end
 
@@ -63,7 +65,27 @@ module Api
       Book.create!(title: "miss", status: :read, genre: :liberal_arts, author: "Ada")
       get api_books_url, params: { status: "reading", genre: "liberal_arts", author: "Ada" }
       assert_response :success
-      assert_equal [hit.id], JSON.parse(response.body).map { |b| b["id"] }
+      assert_equal [hit.id], JSON.parse(response.body)["items"].map { |b| b["id"] }
+    end
+
+    test "index は per_page と page で分割し total を返す" do
+      Book.delete_all
+      5.times { |i| Book.create!(title: "本#{i}") }
+      get api_books_url, params: { per_page: 2, page: 1 }
+      body = JSON.parse(response.body)
+      assert_equal 2, body["items"].size
+      assert_equal 5, body["pagination"]["total"]
+      assert_equal 3, body["pagination"]["total_pages"]
+
+      get api_books_url, params: { per_page: 2, page: 3 }
+      assert_equal 1, JSON.parse(response.body)["items"].size # 最終ページは端数
+    end
+
+    test "index は per_page 上限クランプ・page 下限1にする" do
+      get api_books_url, params: { per_page: 9999, page: 0 }
+      pagination = JSON.parse(response.body)["pagination"]
+      assert_equal 200, pagination["per_page"]
+      assert_equal 1, pagination["page"]
     end
 
     test "show は書籍を返す" do
@@ -226,7 +248,7 @@ module Api
       b = Book.create!(title: "後で2番")
       patch reorder_api_books_url, params: { ids: [b.id, a.id] }
       get api_books_url
-      ids = JSON.parse(response.body).map { |x| x["id"] }
+      ids = JSON.parse(response.body)["items"].map { |x| x["id"] }
       assert_equal [b.id, a.id, old.id], ids # position 付き→未設定の順
     end
   end

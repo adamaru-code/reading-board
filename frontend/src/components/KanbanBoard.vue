@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { listBooks, updateBook, reorderBooks } from '../api/books'
+import { listAllBooks, updateBook, reorderBooks } from '../api/books'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type { Book, BookStatus, BookGenre, BookListParams } from '../types/book'
@@ -53,7 +53,7 @@ function clearFilters() {
 
 async function loadTagOptions() {
   try {
-    const all = await listBooks()
+    const all = await listAllBooks()
     tagOptions.value = [...new Set(all.flatMap((b) => b.tags))].sort()
   } catch {
     // タグ選択肢の取得失敗はボード表示を妨げないので黙って諦める
@@ -81,7 +81,7 @@ async function loadBooks() {
   loading.value = true
   error.value = null
   try {
-    books.value = await listBooks(activeParams())
+    books.value = await listAllBooks(activeParams())
   } catch (e) {
     error.value =
       e instanceof ApiError ? e.message : '書籍の取得に失敗しました。時間をおいて再度お試しください。'
