@@ -134,15 +134,22 @@ sequenceDiagram
     participant R as Rails API
     participant D as MySQL
     U->>V: ボードを開く
-    V->>R: GET /api/books?page=1&per_page=100
-    R->>D: SELECT ... LIMIT/OFFSET（+ COUNT で total）
-    D-->>R: 該当ページの書籍 + 総件数
+    V->>R: GET /api/books?status=<各カラム>&offset=0&per_page=20（3 カラム並行）
+    R->>D: SELECT ... ORDER BY ... LIMIT/OFFSET（+ COUNT で total）
+    D-->>R: 該当範囲の書籍 + 総件数
     R-->>V: 200 { items:[...], pagination:{ page, per_page, total, total_pages } }
-    V-->>U: status ごとに 3 カラムへ振り分けて表示
+    V-->>U: 各カラムに 20 件＋「もっと見る（残り N 件）」
+    U->>V: もっと見る
+    V->>R: GET /api/books?status=...&offset=<読み込み済み件数>&per_page=20
 ```
 
-- 一覧はページング対応（`page` 既定1・下限1、`per_page` 既定100・1〜200 にクランプ）。レスポンスは `{ items, pagination }` エンベロープ。
-- カンバンは全件を 3 カラムに振り分けるため、フロントは `total_pages` を見て**全ページを集約**して表示する（`listAllBooks`）。
+- 一覧はページング対応（`page` 既定1・下限1、`per_page` 既定100・1〜200 にクランプ）。`offset`（0 以上）を指定すると `page` より優先。レスポンスは `{ items, pagination }` エンベロープ。
+- 並びは既定 `position IS NULL, position, created_at, id`。`sort`（`finished_on` / `registered_on` / `rating` / `duration_days`）＋`dir`（`asc`/`desc`）で並び替え（値が無い本は末尾、同値は既定の並び）。不正な `sort` は無視。
+- カンバンは**カラム（status）ごとに個別取得**し、初期 20 件・「もっと見る」で追加読込（`useKanbanColumns`）。件数表示は `total`。
+  - 追加読込は **`offset` = 読み込み済み件数**。D&D でカードが移るとページ境界がずれるため、page 番号ではなく offset で取りこぼしを防ぐ（重複は id で除外）。
+  - 読了カラムの並び替えはページをまたいで正しくなるよう**サーバー側**（`sort`/`dir`）で行い、変更時は先頭から取り直す。
+  - 絞り込み変更時は各カラムを先頭 20 件に戻す。追加・編集・削除後は読み込み済み件数を保って取り直す（上限 200）。
+- タグ選択肢の収集のみ全ページを集約する（`listAllBooks`）。
 
 ### 4.2 カード移動＝ステータス変更（カンバンの中心操作）
 
@@ -170,8 +177,8 @@ sequenceDiagram
 | 登録 | S3 追加フォーム | POST /api/books（種別・タグ含む） | INSERT（+ book_tags / status_event） |
 | 編集（評価・メモ・種別・タグ含む） | S4 編集フォーム | PATCH /api/books/:id | UPDATE（+ book_tags 同期） |
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
-| 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&author=&tag=&page=&per_page= | SELECT（AND 条件・LIMIT/OFFSET） |
-| カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（0..n-1・1トランザクション） |
+| 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&author=&tag=&sort=&dir=&page=\|offset=&per_page= | SELECT（AND 条件・ORDER BY・LIMIT/OFFSET） |
+| カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行 |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
 | ログイン状態確認 | 画面初期化 | GET /api/session | 現在の current_user を返す（未認証 401） |
@@ -203,7 +210,7 @@ sequenceDiagram
 
 | 画面/要素 | 主な構成要素 | 使う API | 備考 |
 |---|---|---|---|
-| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（著者/ジャンル/タグ）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&author=&tag=&page=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。一覧はページング（フロントは全ページ集約）。読了のキー並び替えはクライアント側、カラム内の手動順は position に保存 |
+| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（著者/ジャンル/タグ）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&author=&tag=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
 | S2 書籍カード | ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
 | S3 追加フォーム | ISBN/バーコード登録、タイトル(必須)・著者・初期ステータス・ジャンル・形態・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
 | S4 編集フォーム | 全項目入力（種別・タグ含む）、更新/削除/キャンセル | PATCH・DELETE /api/books/:id | 削除は確認の上 |
