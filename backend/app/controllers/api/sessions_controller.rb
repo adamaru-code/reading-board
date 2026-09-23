@@ -2,6 +2,7 @@ module Api
   class SessionsController < ApplicationController
     # ログインは未認証で叩けるようにする
     allow_unauthenticated_access only: :create
+    limit_attempts to: 10, within: 3.minutes, only: :create
 
     # GET /api/session （ログイン中のユーザーを返す。未認証は 401）
     def show
