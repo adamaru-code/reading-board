@@ -1,7 +1,10 @@
 class User < ApplicationRecord
   PASSWORD_MIN_LENGTH = 8
+  # 管理者が発行する再設定リンクの有効期限（手で渡すため Rails 既定の 15 分より長め）
+  PASSWORD_RESET_VALID_FOR = 24.hours
 
-  has_secure_password
+  # reset_token：署名付きトークン（DB 保存なし）。パスワードを変えると無効になるので 1 回限り
+  has_secure_password reset_token: { expires_in: PASSWORD_RESET_VALID_FOR }
   has_many :sessions, dependent: :destroy
   has_many :books, dependent: :destroy
   # 自分が発行した招待 / 自分が登録に使った招待
