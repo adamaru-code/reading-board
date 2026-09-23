@@ -1,27 +1,46 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { login } from '../api/session'
+import { ref, computed } from 'vue'
+import { resetPassword } from '../api/passwordReset'
 import { ApiError } from '../api/http'
 import type { User } from '../types/auth'
 
-const emit = defineEmits<{ 'logged-in': [user: User]; 'show-register': [] }>()
+// バックエンド User::PASSWORD_MIN_LENGTH と揃える
+const MIN_LENGTH = 8
 
-const email = ref('')
+// 管理者が発行した再設定リンク（/?reset=TOKEN）から開く
+const props = defineProps<{ token: string }>()
+const emit = defineEmits<{ 'logged-in': [user: User]; 'show-login': [] }>()
+
 const password = ref('')
+const passwordConfirmation = ref('')
 const error = ref('')
 const submitting = ref(false)
 
+// 送信前にわかる不備（最終判定はバックエンド）
+const clientError = computed(() => {
+  if (password.value.length > 0 && password.value.length < MIN_LENGTH)
+    return `新しいパスワードは ${MIN_LENGTH} 文字以上にしてください`
+  if (passwordConfirmation.value.length > 0 && password.value !== passwordConfirmation.value)
+    return '新しいパスワード（確認）が一致しません'
+  return ''
+})
+
 async function onSubmit() {
+  if (clientError.value) return
   error.value = ''
   submitting.value = true
   try {
-    const user = await login(email.value.trim(), password.value)
+    const user = await resetPassword({
+      token: props.token,
+      password: password.value,
+      password_confirmation: passwordConfirmation.value,
+    })
     emit('logged-in', user)
   } catch (e) {
     error.value =
       e instanceof ApiError && e.errors.length > 0
         ? e.errors[0]
-        : 'ログインに失敗しました。時間をおいて再度お試しください。'
+        : '再設定に失敗しました。時間をおいて再度お試しください。'
   } finally {
     submitting.value = false
   }
@@ -32,29 +51,36 @@ async function onSubmit() {
   <div class="login">
     <form class="login-card" @submit.prevent="onSubmit">
       <h1 class="login-title">📚 読書管理ボード</h1>
-      <p class="login-sub">ログインしてください</p>
+      <p class="login-sub">新しいパスワードを設定してください</p>
 
       <p v-if="error" class="login-error" role="alert">{{ error }}</p>
 
       <label class="field">
-        <span class="field-label">メールアドレス</span>
-        <input v-model="email" type="email" autocomplete="username" required autofocus />
+        <span class="field-label">新しいパスワード（{{ MIN_LENGTH }} 文字以上）</span>
+        <input
+          v-model="password"
+          type="password"
+          autocomplete="new-password"
+          :minlength="MIN_LENGTH"
+          required
+          autofocus
+        />
       </label>
 
       <label class="field">
-        <span class="field-label">パスワード</span>
-        <input v-model="password" type="password" autocomplete="current-password" required />
+        <span class="field-label">新しいパスワード（確認）</span>
+        <input v-model="passwordConfirmation" type="password" autocomplete="new-password" required />
       </label>
 
-      <button type="submit" class="login-btn" :disabled="submitting">
-        {{ submitting ? 'ログイン中…' : 'ログイン' }}
+      <p v-if="clientError" class="field-hint">{{ clientError }}</p>
+
+      <button type="submit" class="login-btn" :disabled="submitting || !!clientError">
+        {{ submitting ? '設定中…' : '設定してログイン' }}
       </button>
 
-      <button type="button" class="switch-link" @click="emit('show-register')">
-        招待コードをお持ちの方はこちら（新規登録）
+      <button type="button" class="switch-link" @click="emit('show-login')">
+        ログイン画面へ
       </button>
-
-      <p class="login-note">パスワードを忘れた場合は、管理者に再設定リンクを依頼してください。</p>
     </form>
   </div>
 </template>
@@ -128,11 +154,10 @@ async function onSubmit() {
   opacity: 0.6;
   cursor: default;
 }
-.login-note {
-  margin: 10px 0 0;
+.field-hint {
+  margin: -6px 0 8px;
   font-size: 12px;
-  color: var(--text-sub);
-  text-align: center;
+  color: var(--danger);
 }
 .switch-link {
   display: block;

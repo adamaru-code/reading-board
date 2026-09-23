@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import InvitationsModal from '../InvitationsModal.vue'
+import InvitationsPanel from '../InvitationsPanel.vue'
 import * as invitationsApi from '../../api/invitations'
 import { ApiError } from '../../api/http'
 import type { Invitation } from '../../types/auth'
@@ -18,12 +18,12 @@ const invitation = (id: number, overrides: Partial<Invitation> = {}): Invitation
 
 async function mountWith(list: Invitation[]) {
   vi.spyOn(invitationsApi, 'listInvitations').mockResolvedValue(list)
-  const wrapper = mount(InvitationsModal)
+  const wrapper = mount(InvitationsPanel)
   await flushPromises()
   return wrapper
 }
 
-describe('InvitationsModal', () => {
+describe('InvitationsPanel', () => {
   it('一覧に状態と使った人を表示し、操作ボタンは未使用だけに出す', async () => {
     const wrapper = await mountWith([
       invitation(2),
@@ -79,7 +79,7 @@ describe('InvitationsModal', () => {
 
   it('401 なら unauthorized を発火する', async () => {
     vi.spyOn(invitationsApi, 'listInvitations').mockRejectedValue(new ApiError(401, []))
-    const wrapper = mount(InvitationsModal)
+    const wrapper = mount(InvitationsPanel)
     await flushPromises()
     expect(wrapper.emitted('unauthorized')).toHaveLength(1)
   })

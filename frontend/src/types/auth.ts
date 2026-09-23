@@ -19,3 +19,14 @@ export interface Invitation {
   used_by_email: string | null
   created_at: string
 }
+
+// ユーザー一覧の 1 件（Api::UsersController の JSON 契約に一致）
+export interface UserSummary extends User {
+  created_at: string
+}
+
+// 発行したパスワード再設定リンクのトークン（保存されない。発行時にだけ受け取る）
+export interface PasswordResetLink {
+  token: string
+  expires_at: string
+}
