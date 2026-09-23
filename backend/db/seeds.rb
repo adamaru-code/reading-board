@@ -3,6 +3,12 @@
 
 # 初期ユーザー＝管理者（他のユーザーは招待コードで登録。認証情報は環境変数で上書き可）
 # 既定パスワードは流出リストに載らない開発用の値。毎回設定するので再 seed で既存ユーザーにも反映される。
+# 本番は開発用の既定値で管理者を作らないよう、環境変数の指定を必須にする
+# （Docker の起動時に db:prepare が新しい DB へ seed を流すため）
+if Rails.env.production? && (ENV["SEED_USER_EMAIL"].blank? || ENV["SEED_USER_PASSWORD"].blank?)
+  abort "本番では SEED_USER_EMAIL と SEED_USER_PASSWORD を指定してください"
+end
+
 user = User.find_or_initialize_by(email: ENV.fetch("SEED_USER_EMAIL", "owner@example.com"))
 user.password = ENV.fetch("SEED_USER_PASSWORD", "ReadingBoard-dev-2026!")
 user.admin = true # 招待コードを発行できる管理者
