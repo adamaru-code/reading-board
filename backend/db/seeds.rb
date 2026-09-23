@@ -1,10 +1,11 @@
 # デモ / 動作確認用の初期データ。`bin/rails db:seed` で投入する。
 # タイトルをキーに find_or_create するので、複数回実行しても重複しない（冪等）。
 
-# 単一ユーザー（公開登録なし。認証情報は環境変数で上書き可）
+# 初期ユーザー＝管理者（他のユーザーは招待コードで登録。認証情報は環境変数で上書き可）
 # 既定パスワードは流出リストに載らない開発用の値。毎回設定するので再 seed で既存ユーザーにも反映される。
 user = User.find_or_initialize_by(email: ENV.fetch("SEED_USER_EMAIL", "owner@example.com"))
 user.password = ENV.fetch("SEED_USER_PASSWORD", "ReadingBoard-dev-2026!")
+user.admin = true # 招待コードを発行できる管理者
 user.save!
 
 books = [

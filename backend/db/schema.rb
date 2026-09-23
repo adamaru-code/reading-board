@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_23_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_23_160100) do
   create_table "book_status_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "book_id", null: false
     t.datetime "created_at", null: false
@@ -45,6 +45,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_150000) do
     t.index ["user_id"], name: "index_books_on_user_id"
   end
 
+  create_table "invitations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.bigint "inviter_id", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.bigint "used_by_id"
+    t.index ["code"], name: "index_invitations_on_code", unique: true
+    t.index ["inviter_id"], name: "index_invitations_on_inviter_id"
+    t.index ["used_by_id"], name: "index_invitations_on_used_by_id"
+  end
+
   create_table "sessions", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -64,6 +77,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_150000) do
   end
 
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.boolean "admin", default: false, null: false
     t.datetime "created_at", null: false
     t.string "email", null: false
     t.string "password_digest", null: false
@@ -75,5 +89,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_150000) do
   add_foreign_key "book_tags", "books"
   add_foreign_key "book_tags", "tags"
   add_foreign_key "books", "users"
+  add_foreign_key "invitations", "users", column: "inviter_id"
+  add_foreign_key "invitations", "users", column: "used_by_id"
   add_foreign_key "sessions", "users"
 end

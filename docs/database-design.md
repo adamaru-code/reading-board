@@ -117,9 +117,9 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 
 ---
 
-## 7. User / Session（単一ユーザー認証）
+## 7. User / Session / Invitation（認証・招待制の登録）
 
-セッション Cookie 方式で単一ユーザー認証を行う（実装済み）。公開サインアップは無く、ユーザーは seed / コンソールで作成する。`books` は `user_id` で所有者に紐づく（1 対多）。
+セッション Cookie 方式で認証を行う（実装済み）。初期ユーザー（管理者）は seed で作成し、他のユーザーは**管理者が発行した招待コード**で登録する（公開サインアップは無し）。`books` は `user_id` で所有者に紐づく（1 対多）。
 
 `users`
 
@@ -128,6 +128,7 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `id` | bigint | PK, auto | 主キー |
 | `email` | string | NOT NULL, UNIQUE | ログイン ID（正規化：trim + 小文字化） |
 | `password_digest` | string | NOT NULL | bcrypt ハッシュ（`has_secure_password`）。パスワードは 8 文字以上（変更時にモデルで検証） |
+| `admin` | boolean | NOT NULL, 既定 false | 管理者（招待コードを発行できる）。seed の初期ユーザーは true |
 
 `sessions`
 
@@ -138,6 +139,19 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `token` | string | NOT NULL, UNIQUE | セッショントークン（署名付き httpOnly Cookie `session_token` に保持） |
 | `ip_address` | string | NULL 可 | 発行時の IP |
 | `user_agent` | string | NULL 可 | 発行時の UA |
+
+`invitations`
+
+| フィールド | 型 | 制約 | 説明 |
+|---|---|---|---|
+| `id` | bigint | PK, auto | 主キー |
+| `code` | string | NOT NULL, UNIQUE | 招待コード（base58・12 文字） |
+| `inviter_id` | bigint | FK → users, NOT NULL | 発行した管理者 |
+| `used_by_id` | bigint | FK → users, NULL 可 | 登録に使ったユーザー（ユーザー削除時は NULL に） |
+| `used_at` | datetime | NULL 可 | 使用日時（NULL＝未使用） |
+| `expires_at` | datetime | NOT NULL | 有効期限（発行から 7 日） |
+
+- 招待は **1 回限り**。登録時は行ロックを取って使用済みにする。存在しない・使用済み・期限切れはどれも「招待コードが無効です」。
 
 - ログイン時に `sessions` を 1 行作成し、その `token` を署名付き httpOnly Cookie に入れる。ログアウトで該当行を削除。
 - 全 `/api/books*` は認証必須で `current_user` にスコープ。未認証は 401。

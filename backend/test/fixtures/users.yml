@@ -1,6 +1,7 @@
 # password は "password" （テストのログイン用）
 owner:
   email: owner@example.com
+  admin: true
   password_digest: <%= BCrypt::Password.create("password") %>
 
 other:

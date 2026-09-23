@@ -24,11 +24,5 @@ module Api
       terminate_session
       head :no_content
     end
-
-    private
-
-    def user_json(user)
-      { id: user.id, email: user.email }
-    end
   end
 end
