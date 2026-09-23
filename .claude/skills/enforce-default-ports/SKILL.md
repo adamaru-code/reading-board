@@ -6,7 +6,7 @@ description: reading-board プロジェクトのローカル開発サーバー�
 # ローカル開発サーバーの起動ポート（厳守）
 
 このプロジェクトでサーバーを起動する際は、必ず以下のデフォルトポートを使用すること。
-別ポートでの一時起動は**禁止**（CORS とプロキシ設定が固定ポート前提のため動かない）。
+別ポートでの一時起動は**禁止**（Vite プロキシが `:3000` 固定前提のため動かない）。
 
 | サーバー | 必須ポート |
 |---|---|
@@ -33,10 +33,9 @@ lsof -i :5173
 
 ## なぜこのルールがあるか
 
-- バックエンドの CORS は `http://localhost:5173` のみ許可（[backend/config/initializers/cors.rb](../../../backend/config/initializers/cors.rb)）
-- フロントの Vite プロキシは `/api → http://localhost:3000`（[frontend/vite.config.ts](../../../frontend/vite.config.ts)）
+- フロントの Vite プロキシは `/api → http://localhost:3000`（[frontend/vite.config.ts](../../../frontend/vite.config.ts)）。ブラウザから見て同一オリジンで API を叩くため、開発では CORS 設定は不要（[backend/config/initializers/cors.rb](../../../backend/config/initializers/cors.rb) は未構成）。
 
-別ポートで起動すると見かけ上は立ち上がるが、ブラウザから API を叩いた瞬間に CORS エラーまたはプロキシ失敗で動かない。
+別ポートで起動すると見かけ上は立ち上がるが、ブラウザから API を叩いた瞬間に**プロキシ転送に失敗**して動かない。
 
 ## 起動コマンド（参考）
 

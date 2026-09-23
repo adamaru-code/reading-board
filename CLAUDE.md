@@ -133,7 +133,7 @@ git pull origin main
 ## 8. ローカルサーバーの起動ポート（厳守）
 
 ローカル開発時、サーバーは **必ず以下のデフォルトポート** で起動すること。
-別ポートでの一時起動は禁止（プロキシ・CORS 設定が固定ポート前提で動かないため）。
+別ポートでの一時起動は禁止（Vite プロキシが `:3000` 固定前提で動かないため）。
 
 | サーバー | 必須ポート |
 |---|---|
@@ -156,8 +156,8 @@ lsof -i :5173
 
 ### 関連設定（固定ポート前提）
 
-- バックエンドの CORS は `http://localhost:5173` のみ許可（`backend/config/initializers/cors.rb`）
-- フロントの Vite プロキシは `/api → http://localhost:3000`（`frontend/vite.config.ts`）
+- フロントの Vite プロキシは `/api → http://localhost:3000`（`frontend/vite.config.ts`）。これにより開発ではブラウザから見て**同一オリジン**（`localhost:5173`）で API を叩く
+- そのため開発では**バックエンドの CORS 設定は不要**（`backend/config/initializers/cors.rb` は未構成）。本番でフロントを別オリジンに置く場合のみ、許可オリジンを本番ドメインに限定して有効化する
 
 ### 起動手順
 
