@@ -16,6 +16,7 @@
 | フィールド | 型 | 制約 | 説明 |
 |---|---|---|---|
 | `id` | bigint | PK, auto | 主キー |
+| `user_id` | bigint | FK → users | 所有者（単一ユーザー認証。§7） |
 | `title` | string | NOT NULL | 書名（必須） |
 | `author` | string | NULL 可 | 著者名 |
 | `status` | integer(enum) | NOT NULL, default: `want_to_read` | 状態（§2 enum） |
@@ -113,3 +114,30 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 - **所要日数**＝（最初の `read` の `occurred_on`）−（最初の `reading` の `occurred_on`）。開始が無ければ非表示。
 - 同一状態・同一日の重複は記録しない（プロトタイプ挙動に合わせる）。
 - ※ 履歴が不要なら、代替として `books` に `want_to_read_at` / `reading_at` / `read_at` の 3 date カラムを持つ簡易案もある（再読・出戻りの履歴は表現できない）。
+
+---
+
+## 7. User / Session（単一ユーザー認証）
+
+セッション Cookie 方式で単一ユーザー認証を行う（実装済み）。公開サインアップは無く、ユーザーは seed / コンソールで作成する。`books` は `user_id` で所有者に紐づく（1 対多）。
+
+`users`
+
+| フィールド | 型 | 制約 | 説明 |
+|---|---|---|---|
+| `id` | bigint | PK, auto | 主キー |
+| `email` | string | NOT NULL, UNIQUE | ログイン ID（正規化：trim + 小文字化） |
+| `password_digest` | string | NOT NULL | bcrypt ハッシュ（`has_secure_password`） |
+
+`sessions`
+
+| フィールド | 型 | 制約 | 説明 |
+|---|---|---|---|
+| `id` | bigint | PK, auto | 主キー |
+| `user_id` | bigint | FK → users, NOT NULL | 利用者 |
+| `token` | string | NOT NULL, UNIQUE | セッショントークン（署名付き httpOnly Cookie `session_token` に保持） |
+| `ip_address` | string | NULL 可 | 発行時の IP |
+| `user_agent` | string | NULL 可 | 発行時の UA |
+
+- ログイン時に `sessions` を 1 行作成し、その `token` を署名付き httpOnly Cookie に入れる。ログアウトで該当行を削除。
+- 全 `/api/books*` は認証必須で `current_user` にスコープ。未認証は 401。
