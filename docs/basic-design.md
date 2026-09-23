@@ -91,26 +91,35 @@ erDiagram
 ```
 
 - 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。
-- 認証導入時は `books` に `user_id` を追加（§3.1）。
+- `books` は `user_id` で所有者（`users`）に紐づく（認証は実装済み。§3.1）。
 
-### 3.1 将来の拡張（認証導入時）
+### 3.1 認証（単一ユーザー・実装済み）
 
-[要件定義書](requirements.md) §4（将来拡張候補）の通り、将来的に単一ユーザー認証を追加する場合は `users` を追加し、
-`books` に `user_id` を持たせて 1 対多で紐づける想定（本フェーズでは未実装）。
+単一ユーザー認証を**セッション Cookie 方式**で実装済み。`users` と `sessions`（[データベース設計](database-design.md) §7）を持ち、`books` は `user_id` で所有者に 1 対多で紐づく。公開サインアップは無く、ユーザーは seed / コンソールで作成する。
 
 ```mermaid
 erDiagram
     users ||--o{ books : "owns"
+    users ||--o{ sessions : "has"
     users {
         bigint id PK
         string email "ログイン ID"
+        string password_digest "bcrypt"
+    }
+    sessions {
+        bigint id PK
+        bigint user_id FK
+        string token "署名付き httpOnly Cookie"
     }
     books {
         bigint id PK
-        bigint user_id FK "所有者（将来追加）"
+        bigint user_id FK "所有者"
         string title
     }
 ```
+
+- ログインで `sessions` を作成し `token` を署名付き httpOnly Cookie（`session_token`, SameSite=Lax）に保持。フロントは同一オリジン（Vite プロキシ）なので Cookie が自動送受信される。
+- 全 `/api/books*` は認証必須で `current_user` にスコープ。**未認証は 401**（フロントはログイン画面へ）。
 
 ---
 
@@ -163,6 +172,9 @@ sequenceDiagram
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
 | 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&author=&tag=&page=&per_page= | SELECT（AND 条件・LIMIT/OFFSET） |
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（0..n-1・1トランザクション） |
+| ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行 |
+| ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
+| ログイン状態確認 | 画面初期化 | GET /api/session | 現在の current_user を返す（未認証 401） |
 
 ### 4.4 ISBN/バーコードから登録
 
