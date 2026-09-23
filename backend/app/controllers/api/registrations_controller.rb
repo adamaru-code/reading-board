@@ -1,10 +1,11 @@
 module Api
-  # 招待コードによるアカウント登録
+  # 招待コードによるアカウント登録 / アカウント削除
   class RegistrationsController < ApplicationController
     include PasswordValidation
 
     allow_unauthenticated_access only: :create
     limit_attempts to: 10, within: 1.hour, only: :create
+    limit_attempts to: 10, within: 3.minutes, only: :destroy
 
     # POST /api/registration
     # 招待コードが使えればユーザーを作り、招待を使用済みにしてログイン状態にする
@@ -34,6 +35,21 @@ module Api
       else
         render_errors(user_error_messages(user))
       end
+    end
+
+    # DELETE /api/registration
+    # 現在のパスワードで確認し、本・セッション・発行した招待ごと削除する（最後の管理者は不可）
+    def destroy
+      unless current_user.authenticate(params[:current_password].to_s)
+        return render_errors(["現在のパスワードが違います"])
+      end
+      if current_user.admin? && !User.where(admin: true).where.not(id: current_user.id).exists?
+        return render_errors(["最後の管理者は削除できません"])
+      end
+
+      current_user.destroy!
+      cookies.delete(:session_token)
+      head :no_content
     end
 
     private

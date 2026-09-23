@@ -9,7 +9,7 @@ Rails.application.routes.draw do
   namespace :api do
     resource :session, only: %i[show create destroy] # ログイン状態 / ログイン / ログアウト
     resource :password, only: :update # PATCH /api/password（パスワード変更）
-    resource :registration, only: :create # POST /api/registration（招待コードで登録）
+    resource :registration, only: %i[create destroy] # 招待コードで登録 / アカウント削除
     resources :invitations, only: %i[index create destroy] # 招待コード（管理者のみ）
 
     resources :books, only: %i[index show create update destroy] do
