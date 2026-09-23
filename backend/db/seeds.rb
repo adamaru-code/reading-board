@@ -6,8 +6,6 @@
 user = User.find_or_initialize_by(email: ENV.fetch("SEED_USER_EMAIL", "owner@example.com"))
 user.password = ENV.fetch("SEED_USER_PASSWORD", "ReadingBoard-dev-2026!")
 user.save!
-# user_id 未設定の既存書籍はこのユーザーへ backfill
-Book.where(user_id: nil).update_all(user_id: user.id)
 
 books = [
   {
