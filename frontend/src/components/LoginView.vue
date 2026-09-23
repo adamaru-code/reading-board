@@ -4,7 +4,7 @@ import { login } from '../api/session'
 import { ApiError } from '../api/http'
 import type { User } from '../types/auth'
 
-const emit = defineEmits<{ 'logged-in': [user: User] }>()
+const emit = defineEmits<{ 'logged-in': [user: User]; 'show-register': [] }>()
 
 const email = ref('')
 const password = ref('')
@@ -48,6 +48,10 @@ async function onSubmit() {
 
       <button type="submit" class="login-btn" :disabled="submitting">
         {{ submitting ? 'ログイン中…' : 'ログイン' }}
+      </button>
+
+      <button type="button" class="switch-link" @click="emit('show-register')">
+        招待コードをお持ちの方はこちら（新規登録）
       </button>
     </form>
   </div>
@@ -121,5 +125,17 @@ async function onSubmit() {
 .login-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.switch-link {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
 }
 </style>
