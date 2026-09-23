@@ -15,7 +15,7 @@ async function submit(email: string, password: string) {
 
 describe('LoginView', () => {
   it('ログイン成功で logged-in を発火する', async () => {
-    const user = { id: 1, email: 'owner@example.com' }
+    const user = { id: 1, email: 'owner@example.com', admin: true }
     const loginSpy = vi.spyOn(sessionApi, 'login').mockResolvedValue(user)
 
     const wrapper = await submit(' owner@example.com ', 'secret')
@@ -33,5 +33,13 @@ describe('LoginView', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toBe('メールアドレスまたはパスワードが違います')
     expect(wrapper.emitted('logged-in')).toBeUndefined()
+  })
+})
+
+describe('LoginView の新規登録リンク', () => {
+  it('show-register を発火する', async () => {
+    const wrapper = mount(LoginView)
+    await wrapper.find('.switch-link').trigger('click')
+    expect(wrapper.emitted('show-register')).toHaveLength(1)
   })
 })

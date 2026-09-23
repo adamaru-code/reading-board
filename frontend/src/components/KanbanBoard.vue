@@ -9,6 +9,7 @@ import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
 import PasswordChangeModal from './PasswordChangeModal.vue'
+import InvitationsModal from './InvitationsModal.vue'
 import { useKanbanColumns } from '../composables/useKanbanColumns'
 
 defineProps<{ user: User }>()
@@ -40,6 +41,7 @@ async function onLogout() {
 }
 
 const passwordModalOpen = ref(false)
+const invitationsModalOpen = ref(false)
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -282,6 +284,14 @@ function onModalDone() {
         <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">クリア</button>
         <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
         <span class="user-email" :title="user.email">{{ user.email }}</span>
+        <button
+          v-if="user.admin"
+          type="button"
+          class="header-btn"
+          @click="invitationsModalOpen = true"
+        >
+          招待
+        </button>
         <button type="button" class="header-btn" @click="passwordModalOpen = true">
           パスワード変更
         </button>
@@ -369,6 +379,12 @@ function onModalDone() {
     <PasswordChangeModal
       v-if="passwordModalOpen"
       @close="passwordModalOpen = false"
+      @unauthorized="emit('logout')"
+    />
+
+    <InvitationsModal
+      v-if="invitationsModalOpen"
+      @close="invitationsModalOpen = false"
       @unauthorized="emit('logout')"
     />
   </div>
