@@ -4,6 +4,7 @@ import InvitationsPanel from './InvitationsPanel.vue'
 import UsersPanel from './UsersPanel.vue'
 
 // 管理者向けのモーダル（招待 / ユーザー）
+defineProps<{ currentUserId: number }>()
 const emit = defineEmits<{ close: []; unauthorized: [] }>()
 
 const tab = ref<'invitations' | 'users'>('invitations')
@@ -36,7 +37,11 @@ const tab = ref<'invitations' | 'users'>('invitations')
       </div>
 
       <InvitationsPanel v-if="tab === 'invitations'" @unauthorized="emit('unauthorized')" />
-      <UsersPanel v-else @unauthorized="emit('unauthorized')" />
+      <UsersPanel
+        v-else
+        :current-user-id="currentUserId"
+        @unauthorized="emit('unauthorized')"
+      />
 
       <div class="modal-actions">
         <span class="spacer"></span>

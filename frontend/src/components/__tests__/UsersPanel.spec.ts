@@ -11,7 +11,8 @@ const users = [
 
 async function mountPanel() {
   vi.spyOn(usersApi, 'listUsers').mockResolvedValue(users)
-  const wrapper = mount(UsersPanel)
+  // ログイン中の管理者は id 1（owner）
+  const wrapper = mount(UsersPanel, { props: { currentUserId: 1 } })
   await flushPromises()
   return wrapper
 }
@@ -26,6 +27,32 @@ describe('UsersPanel', () => {
     ])
     expect(items[0].find('.badge').exists()).toBe(true)
     expect(items[1].find('.badge').exists()).toBe(false)
+  })
+
+  it('自分の行に「（自分）」を出し、発行前に確認を挟む', async () => {
+    const spy = vi
+      .spyOn(usersApi, 'createPasswordResetLink')
+      .mockResolvedValue({ token: 'mine', expires_at: '2026-09-24T00:00:00Z' })
+    const wrapper = await mountPanel()
+    const self = () => wrapper.findAll('.user')[0]
+
+    expect(self().find('.self').text()).toBe('（自分）')
+    expect(wrapper.findAll('.user')[1].find('.self').exists()).toBe(false)
+
+    await self().find('button').trigger('click')
+    expect(spy).not.toHaveBeenCalled()
+    expect(self().find('.confirm-self').text()).toContain('あなた自身のパスワード')
+
+    await self().find('.confirm-self .btn-ghost').trigger('click')
+    expect(self().find('.confirm-self').exists()).toBe(false)
+    expect(spy).not.toHaveBeenCalled()
+
+    await self().find('button').trigger('click')
+    await self().find('.confirm-self .btn-primary').trigger('click')
+    await flushPromises()
+    expect(spy).toHaveBeenCalledWith(1)
+    expect(self().find('.issued-url').exists()).toBe(true)
+    expect(self().find('.confirm-self').exists()).toBe(false)
   })
 
   it('再設定リンクを発行すると、そのユーザーの下にリンクを出してコピーできる', async () => {
@@ -52,7 +79,7 @@ describe('UsersPanel', () => {
 
   it('401 なら unauthorized を発火する', async () => {
     vi.spyOn(usersApi, 'listUsers').mockRejectedValue(new ApiError(401, []))
-    const wrapper = mount(UsersPanel)
+    const wrapper = mount(UsersPanel, { props: { currentUserId: 1 } })
     await flushPromises()
     expect(wrapper.emitted('unauthorized')).toHaveLength(1)
   })

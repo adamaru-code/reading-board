@@ -10,7 +10,7 @@ describe('AdminModal', () => {
   it('招待タブで開き、ユーザータブに切り替えられる', async () => {
     vi.spyOn(invitationsApi, 'listInvitations').mockResolvedValue([])
     vi.spyOn(usersApi, 'listUsers').mockResolvedValue([])
-    const wrapper = mount(AdminModal)
+    const wrapper = mount(AdminModal, { props: { currentUserId: 1 } })
     await flushPromises()
 
     expect(wrapper.findComponent(InvitationsPanel).exists()).toBe(true)
@@ -25,7 +25,7 @@ describe('AdminModal', () => {
 
   it('閉じるで close を発火する', async () => {
     vi.spyOn(invitationsApi, 'listInvitations').mockResolvedValue([])
-    const wrapper = mount(AdminModal)
+    const wrapper = mount(AdminModal, { props: { currentUserId: 1 } })
     await wrapper.find('.btn-close').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
