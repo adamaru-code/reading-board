@@ -97,8 +97,9 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] スタイルの当て方が無秩序に混在していない（scoped CSS / ユーティリティの方針が一貫）
 - [ ] 命名（コンポーネント PascalCase / 関数・変数 camelCase / 型 PascalCase）が一貫
 
-### 2.6 Lint / 型チェック / Build
+### 2.6 Lint / テスト / 型チェック / Build
 
+- [ ] `npm test`（vitest）が成功。ロジック（`api/` `lib/`）やコンポーネントの振る舞いを変えたらテストを追加・更新（`src/**/__tests__/*.spec.ts`）
 - [ ] `npm run build`（`vue-tsc` の型チェック含む）が成功
 - [ ] Lint 導入時は `npm run lint` 成功
 

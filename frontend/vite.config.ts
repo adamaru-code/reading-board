@@ -5,7 +5,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
-    port: 5173, // 固定（別ポートだと Rails 側の CORS 許可が効かない）
+    port: 5173, // 固定（CLAUDE.md §8。/api は下記プロキシで同一オリジン化するため CORS 不要）
     proxy: {
       // フロントの相対パス /api/* を Rails(3000) に転送
       '/api': 'http://localhost:3000',
