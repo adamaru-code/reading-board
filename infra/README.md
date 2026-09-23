@@ -28,10 +28,11 @@
 cd infra
 terraform init
 terraform plan -out=tfplan   # 作成されるリソースを確認（26 個）
-terraform apply tfplan       # 10〜15 分（RDS と CloudFront の作成待ち）
+terraform apply tfplan       # 約 10 分（RDS と CloudFront の作成待ち）
+rm tfplan                    # plan ファイルはシークレットを含むので消す（gitignore 済み）
 ```
 
-apply 後、**EC2 の構築にさらに 10 分前後**かかる（Docker ビルド）。その間 `app_url` は 502 / 504 になる。
+apply 後、**EC2 の構築にさらに 5 分前後**かかる（Docker ビルド。初回の実測で約 4 分）。その間 `app_url` は 502 / 504 になる。
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' "$(terraform output -raw app_url)/up"   # 200 になれば完了
