@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { changePassword } from '../api/password'
+import { deleteAccount } from '../api/registration'
 import { ApiError } from '../api/http'
 
 // バックエンド User::PASSWORD_MIN_LENGTH と揃える
 const MIN_LENGTH = 8
 
-const emit = defineEmits<{ close: []; unauthorized: [] }>()
+const emit = defineEmits<{ close: []; unauthorized: []; deleted: [] }>()
+
+// パスワード変更 / アカウント削除 の切り替え
+const tab = ref<'password' | 'delete'>('password')
 
 const currentPassword = ref('')
 const password = ref('')
@@ -24,6 +28,34 @@ const clientError = computed(() => {
   return ''
 })
 
+// ---------- アカウント削除 ----------
+const deletePassword = ref('')
+const deleteConfirmed = ref(false)
+const deleteErrors = ref<string[]>([])
+const deleting = ref(false)
+
+async function onDelete() {
+  if (!deleteConfirmed.value) return
+  deleteErrors.value = []
+  deleting.value = true
+  try {
+    await deleteAccount(deletePassword.value)
+    emit('deleted')
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      emit('unauthorized')
+      return
+    }
+    deleteErrors.value =
+      e instanceof ApiError && e.errors.length > 0
+        ? e.errors
+        : ['アカウントの削除に失敗しました。時間をおいて再度お試しください。']
+  } finally {
+    deleting.value = false
+  }
+}
+
+// ---------- パスワード変更 ----------
 async function onSubmit() {
   if (clientError.value) return
   errors.value = []
@@ -52,10 +84,61 @@ async function onSubmit() {
 
 <template>
   <div class="modal-overlay" @click.self="emit('close')" @keydown.esc="emit('close')">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
-      <h2 id="password-modal-title" class="modal-title">パスワード変更</h2>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+      <h2 id="account-modal-title" class="modal-title">アカウント</h2>
 
-      <template v-if="done">
+      <div class="tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="tab"
+          :aria-selected="tab === 'password'"
+          @click="tab = 'password'"
+        >
+          パスワード変更
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="tab"
+          :aria-selected="tab === 'delete'"
+          @click="tab = 'delete'"
+        >
+          アカウント削除
+        </button>
+      </div>
+
+      <form v-if="tab === 'delete'" class="delete-form" @submit.prevent="onDelete">
+        <ul v-if="deleteErrors.length" class="form-errors" role="alert">
+          <li v-for="(msg, i) in deleteErrors" :key="i">{{ msg }}</li>
+        </ul>
+
+        <p class="delete-warning">
+          アカウントを削除すると、登録した本・メモ・タグの紐づけがすべて削除され、元に戻せません。
+        </p>
+
+        <label class="field">
+          <span class="field-label">現在のパスワード</span>
+          <input v-model="deletePassword" type="password" autocomplete="current-password" required />
+        </label>
+
+        <label class="confirm-check">
+          <input v-model="deleteConfirmed" type="checkbox" />
+          すべてのデータが削除されることを理解しました
+        </label>
+
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" :disabled="deleting" @click="emit('close')">
+            キャンセル
+          </button>
+          <button type="submit" class="btn btn-danger" :disabled="deleting || !deleteConfirmed">
+            {{ deleting ? '削除中…' : 'アカウントを削除' }}
+          </button>
+        </div>
+      </form>
+
+      <template v-else-if="done">
         <p class="done-message" role="status">
           パスワードを変更しました。他の端末ではログアウトされています。
         </p>
@@ -135,7 +218,39 @@ async function onSubmit() {
 .modal-title {
   font-size: 18px;
   font-weight: 700;
+  margin-bottom: 12px;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
   margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.tab[aria-selected='true'] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.delete-warning {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--danger);
+}
+.confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
 }
 .form-errors {
   margin: 0 0 16px;
@@ -199,5 +314,9 @@ async function onSubmit() {
 .btn-ghost {
   background: var(--surface);
   border-color: var(--border);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
 }
 </style>

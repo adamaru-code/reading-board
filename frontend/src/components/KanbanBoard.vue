@@ -8,7 +8,7 @@ import type { Book, BookStatus, BookGenre, BookListParams, BookSortKey, SortDir 
 import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
-import PasswordChangeModal from './PasswordChangeModal.vue'
+import AccountModal from './AccountModal.vue'
 import InvitationsModal from './InvitationsModal.vue'
 import { useKanbanColumns } from '../composables/useKanbanColumns'
 
@@ -40,7 +40,7 @@ async function onLogout() {
   emit('logout')
 }
 
-const passwordModalOpen = ref(false)
+const accountModalOpen = ref(false)
 const invitationsModalOpen = ref(false)
 
 const loading = ref(true)
@@ -292,8 +292,8 @@ function onModalDone() {
         >
           招待
         </button>
-        <button type="button" class="header-btn" @click="passwordModalOpen = true">
-          パスワード変更
+        <button type="button" class="header-btn" @click="accountModalOpen = true">
+          アカウント
         </button>
         <button type="button" class="header-btn" @click="onLogout">ログアウト</button>
       </div>
@@ -376,10 +376,11 @@ function onModalDone() {
       @deleted="onModalDone"
     />
 
-    <PasswordChangeModal
-      v-if="passwordModalOpen"
-      @close="passwordModalOpen = false"
+    <AccountModal
+      v-if="accountModalOpen"
+      @close="accountModalOpen = false"
       @unauthorized="emit('logout')"
+      @deleted="emit('logout')"
     />
 
     <InvitationsModal

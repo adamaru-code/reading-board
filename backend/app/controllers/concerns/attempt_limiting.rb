@@ -6,7 +6,8 @@ module AttemptLimiting
 
   class_methods do
     def limit_attempts(to:, within:, only:)
-      rate_limit to: to, within: within, only: only, store: RATE_LIMIT_STORE,
+      # name でアクションごとにカウンタを分ける（同じコントローラに複数付けても混ざらない）
+      rate_limit to: to, within: within, only: only, name: Array(only).join("-"), store: RATE_LIMIT_STORE,
         with: -> { render json: { errors: [TOO_MANY_ATTEMPTS] }, status: :too_many_requests }
     end
   end

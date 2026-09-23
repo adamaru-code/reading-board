@@ -84,5 +84,50 @@ module Api
       assert_response :too_many_requests
       assert_nil @invitation.reload.used_at
     end
+
+    def log_in(user) = post(api_session_url, params: { email: user.email, password: "password" })
+
+    test "アカウント削除で本・セッションが消え、使った招待は残って used_by が NULL になる" do
+      other = users(:other)
+      other.books.create!(title: "消える本")
+      @invitation.redeem!(other)
+      log_in(other)
+
+      assert_difference -> { User.count } => -1, -> { Book.where(user: other).count } => -1 do
+        delete api_registration_url, params: { current_password: "password" }
+      end
+      assert_response :no_content
+      assert_nil @invitation.reload.used_by_id
+      assert_equal 0, Session.where(user_id: other.id).count
+      get api_session_url
+      assert_response :unauthorized
+    end
+
+    test "アカウント削除は現在のパスワードが違うと 422" do
+      log_in(users(:other))
+      delete api_registration_url, params: { current_password: "wrong" }
+      assert_response :unprocessable_content
+      assert_equal ["現在のパスワードが違います"], errors
+      assert User.exists?(users(:other).id)
+    end
+
+    test "最後の管理者は削除できないが、他に管理者がいれば削除できる" do
+      owner = users(:owner)
+      log_in(owner)
+      delete api_registration_url, params: { current_password: "password" }
+      assert_response :unprocessable_content
+      assert_equal ["最後の管理者は削除できません"], errors
+
+      users(:other).update!(admin: true)
+      delete api_registration_url, params: { current_password: "password" }
+      assert_response :no_content
+      assert_not User.exists?(owner.id)
+      assert_not Invitation.exists?(@invitation.id) # 発行した招待も消える
+    end
+
+    test "アカウント削除は未ログインで 401" do
+      delete api_registration_url, params: { current_password: "password" }
+      assert_response :unauthorized
+    end
   end
 end

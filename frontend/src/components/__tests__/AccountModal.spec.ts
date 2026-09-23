@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import PasswordChangeModal from '../PasswordChangeModal.vue'
+import AccountModal from '../AccountModal.vue'
 import * as passwordApi from '../../api/password'
+import * as registrationApi from '../../api/registration'
 import { ApiError } from '../../api/http'
 
 async function fill(current: string, password: string, confirmation: string) {
-  const wrapper = mount(PasswordChangeModal)
+  const wrapper = mount(AccountModal)
   const inputs = wrapper.findAll('input[type="password"]')
   await inputs[0].setValue(current)
   await inputs[1].setValue(password)
@@ -13,7 +14,7 @@ async function fill(current: string, password: string, confirmation: string) {
   return wrapper
 }
 
-describe('PasswordChangeModal', () => {
+describe('AccountModal（パスワード変更）', () => {
   it('入力値を送信し、成功メッセージを表示する', async () => {
     const spy = vi.spyOn(passwordApi, 'changePassword').mockResolvedValue()
 
@@ -65,5 +66,50 @@ describe('PasswordChangeModal', () => {
     await flushPromises()
 
     expect(wrapper.emitted('unauthorized')).toHaveLength(1)
+  })
+})
+
+describe('AccountModal（アカウント削除）', () => {
+  async function openDeleteTab() {
+    const wrapper = mount(AccountModal)
+    await wrapper.findAll('[role="tab"]')[1].trigger('click')
+    await wrapper.find('input[type="password"]').setValue('current-pw')
+    return wrapper
+  }
+
+  it('確認にチェックするまで削除できない', async () => {
+    const spy = vi.spyOn(registrationApi, 'deleteAccount')
+    const wrapper = await openDeleteTab()
+
+    const button = wrapper.find('button.btn-danger')
+    expect(button.attributes('disabled')).toBeDefined()
+    await wrapper.find('.delete-form').trigger('submit')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('削除に成功すると deleted を発火する', async () => {
+    const spy = vi.spyOn(registrationApi, 'deleteAccount').mockResolvedValue()
+    const wrapper = await openDeleteTab()
+
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('.delete-form').trigger('submit')
+    await flushPromises()
+
+    expect(spy).toHaveBeenCalledWith('current-pw')
+    expect(wrapper.emitted('deleted')).toHaveLength(1)
+  })
+
+  it('API のエラーを表示する', async () => {
+    vi.spyOn(registrationApi, 'deleteAccount').mockRejectedValue(
+      new ApiError(422, ['最後の管理者は削除できません']),
+    )
+    const wrapper = await openDeleteTab()
+
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('.delete-form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').text()).toBe('最後の管理者は削除できません')
+    expect(wrapper.emitted('deleted')).toBeUndefined()
   })
 })

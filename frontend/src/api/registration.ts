@@ -13,3 +13,11 @@ export interface RegistrationInput {
 export function register(input: RegistrationInput): Promise<User> {
   return request<User>('/registration', { method: 'POST', body: input })
 }
+
+// DELETE /api/registration （現在のパスワードで確認してアカウントを削除。本もすべて消える）
+export function deleteAccount(currentPassword: string): Promise<void> {
+  return request<void>('/registration', {
+    method: 'DELETE',
+    body: { current_password: currentPassword },
+  })
+}
