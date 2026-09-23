@@ -19,7 +19,7 @@
 | `books.user_id` の NOT NULL 制約 | 済（#127） |
 | 招待コードによる登録・管理者フラグ（API） | 済（#129） |
 | 登録画面・招待管理画面 | 済（#131） |
-| ログイン試行の回数制限 | 未 |
+| ログイン・登録・パスワード変更の回数制限 | 済（#133） |
 | パスワードリセット（メール） | 未 |
 | アカウント削除 | 未（`User has_many :books, dependent: :destroy` は設定済み） |
 
@@ -31,7 +31,7 @@
 
 1. **`books.user_id` を NOT NULL に**：マイグレーションで NULL の行を初期ユーザーに寄せてから制約を付ける。
 2. **招待制の登録**：管理者（`users.admin`）が `POST /api/invitations` でコードを発行し、`POST /api/registration { invitation_code, email, password, password_confirmation }` でユーザー作成＋ログイン。メール形式のバリデーションを追加。ログイン画面から登録画面へ切り替え、`?invite=CODE` 付きリンクで登録画面を開けるようにする。
-3. **レート制限**：Rails 8 の `rate_limit` を `sessions#create` / `registrations#create` / `passwords#update` に付ける。本番のキャッシュストアが必要（`solid_cache` は Gemfile にあるが未設定）。
+3. **レート制限**：Rails 8 の `rate_limit`（`AttemptLimiting#limit_attempts`）を IP ごとに付ける。ログイン 3 分 10 回・登録 1 時間 10 回・パスワード変更 3 分 10 回、超えたら 429。記録先は `RATE_LIMIT_STORE`（プロセス内メモリ・単一インスタンス前提）。複数台にするなら solid_cache / Redis などの共有ストアに移す。
 4. **アカウント削除**：`DELETE /api/registration`（現在のパスワードで確認）。本・セッションは `dependent: :destroy` で消える。
 5. **パスワードリセット**：メール送信が要る（ActionMailer＋送信サービス。AWS なら SES）。**AWS デプロイ後**に回す。
 6. seed・テスト：複数ユーザーのデモデータ、サインアップ・レート制限・削除のテスト。
@@ -45,7 +45,7 @@
 | 1 | `books.user_id` NOT NULL 化（済） | 小 | なし |
 | 2 | 招待・登録 API＋管理者フラグ（済） | 中 | 1 |
 | 2b | 登録画面＋招待管理画面（済） | 中 | 2 |
-| 3 | レート制限（ログイン・登録・パスワード変更） | 小〜中 | 2 |
+| 3 | レート制限（ログイン・登録・パスワード変更）（済） | 小〜中 | 2 |
 | 4 | アカウント削除 | 小 | 2 |
 | 5 | パスワードリセット（メール） | 中 | AWS（SES）または別のメール送信サービス |
 

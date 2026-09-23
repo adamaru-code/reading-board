@@ -4,6 +4,7 @@ module Api
     include PasswordValidation
 
     allow_unauthenticated_access only: :create
+    limit_attempts to: 10, within: 1.hour, only: :create
 
     # POST /api/registration
     # 招待コードが使えればユーザーを作り、招待を使用済みにしてログイン状態にする

@@ -2,6 +2,8 @@ module Api
   class PasswordsController < ApplicationController
     include PasswordValidation
 
+    limit_attempts to: 10, within: 3.minutes, only: :update
+
     # PATCH /api/password
     # 成功すると他端末のセッションを失効させ、操作中のセッションは維持する
     def update

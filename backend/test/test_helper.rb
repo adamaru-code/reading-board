@@ -13,3 +13,10 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
+
+module ActionDispatch
+  class IntegrationTest
+    # 回数制限の記録をテストごとにリセットする（同一プロセス内でテスト間に持ち越さない）
+    setup { RATE_LIMIT_STORE.clear }
+  end
+end

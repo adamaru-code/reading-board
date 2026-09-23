@@ -76,5 +76,13 @@ module Api
       assert_equal ["パスワード（確認）が一致しません"], errors
       assert_nil @invitation.reload.used_at
     end
+
+    test "登録の試行が 1 時間に 10 回を超えると 429（招待コードの総当たり対策）" do
+      10.times { |n| register(code: "guess-#{n}") }
+      assert_response :unprocessable_content
+      register
+      assert_response :too_many_requests
+      assert_nil @invitation.reload.used_at
+    end
   end
 end
