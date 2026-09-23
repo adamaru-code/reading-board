@@ -23,4 +23,7 @@ backend/.bundle/
 *.tfstate
 *.tfstate.*
 **/terraform.tfvars
+# plan -out の出力（シークレットを含む）
+**/tfplan
+*.tfplan
 *.tfplan
