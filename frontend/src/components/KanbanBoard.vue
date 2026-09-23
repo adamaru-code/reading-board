@@ -385,6 +385,7 @@ function onModalDone() {
 
     <AdminModal
       v-if="adminModalOpen"
+      :current-user-id="user.id"
       @close="adminModalOpen = false"
       @unauthorized="emit('logout')"
     />

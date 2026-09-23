@@ -5,6 +5,8 @@ import { ApiError } from '../api/http'
 import type { UserSummary } from '../types/auth'
 
 // 管理モーダル（AdminModal）の「ユーザー」タブ
+// currentUserId：ログイン中の管理者自身（自分宛ての発行は確認を挟む）
+const props = defineProps<{ currentUserId: number }>()
 const emit = defineEmits<{ unauthorized: [] }>()
 
 const users = ref<UserSummary[]>([])
@@ -14,6 +16,8 @@ const error = ref('')
 // 発行した再設定リンク（保存されないので、このタブを開いている間だけ表示する）
 const issued = ref<{ userId: number; url: string; expiresAt: string } | null>(null)
 const copied = ref(false)
+// 自分宛ての発行を確認中か（取り違えて自分のパスワードを変えてしまわないように）
+const confirmingSelf = ref(false)
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' })
@@ -38,7 +42,17 @@ onMounted(async () => {
   }
 })
 
+// 自分宛てはすぐ発行せず確認を出す。他のユーザーはすぐ発行する
+function onIssueClick(user: UserSummary) {
+  if (user.id === props.currentUserId) {
+    confirmingSelf.value = true
+    return
+  }
+  onIssue(user)
+}
+
 async function onIssue(user: UserSummary) {
+  confirmingSelf.value = false
   error.value = ''
   busy.value = true
   try {
@@ -77,6 +91,7 @@ async function onCopy() {
       <li v-for="user in users" :key="user.id" class="user">
         <div class="user-main">
           <span class="user-email">{{ user.email }}</span>
+          <span v-if="user.id === currentUserId" class="self">（自分）</span>
           <span v-if="user.admin" class="badge">管理者</span>
         </div>
         <p class="user-meta">登録 {{ formatDateTime(user.created_at) }}</p>
@@ -84,10 +99,24 @@ async function onCopy() {
           type="button"
           class="btn btn-ghost btn-small"
           :disabled="busy"
-          @click="onIssue(user)"
+          @click="onIssueClick(user)"
         >
           再設定リンクを発行
         </button>
+
+        <div v-if="user.id === currentUserId && confirmingSelf" class="confirm-self" role="alert">
+          <p class="confirm-text">
+            あなた自身のパスワードを再設定するリンクです。今のパスワードが分かる場合は「アカウント」→「パスワード変更」を使ってください。
+          </p>
+          <div class="confirm-actions">
+            <button type="button" class="btn btn-primary btn-small" @click="onIssue(user)">
+              発行する
+            </button>
+            <button type="button" class="btn btn-ghost btn-small" @click="confirmingSelf = false">
+              やめる
+            </button>
+          </div>
+        </div>
 
         <div v-if="issued && issued.userId === user.id" class="issued" role="status">
           <input class="issued-url" :value="issued.url" readonly aria-label="再設定リンク" />
@@ -144,6 +173,25 @@ async function onCopy() {
 .user-email {
   font-weight: 600;
   word-break: break-all;
+}
+.self {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.confirm-self {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #fff7d6;
+  border: 1px solid #f5cd47;
+  border-radius: 6px;
+}
+.confirm-text {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.confirm-actions {
+  display: flex;
+  gap: 6px;
 }
 .badge {
   font-size: 11px;
