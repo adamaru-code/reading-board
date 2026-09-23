@@ -87,11 +87,11 @@ module Api
     # 渡された id 順に position を 0..n-1 で保存（カラム内の並び順）
     def reorder
       ids = Array(params[:ids]).map(&:to_i)
-      Book.transaction do
-        ids.each_with_index do |id, index|
-          current_user.books.where(id: id).update_all(position: index)
-        end
-      end
+      return head :no_content if ids.empty?
+
+      # id → position(0..n-1) を CASE 式で 1 クエリ更新（所有者スコープ）。id は整数化済みで安全
+      whens = ids.each_with_index.map { |id, index| "WHEN #{id} THEN #{index}" }.join(" ")
+      current_user.books.where(id: ids).update_all("position = CASE id #{whens} END")
       head :no_content
     end
 
