@@ -15,7 +15,12 @@ module Authentication
   private
 
   def current_user
-    @current_user ||= resume_session&.user
+    current_session&.user
+  end
+
+  # このリクエストのセッション（パスワード変更時に「自分以外」を失効させるのに使う）
+  def current_session
+    @current_session ||= resume_session
   end
 
   # 署名付き httpOnly Cookie のトークンからセッションを復元

@@ -175,6 +175,7 @@ sequenceDiagram
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行 |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
 | ログイン状態確認 | 画面初期化 | GET /api/session | 現在の current_user を返す（未認証 401） |
+| パスワード変更 | ヘッダ → パスワード変更モーダル | PATCH /api/password { current_password, password, password_confirmation } | users UPDATE（8 文字以上）＋ 自分以外の sessions DELETE（他端末は失効・操作中は維持）。不備は 422 |
 
 ### 4.4 ISBN/バーコードから登録
 

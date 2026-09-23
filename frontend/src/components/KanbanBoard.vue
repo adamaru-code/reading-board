@@ -8,6 +8,7 @@ import type { Book, BookStatus, BookGenre, BookListParams } from '../types/book'
 import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
+import PasswordChangeModal from './PasswordChangeModal.vue'
 
 defineProps<{ user: User }>()
 const emit = defineEmits<{ logout: [] }>()
@@ -36,6 +37,8 @@ async function onLogout() {
   }
   emit('logout')
 }
+
+const passwordModalOpen = ref(false)
 
 const books = ref<Book[]>([])
 const loading = ref(true)
@@ -291,7 +294,10 @@ function onModalDone() {
         <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">クリア</button>
         <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
         <span class="user-email" :title="user.email">{{ user.email }}</span>
-        <button type="button" class="logout-btn" @click="onLogout">ログアウト</button>
+        <button type="button" class="header-btn" @click="passwordModalOpen = true">
+          パスワード変更
+        </button>
+        <button type="button" class="header-btn" @click="onLogout">ログアウト</button>
       </div>
     </header>
 
@@ -357,6 +363,12 @@ function onModalDone() {
       @close="closeModal"
       @saved="onModalDone"
       @deleted="onModalDone"
+    />
+
+    <PasswordChangeModal
+      v-if="passwordModalOpen"
+      @close="passwordModalOpen = false"
+      @unauthorized="emit('logout')"
     />
   </div>
 </template>
@@ -425,7 +437,7 @@ function onModalDone() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.logout-btn {
+.header-btn {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;

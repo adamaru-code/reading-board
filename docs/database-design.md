@@ -127,7 +127,7 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 |---|---|---|---|
 | `id` | bigint | PK, auto | 主キー |
 | `email` | string | NOT NULL, UNIQUE | ログイン ID（正規化：trim + 小文字化） |
-| `password_digest` | string | NOT NULL | bcrypt ハッシュ（`has_secure_password`） |
+| `password_digest` | string | NOT NULL | bcrypt ハッシュ（`has_secure_password`）。パスワードは 8 文字以上（変更時にモデルで検証） |
 
 `sessions`
 
