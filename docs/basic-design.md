@@ -93,18 +93,27 @@ erDiagram
 - 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。
 - `books` は `user_id` で所有者（`users`）に紐づく（認証は実装済み。§3.1）。
 
-### 3.1 認証（単一ユーザー・実装済み）
+### 3.1 認証（招待制の複数ユーザー・実装済み）
 
-単一ユーザー認証を**セッション Cookie 方式**で実装済み。`users` と `sessions`（[データベース設計](database-design.md) §7）を持ち、`books` は `user_id` で所有者に 1 対多で紐づく。公開サインアップは無く、ユーザーは seed / コンソールで作成する。
+認証を**セッション Cookie 方式**で実装済み。`users` / `sessions` / `invitations`（[データベース設計](database-design.md) §7）を持ち、`books` は `user_id` で所有者に 1 対多で紐づく。公開サインアップは無く、初期ユーザー（管理者）は seed で作成し、他のユーザーは管理者が発行した招待コードで登録する（[複数ユーザー対応](multi-user.md)）。
 
 ```mermaid
 erDiagram
     users ||--o{ books : "owns"
     users ||--o{ sessions : "has"
+    users ||--o{ invitations : "issues"
     users {
         bigint id PK
         string email "ログイン ID"
         string password_digest "bcrypt"
+        boolean admin "招待を発行できる"
+    }
+    invitations {
+        bigint id PK
+        string code "1 回限り"
+        bigint inviter_id FK
+        bigint used_by_id FK
+        datetime expires_at "7 日"
     }
     sessions {
         bigint id PK
@@ -182,7 +191,9 @@ sequenceDiagram
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行 |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
-| ログイン状態確認 | 画面初期化 | GET /api/session | 現在の current_user を返す（未認証 401） |
+| ログイン状態確認 | 画面初期化 | GET /api/session | 現在の current_user（`id` / `email` / `admin`）を返す（未認証 401） |
+| 招待コードで登録 | 登録画面 | POST /api/registration { invitation_code, email, password, password_confirmation } | users INSERT ＋ invitations UPDATE（行ロック・使用済みに）＋ sessions INSERT。コード不正・メール重複・パスワード不備は 422 |
+| 招待の一覧 / 発行 / 削除 | 招待管理（管理者のみ） | GET / POST /api/invitations、DELETE /api/invitations/:id | invitations SELECT / INSERT / DELETE（未使用のみ）。一般ユーザーは 403 |
 | パスワード変更 | ヘッダ → パスワード変更モーダル | PATCH /api/password { current_password, password, password_confirmation } | users UPDATE（8 文字以上）＋ 自分以外の sessions DELETE（他端末は失効・操作中は維持）。不備は 422 |
 
 ### 4.4 ISBN/バーコードから登録

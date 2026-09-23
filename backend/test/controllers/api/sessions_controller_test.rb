@@ -6,10 +6,12 @@ module Api
       @owner = users(:owner) # password: "password"
     end
 
-    test "正しい資格情報でログインでき、ユーザーを返す" do
+    test "正しい資格情報でログインでき、ユーザー（管理者フラグ付き）を返す" do
       post api_session_url, params: { email: @owner.email, password: "password" }
       assert_response :success
-      assert_equal @owner.email, JSON.parse(response.body)["email"]
+      body = JSON.parse(response.body)
+      assert_equal @owner.email, body["email"]
+      assert_equal true, body["admin"]
     end
 
     test "誤ったパスワードは 401" do
