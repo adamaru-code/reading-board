@@ -1,0 +1,62 @@
+#!/bin/bash
+# EC2 の初回起動時に cloud-init が実行する。ログ：/var/log/reading-board-bootstrap.log
+# GitHub から取得 → API は Docker コンテナ、フロントはビルドして nginx で配信する。
+set -euo pipefail
+exec > >(tee -a /var/log/reading-board-bootstrap.log) 2>&1
+echo "[bootstrap] start $(date -Is)"
+
+REGION="${region}"
+PREFIX="${ssm_prefix}"
+param() {
+  aws ssm get-parameter --region "$REGION" --name "$PREFIX/$1" --with-decryption \
+    --query Parameter.Value --output text
+}
+
+# Docker ビルド中のメモリ不足対策（t4g.small は 2GB）
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+
+dnf install -y docker nginx git
+systemctl enable --now docker
+
+git clone --depth 1 --branch "${git_ref}" "${repo_url}" /opt/reading-board
+
+echo "[bootstrap] build api image"
+docker build -t reading-board-api /opt/reading-board/backend
+
+echo "[bootstrap] build frontend"
+docker run --rm -v /opt/reading-board/frontend:/app -w /app docker.io/library/node:24-slim \
+  sh -c "npm ci && npm run build"
+mkdir -p /usr/share/nginx/reading-board
+cp -r /opt/reading-board/frontend/dist/. /usr/share/nginx/reading-board/
+
+echo "[bootstrap] start api container"
+# シークレットは SSM Parameter Store から取得し、root だけが読めるファイルに置く
+umask 077
+cat > /etc/reading-board.env <<ENV
+RAILS_ENV=production
+SECRET_KEY_BASE=$(param secret_key_base)
+DB_HOST=${db_host}
+DB_PORT=3306
+DB_USERNAME=${db_username}
+DB_PASSWORD=$(param db_password)
+DB_NAME=${db_name}
+SEED_USER_EMAIL=${admin_email}
+SEED_USER_PASSWORD=$(param admin_password)
+ENV
+umask 022
+
+# 起動時に db:prepare（DB 作成・マイグレーション・新規 DB なら管理者とデモ用の本を seed）
+docker run -d --name reading-board-api --restart unless-stopped \
+  --env-file /etc/reading-board.env -p 127.0.0.1:3000:80 reading-board-api
+
+echo "[bootstrap] configure nginx"
+cat > /etc/nginx/nginx.conf <<'NGINX'
+${nginx_conf}
+NGINX
+nginx -t
+systemctl enable --now nginx
+
+echo "[bootstrap] done $(date -Is)"

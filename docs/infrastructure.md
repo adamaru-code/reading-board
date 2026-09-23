@@ -1,6 +1,6 @@
 # 読書管理アプリ — インフラ設計（AWS デプロイ案）
 
-> **ステータス：構築中。** 決定事項は §0。アプリ側の本番設定は済（§1.1）、`infra/`（Terraform）は作成中。
+> **ステータス：構築中。** 決定事項は §0。アプリ側の本番設定は済（§1.1）、`infra/`（Terraform）は作成済み・未 apply。手順は [infra/README.md](../infra/README.md)。
 > AWS 上のリソース・課金はまだゼロ。`terraform apply` は実行前に必ず合意を取る。
 > 費用は 2026-09 時点の東京リージョン・オンデマンド料金の**概算**（1 USD ≒ 150 円）。着手時に公式の料金ページで必ず再確認する。
 
@@ -84,12 +84,20 @@ flowchart LR
 
 ---
 
-## 3. コスト管理（着手時に最初にやること）
+## 3. コスト管理
 
-1. **AWS Budgets** で月額予算アラート（例：$10 / $30 で通知）を最初に作る（Budgets は 2 件まで無料）。
+1. **AWS Budgets** の予算アラート：既存の日次 $0.5・月次 $12 を使う（§0）。起動中は 1 時間あたり約 $0.06 なので、8 時間ほど起動し続けると日次アラートに届く。
 2. 学習中は**常時起動しない**。`terraform destroy` を README に明記し、終了時に必ず実行する。
 3. RDS は停止しても 7 日で自動起動するため、長期間使わないなら destroy（必要ならスナップショットを残す）。
 4. NAT Gateway・Elastic IP の放置・マルチ AZ など、固定費の大きい設定は使わない。
+5. destroy 後、課金中のリソースが残っていないか確かめる（すべて 0 / None なら OK）：
+
+```bash
+aws ec2 describe-instances --query 'length(Reservations[].Instances[?State.Name!=`terminated`][])'
+aws rds describe-db-instances --query 'length(DBInstances)'
+aws ec2 describe-addresses --query 'length(Addresses)'
+aws cloudfront list-distributions --query 'DistributionList.Quantity'
+```
 
 ---
 
@@ -97,22 +105,27 @@ flowchart LR
 
 - 置き場所：`infra/`（リポジトリ直下）。`*.tfstate` / `terraform.tfvars` は `.gitignore` 済み。
 - state：最初はローカル（1 人運用）。複数環境・CI 連携が必要になったら S3 backend に移す。
-- ファイル分割：`providers.tf` / `variables.tf` / `network.tf`（VPC・サブネット・SG）/ `ec2.tf` / `rds.tf` / `cloudfront.tf` / `outputs.tf`。
-- 機密変数は `sensitive = true`。DB パスワードは tfvars か `random_password` → SSM に保存。
+- ファイル分割：`versions.tf` / `providers.tf` / `variables.tf` / `network.tf`（VPC・サブネット）/ `security.tf`（SG）/ `iam.tf` / `secrets.tf`（random_password → SSM）/ `ec2.tf` / `rds.tf` / `cloudfront.tf` / `outputs.tf`、起動スクリプトと nginx 設定は `templates/`。
+- シークレット（DB パスワード・SECRET_KEY_BASE・管理者パスワード）は `random_password` で生成し SSM Parameter Store（SecureString）へ。`.tf` や出力には値を出さない（管理者パスワードは取得コマンドだけ出力）。
+- `.terraform.lock.hcl` はコミットする（プロバイダのバージョン固定）。
 - CI：PR で `terraform fmt -check` と `terraform validate` のみ（`plan` / `apply` は手元で実行し、CI に AWS 認証情報は置かない）。
 - 点検項目は quality-review スキルの「4. Terraform / インフラ」を正とする。
 
 ---
 
-## 5. デプロイ手順（案）
+## 5. デプロイ手順
 
-1. `frontend`：`npm run build` → `dist/` を EC2 の nginx 配信ディレクトリへ転送。
-2. `backend`：Docker イメージ（`backend/Dockerfile`）を EC2 上で起動（Kamal か docker compose で管理。着手時に決める）。
-3. `bin/rails db:migrate` → 初期ユーザーを seed（`SEED_USER_EMAIL` / `SEED_USER_PASSWORD` を本番用に指定）。
+「使うときだけ起動」なので、デプロイ＝`terraform apply` で作り直す（更新の仕組みは持たない）。EC2 の起動スクリプト（`infra/templates/user_data.sh.tftpl`）が次を行う：
+
+1. GitHub から `git_ref`（既定 `main`）を取得
+2. `backend/Dockerfile` で API イメージをビルドし、SSM から取ったシークレットを環境変数にして起動（`db:prepare` で DB 作成・マイグレーション・管理者とデモ用の本を seed）
+3. Node コンテナで `frontend` をビルドし、nginx で配信（`/api` と `/up` はコンテナへ転送）
+
+手順の詳細は [infra/README.md](../infra/README.md)。
 
 ---
 
-## 6. 着手前に決めること
+## 6. 着手前に決めること（→ §0 で決定済み）
 
 - [ ] 構成案（推奨：B）
 - [ ] 月額予算の上限と Budgets の通知額
