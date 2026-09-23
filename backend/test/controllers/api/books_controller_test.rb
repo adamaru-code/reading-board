@@ -322,6 +322,19 @@ module Api
       assert_equal [long.id, short.id, unrated.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
     end
 
+    test "index の sort は同値をタイトル順に並べ、手動順（position）を混ぜない" do
+      Book.delete_all
+      same_day = Date.new(2026, 9, 23)
+      c = create_read_book("う", started: nil, finished: same_day)
+      a = create_read_book("あ", started: nil, finished: same_day)
+      b = create_read_book("い", started: nil, finished: same_day)
+      c.update!(position: 0)
+      a.update!(position: 2)
+      b.update!(position: 1)
+      get api_books_url, params: { status: "read", sort: "finished_on", dir: "desc" }
+      assert_equal [a.id, b.id, c.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+    end
+
     test "index は不正な sort を無視して既定の並びで返す" do
       get api_books_url, params: { sort: "title; DROP TABLE books", dir: "desc" }
       assert_response :success

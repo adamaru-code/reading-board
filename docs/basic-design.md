@@ -144,10 +144,11 @@ sequenceDiagram
 ```
 
 - 一覧はページング対応（`page` 既定1・下限1、`per_page` 既定100・1〜200 にクランプ）。`offset`（0 以上）を指定すると `page` より優先。レスポンスは `{ items, pagination }` エンベロープ。
-- 並びは既定 `position IS NULL, position, created_at, id`。`sort`（`finished_on` / `registered_on` / `rating` / `duration_days`）＋`dir`（`asc`/`desc`）で並び替え（値が無い本は末尾、同値は既定の並び）。不正な `sort` は無視。
+- 並びは既定 `position IS NULL, position, created_at, id`。`sort`（`finished_on` / `registered_on` / `rating` / `duration_days`）＋`dir`（`asc`/`desc`）で並び替え（値が無い本は末尾、同値はタイトル順。position は使わない）。不正な `sort` は無視。
 - カンバンは**カラム（status）ごとに個別取得**し、初期 20 件・「もっと見る」で追加読込（`useKanbanColumns`）。件数表示は `total`。
   - 追加読込は **`offset` = 読み込み済み件数**。D&D でカードが移るとページ境界がずれるため、page 番号ではなく offset で取りこぼしを防ぐ（重複は id で除外）。
   - 読了カラムの並び替えはページをまたいで正しくなるよう**サーバー側**（`sort`/`dir`）で行い、変更時は先頭から取り直す。
+  - 読了カラムはキーで並べるため**カラム内の手動並び替えの対象外**。他カラムからドロップしたときは status だけ更新し、読了カラムを取り直してキー順の位置に置く（reorder は呼ばない）。
   - 絞り込み変更時は各カラムを先頭 20 件に戻す。追加・編集・削除後は読み込み済み件数を保って取り直す（上限 200）。
 - タグ選択肢の収集のみ全ページを集約する（`listAllBooks`）。
 

@@ -13,7 +13,7 @@ module Api
         "WHERE e.book_id = books.id AND e.status = #{Book.statuses.fetch(status)})"
     end
 
-    # sort パラメータ → 並び替え式（値が無い本は常に末尾）
+    # sort パラメータ → 並び替え式（値が無い本は常に末尾、同値はタイトル順）
     SORT_EXPRESSIONS = {
       "registered_on" => first_occurred_on_sql("want_to_read"),
       "finished_on" => first_occurred_on_sql("read"),
@@ -154,13 +154,14 @@ module Api
       ([params[:page].to_i, 1].max - 1) * per_page
     end
 
-    # sort 指定があればその式（値なしは末尾）→ 既定の並び
+    # sort 指定があればその式（値なしは末尾）→ 同値はタイトル順。
+    # キーで並べる場合は手動順（position）を混ぜない（読了カラムは手動並び替えの対象外）
     def order_clause
       expression = SORT_EXPRESSIONS[params[:sort]]
       return DEFAULT_ORDER unless expression
 
       direction = params[:dir] == "desc" ? "DESC" : "ASC"
-      "#{expression} IS NULL, #{expression} #{direction}, #{DEFAULT_ORDER}"
+      "#{expression} IS NULL, #{expression} #{direction}, title ASC, id ASC"
     end
 
     # 1 ページ件数（既定 100・1〜200 にクランプ）

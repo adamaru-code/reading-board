@@ -199,6 +199,10 @@ async function onDrop(status: BookStatus, event: DragEvent) {
   if (!book) return
 
   const statusChanged = book.status !== status
+  // 読了カラムはキー（読了日など）で並べるため手動並び替えの対象外
+  const sortedByKey = status === 'read'
+  if (sortedByKey && !statusChanged) return
+
   const index = dropIndex(event.currentTarget as HTMLElement, status, id, event.clientY)
 
   // 楽観的更新：カードを移して status と position をローカルに反映（失敗時はサーバーから再取得）。
@@ -207,7 +211,11 @@ async function onDrop(status: BookStatus, event: DragEvent) {
 
   try {
     if (statusChanged) await updateBook(id, { status })
-    await reorderBooks(targetIds)
+    if (sortedByKey) {
+      await reloadColumn(status, true) // キー順の正しい位置に置き直す
+    } else {
+      await reorderBooks(targetIds)
+    }
   } catch (e) {
     if (handleAuthError(e)) return
     error.value =
