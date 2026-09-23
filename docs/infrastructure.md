@@ -1,10 +1,21 @@
 # 読書管理アプリ — インフラ設計（AWS デプロイ案）
 
-> **ステータス：設計メモ（未着手）。** `infra/` はまだ無く、AWS 上のリソース・課金はゼロ。
-> 本書は着手判断の材料。構成と予算を合意してから Terraform を書き始める。
+> **ステータス：構築中。** 決定事項は §0。アプリ側の本番設定は済（§1.1）、`infra/`（Terraform）は作成中。
+> AWS 上のリソース・課金はまだゼロ。`terraform apply` は実行前に必ず合意を取る。
 > 費用は 2026-09 時点の東京リージョン・オンデマンド料金の**概算**（1 USD ≒ 150 円）。着手時に公式の料金ページで必ず再確認する。
 
 関連：[基本設計](basic-design.md) §1（システム構成）/ [技術スタック](tech-stack.md) / [複数ユーザー対応](multi-user.md)
+
+---
+
+## 0. 決定事項（2026-09-24）
+
+| 項目 | 決定 |
+|---|---|
+| 構成 | **B：EC2 ＋ RDS ＋ CloudFront**（§2） |
+| 運用 | **使うときだけ起動**：学習・動作確認のときに `terraform apply`、終わったら `terraform destroy`（常時公開しない） |
+| ドメイン | **取らない**（`*.cloudfront.net` の URL で HTTPS）。SES（メール）はドメインを取るときに |
+| 予算アラート | **既存のまま**（AWS Budgets に日次 $0.5・月次 $12 が設定済み。Terraform では作らない） |
 
 ---
 
@@ -19,6 +30,14 @@
 | MySQL 8 | ActiveRecord の MySQL 前提（`DATEDIFF` 等の方言も使用） |
 | Rails 8 の実行環境 | `backend/Dockerfile`（Rails 8 標準）あり。Kamal / Thruster の gem も同梱済み（未設定） |
 | シークレット | `RAILS_MASTER_KEY`・DB パスワードはコード / `.tf` / ドキュメントに書かない |
+
+### 1.1 アプリ側の本番設定（済）
+
+- `database.yml` の production は単一 DB。接続先は環境変数 `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME` で渡す（Rails 既定の cache / queue / cable DB は未使用のため削除）。
+- `production.rb`：`assume_ssl` ＋ `force_ssl`（Cookie は secure・HSTS 付き。CloudFront→EC2 は HTTP でもリダイレクトはループしない）。`/up` はリダイレクト対象外。
+- 秘密鍵は **`SECRET_KEY_BASE` 環境変数**で渡す（`master.key` はサーバーに置かない）。
+- `backend/Dockerfile`（Rails 8 標準）のコンテナは起動時に `db:prepare`（DB 作成・マイグレーション・新規 DB なら seed）。**本番の seed は `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` が必須**（未指定なら停止し、開発用の既定パスワードで管理者を作らない）。
+- 手元の Docker で本番モードの起動・ログイン（secure Cookie・HSTS）・seed のガードを確認済み。
 
 ---
 

@@ -56,20 +56,7 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  primary: &primary_production
-    <<: *default
-    database: backend_production
-    username: backend
-    password: <%= ENV["BACKEND_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: backend_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: backend_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: backend_production_cable
-    migrations_paths: db/cable_migrate
+  <<: *default
+  # 接続先は環境変数で渡す（AWS では EC2 の起動スクリプトが SSM Parameter Store から設定）。
+  # このアプリは単一 DB のみ使う（solid_cache / queue / cable は未使用）
+  database: <%= ENV.fetch("DB_NAME") { "reading_board_production" } %>
