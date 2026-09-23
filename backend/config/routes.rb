@@ -11,6 +11,11 @@ Rails.application.routes.draw do
     resource :password, only: :update # PATCH /api/password（パスワード変更）
     resource :registration, only: %i[create destroy] # 招待コードで登録 / アカウント削除
     resources :invitations, only: %i[index create destroy] # 招待コード（管理者のみ）
+    # ユーザー一覧と再設定リンクの発行（管理者のみ）
+    resources :users, only: :index do
+      resource :password_reset_link, only: :create
+    end
+    resource :password_reset, only: :update # PATCH /api/password_reset（再設定リンクから新パスワード）
 
     resources :books, only: %i[index show create update destroy] do
       collection do
