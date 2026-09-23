@@ -4,7 +4,8 @@ import { listInvitations, createInvitation, deleteInvitation, invitationUrl } fr
 import { ApiError } from '../api/http'
 import type { Invitation, InvitationStatus } from '../types/auth'
 
-const emit = defineEmits<{ close: []; unauthorized: [] }>()
+// 管理モーダル（AdminModal）の「招待」タブ
+const emit = defineEmits<{ unauthorized: [] }>()
 
 const STATUS_LABELS: Record<InvitationStatus, string> = {
   unused: '未使用',
@@ -79,85 +80,52 @@ async function onDelete(invitation: Invitation) {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')" @keydown.esc="emit('close')">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="invitations-modal-title">
-      <h2 id="invitations-modal-title" class="modal-title">招待コード</h2>
-      <p class="modal-sub">コードは 1 回だけ使え、発行から 7 日で期限切れになります。</p>
+  <div>
+    <p class="panel-sub">コードは 1 回だけ使え、発行から 7 日で期限切れになります。</p>
 
-      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
-      <button type="button" class="btn btn-primary" :disabled="busy" @click="onCreate">
-        ＋ 招待コードを発行
-      </button>
+    <button type="button" class="btn btn-primary" :disabled="busy" @click="onCreate">
+      ＋ 招待コードを発行
+    </button>
 
-      <p v-if="loading" class="state">読み込み中…</p>
-      <p v-else-if="invitations.length === 0" class="state">まだ招待はありません</p>
-      <ul v-else class="invitation-list">
-        <li v-for="invitation in invitations" :key="invitation.id" class="invitation">
-          <div class="invitation-main">
-            <code class="invitation-code">{{ invitation.code }}</code>
-            <span class="status" :class="`status-${invitation.status}`">
-              {{ STATUS_LABELS[invitation.status] }}
-            </span>
-          </div>
-          <p class="invitation-meta">
-            <template v-if="invitation.status === 'used'">
-              {{ invitation.used_by_email ?? '削除済みのユーザー' }} が登録
-            </template>
-            <template v-else>期限 {{ formatDateTime(invitation.expires_at) }}</template>
-          </p>
-          <div v-if="invitation.status === 'unused'" class="invitation-actions">
-            <button type="button" class="btn btn-ghost btn-small" @click="onCopy(invitation)">
-              {{ copiedId === invitation.id ? 'コピーしました' : 'リンクをコピー' }}
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger btn-small"
-              :disabled="busy"
-              @click="onDelete(invitation)"
-            >
-              削除
-            </button>
-          </div>
-        </li>
-      </ul>
-
-      <div class="modal-actions">
-        <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost" @click="emit('close')">閉じる</button>
-      </div>
-    </div>
+    <p v-if="loading" class="state">読み込み中…</p>
+    <p v-else-if="invitations.length === 0" class="state">まだ招待はありません</p>
+    <ul v-else class="invitation-list">
+      <li v-for="invitation in invitations" :key="invitation.id" class="invitation">
+        <div class="invitation-main">
+          <code class="invitation-code">{{ invitation.code }}</code>
+          <span class="status" :class="`status-${invitation.status}`">
+            {{ STATUS_LABELS[invitation.status] }}
+          </span>
+        </div>
+        <p class="invitation-meta">
+          <template v-if="invitation.status === 'used'">
+            {{ invitation.used_by_email ?? '削除済みのユーザー' }} が登録
+          </template>
+          <template v-else>期限 {{ formatDateTime(invitation.expires_at) }}</template>
+        </p>
+        <div v-if="invitation.status === 'unused'" class="invitation-actions">
+          <button type="button" class="btn btn-ghost btn-small" @click="onCopy(invitation)">
+            {{ copiedId === invitation.id ? 'コピーしました' : 'リンクをコピー' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger btn-small"
+            :disabled="busy"
+            @click="onDelete(invitation)"
+          >
+            削除
+          </button>
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(9, 30, 66, 0.5);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 48px 16px;
-  z-index: 100;
-}
-.modal {
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 20px;
-  width: 100%;
-  max-width: 440px;
-  max-height: calc(100svh - 96px);
-  overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.25);
-}
-.modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-.modal-sub {
-  margin: 4px 0 16px;
+.panel-sub {
+  margin: 0 0 12px;
   font-size: 12px;
   color: var(--text-sub);
 }
@@ -224,15 +192,6 @@ async function onDelete(invitation: Invitation) {
   display: flex;
   gap: 6px;
   margin-top: 8px;
-}
-.modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.spacer {
-  flex: 1;
 }
 .btn {
   border: 1px solid transparent;

@@ -99,5 +99,21 @@ module Api
       assert_response :unprocessable_content
       assert @other.reload.authenticate("password")
     end
+
+    test "開いた時点でリンクを確認でき、使用済み・改ざんは 422" do
+      token = issue_token_as_admin
+      get api_password_reset_url, params: { token: token }
+      assert_response :success
+      assert_equal({ "email" => @other.email }, JSON.parse(response.body))
+
+      reset(token)
+      delete api_session_url
+      get api_password_reset_url, params: { token: token }
+      assert_response :unprocessable_content
+      assert_equal ["再設定リンクが無効か、期限切れです"], errors
+
+      get api_password_reset_url, params: { token: "tampered" }
+      assert_response :unprocessable_content
+    end
   end
 end

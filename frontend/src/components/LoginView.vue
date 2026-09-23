@@ -53,6 +53,8 @@ async function onSubmit() {
       <button type="button" class="switch-link" @click="emit('show-register')">
         招待コードをお持ちの方はこちら（新規登録）
       </button>
+
+      <p class="login-note">パスワードを忘れた場合は、管理者に再設定リンクを依頼してください。</p>
     </form>
   </div>
 </template>
@@ -125,6 +127,12 @@ async function onSubmit() {
 .login-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.login-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  text-align: center;
 }
 .switch-link {
   display: block;

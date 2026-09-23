@@ -15,7 +15,7 @@ Rails.application.routes.draw do
     resources :users, only: :index do
       resource :password_reset_link, only: :create
     end
-    resource :password_reset, only: :update # PATCH /api/password_reset（再設定リンクから新パスワード）
+    resource :password_reset, only: %i[show update] # 再設定リンクの確認 / 新パスワードの設定
 
     resources :books, only: %i[index show create update destroy] do
       collection do

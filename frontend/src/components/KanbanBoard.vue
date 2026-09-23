@@ -9,7 +9,7 @@ import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
 import AccountModal from './AccountModal.vue'
-import InvitationsModal from './InvitationsModal.vue'
+import AdminModal from './AdminModal.vue'
 import { useKanbanColumns } from '../composables/useKanbanColumns'
 
 defineProps<{ user: User }>()
@@ -41,7 +41,7 @@ async function onLogout() {
 }
 
 const accountModalOpen = ref(false)
-const invitationsModalOpen = ref(false)
+const adminModalOpen = ref(false)
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -288,9 +288,9 @@ function onModalDone() {
           v-if="user.admin"
           type="button"
           class="header-btn"
-          @click="invitationsModalOpen = true"
+          @click="adminModalOpen = true"
         >
-          招待
+          管理
         </button>
         <button type="button" class="header-btn" @click="accountModalOpen = true">
           アカウント
@@ -383,9 +383,9 @@ function onModalDone() {
       @deleted="emit('logout')"
     />
 
-    <InvitationsModal
-      v-if="invitationsModalOpen"
-      @close="invitationsModalOpen = false"
+    <AdminModal
+      v-if="adminModalOpen"
+      @close="adminModalOpen = false"
       @unauthorized="emit('logout')"
     />
   </div>
