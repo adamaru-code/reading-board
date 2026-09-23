@@ -22,7 +22,6 @@
 | `status` | integer(enum) | NOT NULL, default: `want_to_read` | 状態（§2 enum） |
 | `rating` | integer | NULL 可, 0〜5 | 評価（★）。0/未設定は評価なし |
 | `memo` | text | NULL 可 | 感想メモ |
-| `isbn` | string | NULL 可 | ISBN/JAN（コードから登録した場合に保持。13桁 or 変換後） |
 | `genre` | integer(enum) | NOT NULL, default: `other` | 主ジャンル（単一。§3 enum） |
 | `media_type` | integer(enum) | NOT NULL, default: `book` | 形態（書籍/雑誌。§4 enum） |
 | `position` | integer | NULL 可 | カラム内の並び順（将来の並べ替え用） |
@@ -31,6 +30,7 @@
 
 - タグは多対多（§5）、状態に入った日付の履歴は別テーブル（§6）で表現する。
 - 所要日数（開始→読了）は §6 のイベントから**算出**し、保存しない。
+- ISBN/JAN は `GET /api/books/lookup` の書誌照会（openBD）でのみ一時利用し、`books` には**保存しない**（タイトル・著者・形態の自動入力に使うだけ）。
 
 ---
 
