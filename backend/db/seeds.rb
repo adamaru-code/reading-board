@@ -2,8 +2,9 @@
 # タイトルをキーに find_or_create するので、複数回実行しても重複しない（冪等）。
 
 # 単一ユーザー（公開登録なし。認証情報は環境変数で上書き可）
+# 既定パスワードは流出リストに載らない開発用の値。毎回設定するので再 seed で既存ユーザーにも反映される。
 user = User.find_or_initialize_by(email: ENV.fetch("SEED_USER_EMAIL", "owner@example.com"))
-user.password = ENV.fetch("SEED_USER_PASSWORD", "password123") if user.new_record?
+user.password = ENV.fetch("SEED_USER_PASSWORD", "ReadingBoard-dev-2026!")
 user.save!
 # user_id 未設定の既存書籍はこのユーザーへ backfill
 Book.where(user_id: nil).update_all(user_id: user.id)
