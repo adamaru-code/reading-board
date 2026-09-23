@@ -41,6 +41,15 @@ npm run dev
 
 ブラウザで `http://localhost:5173` を開く。`/api/*` は Vite プロキシ経由で Rails(3000) に転送される。
 
+## テスト
+
+```bash
+cd backend && bin/rails test     # Rails（minitest）
+cd frontend && npm test          # Vue/TS（vitest）
+```
+
+CI（GitHub Actions）で PR ごとに両方と `npm run build` を実行する。
+
 ## ディレクトリ構成
 
 ```
