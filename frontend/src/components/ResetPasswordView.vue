@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { resetPassword } from '../api/passwordReset'
+import { ref, computed, onMounted } from 'vue'
+import { checkPasswordResetToken, resetPassword } from '../api/passwordReset'
 import { ApiError } from '../api/http'
 import type { User } from '../types/auth'
 
@@ -10,6 +10,24 @@ const MIN_LENGTH = 8
 // 管理者が発行した再設定リンク（/?reset=TOKEN）から開く
 const props = defineProps<{ token: string }>()
 const emit = defineEmits<{ 'logged-in': [user: User]; 'show-login': [] }>()
+
+// 開いた時点でリンクを確認する：checking → valid（対象のメールを表示）/ invalid（フォームを出さない）
+const linkState = ref<'checking' | 'valid' | 'invalid'>('checking')
+const targetEmail = ref('')
+const linkError = ref('')
+
+onMounted(async () => {
+  try {
+    targetEmail.value = (await checkPasswordResetToken(props.token)).email
+    linkState.value = 'valid'
+  } catch (e) {
+    linkError.value =
+      e instanceof ApiError && e.errors.length > 0
+        ? e.errors[0]
+        : 'リンクを確認できませんでした。時間をおいて再度お試しください。'
+    linkState.value = 'invalid'
+  }
+})
 
 const password = ref('')
 const passwordConfirmation = ref('')
@@ -49,9 +67,19 @@ async function onSubmit() {
 
 <template>
   <div class="login">
-    <form class="login-card" @submit.prevent="onSubmit">
+    <div v-if="linkState !== 'valid'" class="login-card">
       <h1 class="login-title">📚 読書管理ボード</h1>
-      <p class="login-sub">新しいパスワードを設定してください</p>
+      <p v-if="linkState === 'checking'" class="login-sub">リンクを確認しています…</p>
+      <template v-else>
+        <p class="login-error" role="alert">{{ linkError }}</p>
+        <p class="login-note">必要なら、管理者に新しい再設定リンクを依頼してください。</p>
+        <button type="button" class="login-btn" @click="emit('show-login')">ログイン画面へ</button>
+      </template>
+    </div>
+
+    <form v-else class="login-card" @submit.prevent="onSubmit">
+      <h1 class="login-title">📚 読書管理ボード</h1>
+      <p class="login-sub">{{ targetEmail }} の新しいパスワードを設定してください</p>
 
       <p v-if="error" class="login-error" role="alert">{{ error }}</p>
 
@@ -158,6 +186,11 @@ async function onSubmit() {
   margin: -6px 0 8px;
   font-size: 12px;
   color: var(--danger);
+}
+.login-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: var(--text-sub);
 }
 .switch-link {
   display: block;

@@ -195,6 +195,7 @@ sequenceDiagram
 | 招待コードで登録 | 登録画面 | POST /api/registration { invitation_code, email, password, password_confirmation } | users INSERT ＋ invitations UPDATE（行ロック・使用済みに）＋ sessions INSERT。コード不正・メール重複・パスワード不備は 422 |
 | ユーザー一覧 | 管理 → ユーザータブ（管理者のみ） | GET /api/users | users SELECT（`id` / `email` / `admin` / `created_at`）。一般ユーザーは 403 |
 | 再設定リンクの発行 | 管理 → ユーザータブ（管理者のみ） | POST /api/users/:user_id/password_reset_link | 署名付きトークン（`has_secure_password` の reset token・24 時間・DB 非保存）を返す |
+| 再設定リンクの確認 | 再設定画面を開いた時 | GET /api/password_reset?token= | 使えれば `{ email }`、無効・期限切れ・使用済みは 422（フォームを出さない）。3 分 30 回まで |
 | パスワード再設定 | 再設定画面（`/?reset=TOKEN`） | PATCH /api/password_reset { token, password, password_confirmation } | users UPDATE ＋ そのユーザーの sessions 全 DELETE ＋ sessions INSERT（この端末でログイン）。無効・期限切れ・使用済みは 422。3 分 10 回まで |
 | アカウント削除 | ヘッダ「アカウント」→ アカウント削除タブ | DELETE /api/registration { current_password } | users DELETE（books・sessions・発行した invitations も削除、使った invitations の used_by_id は NULL）＋ Cookie 削除。パスワード違い・最後の管理者は 422。3 分 10 回まで |
 | 招待の一覧 / 発行 / 削除 | 管理 → 招待タブ（管理者のみ） | GET / POST /api/invitations、DELETE /api/invitations/:id | invitations SELECT / INSERT / DELETE（未使用のみ）。一般ユーザーは 403 |
