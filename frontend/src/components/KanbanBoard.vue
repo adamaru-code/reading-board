@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { listAllBooks, updateBook, reorderBooks } from '../api/books'
 import { logout } from '../api/session'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
-import type { Book, BookStatus, BookGenre, BookListParams } from '../types/book'
+import type { Book, BookStatus, BookGenre, BookListParams, BookSortKey, SortDir } from '../types/book'
 import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
 import PasswordChangeModal from './PasswordChangeModal.vue'
+import { useKanbanColumns } from '../composables/useKanbanColumns'
 
 defineProps<{ user: User }>()
 const emit = defineEmits<{ logout: [] }>()
@@ -40,7 +41,6 @@ async function onLogout() {
 
 const passwordModalOpen = ref(false)
 
-const books = ref<Book[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -67,7 +67,7 @@ function activeParams(): BookListParams {
 let authorTimer: ReturnType<typeof setTimeout> | undefined
 function onAuthorInput() {
   clearTimeout(authorTimer)
-  authorTimer = setTimeout(loadBooks, 300) // 入力が落ち着いてから再取得
+  authorTimer = setTimeout(() => loadBooks(), 300) // 入力が落ち着いてから再取得
 }
 
 function clearFilters() {
@@ -86,52 +86,15 @@ async function loadTagOptions() {
   }
 }
 
-// status ごとに書籍を振り分ける（各カラムは position 昇順・未設定は後ろ→ created_at）
-const booksByStatus = computed<Record<BookStatus, Book[]>>(() => {
-  const grouped: Record<BookStatus, Book[]> = {
-    want_to_read: [],
-    reading: [],
-    read: [],
-  }
-  for (const book of books.value) {
-    grouped[book.status].push(book)
-  }
-  const pos = (b: Book) => (b.position ?? Number.MAX_SAFE_INTEGER)
-  for (const status of BOOK_STATUSES) {
-    grouped[status].sort((a, b) => pos(a) - pos(b) || a.created_at.localeCompare(b.created_at))
-  }
-  return grouped
-})
-
-async function loadBooks() {
-  loading.value = true
-  error.value = null
-  try {
-    books.value = await listAllBooks(activeParams())
-  } catch (e) {
-    if (handleAuthError(e)) return
-    error.value =
-      e instanceof ApiError ? e.message : '書籍の取得に失敗しました。時間をおいて再度お試しください。'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => {
-  loadBooks()
-  loadTagOptions()
-})
-
 // ---------- 読了カラムの並び替え ----------
-const SORT_KEYS = [
+const SORT_KEYS: readonly { key: BookSortKey; label: string }[] = [
   { key: 'finished_on', label: '読了日' },
   { key: 'rating', label: '評価' },
   { key: 'registered_on', label: '登録日' },
   { key: 'duration_days', label: '所要日数' },
-] as const
-type SortKey = (typeof SORT_KEYS)[number]['key']
+]
 
-const readSort = reactive<{ key: SortKey; dir: 'asc' | 'desc' }>({
+const readSort = reactive<{ key: BookSortKey; dir: SortDir }>({
   key: 'finished_on',
   dir: 'desc',
 })
@@ -140,27 +103,52 @@ function toggleSortDir() {
   readSort.dir = readSort.dir === 'asc' ? 'desc' : 'asc'
 }
 
-function sortValue(book: Book, key: SortKey): number | string | null {
-  return book[key]
+// 各カラムを status ごとにページ取得する（読了カラムはサーバー側で並び替え）
+const { columns, reloadAll, reloadColumn, hasMore, loadMore, findBook, moveBook } =
+  useKanbanColumns(activeParams, (status) =>
+    status === 'read' ? { sort: readSort.key, dir: readSort.dir } : {},
+  )
+
+function showLoadError(e: unknown) {
+  if (handleAuthError(e)) return
+  error.value =
+    e instanceof ApiError ? e.message : '書籍の取得に失敗しました。時間をおいて再度お試しください。'
 }
 
-// 読了カラムだけ並び替え、他はそのまま。値が無いカードは常に末尾。
-function columnBooks(status: BookStatus): Book[] {
-  const list = booksByStatus.value[status]
-  if (status !== 'read') return list
-
-  const factor = readSort.dir === 'asc' ? 1 : -1
-  return [...list].sort((a, b) => {
-    const av = sortValue(a, readSort.key)
-    const bv = sortValue(b, readSort.key)
-    if (av === null && bv === null) return 0
-    if (av === null) return 1
-    if (bv === null) return -1
-    if (av < bv) return -1 * factor
-    if (av > bv) return 1 * factor
-    return 0
-  })
+// keepLoaded: 編集後などに「もっと見る」で読み込んだ件数を保って取り直す（ボードは隠さない）
+async function loadBooks(keepLoaded = false) {
+  if (!keepLoaded) loading.value = true
+  error.value = null
+  try {
+    await reloadAll(keepLoaded)
+  } catch (e) {
+    showLoadError(e)
+  } finally {
+    loading.value = false
+  }
 }
+
+async function onLoadMore(status: BookStatus) {
+  try {
+    await loadMore(status)
+  } catch (e) {
+    showLoadError(e)
+  }
+}
+
+onMounted(() => {
+  loadBooks()
+  loadTagOptions()
+})
+
+// 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す
+watch(readSort, async () => {
+  try {
+    await reloadColumn('read')
+  } catch (e) {
+    showLoadError(e)
+  }
+})
 
 // ---------- ドラッグ&ドロップでのステータス更新 ----------
 const draggingId = ref<number | null>(null)
@@ -188,7 +176,7 @@ function onDragEnd() {
 
 // ドロップ位置（カーソル Y）から、移動カードを除いた挿入インデックスを求める
 function dropIndex(section: HTMLElement, status: BookStatus, movedId: number, clientY: number): number {
-  const displayed = columnBooks(status)
+  const displayed = columns[status].items
   const cardEls = Array.from(section.querySelectorAll<HTMLElement>('.card'))
   let index = 0
   for (let i = 0; i < cardEls.length; i++) {
@@ -207,32 +195,32 @@ async function onDrop(status: BookStatus, event: DragEvent) {
   dragOverStatus.value = null
   if (id === null) return
 
-  const book = books.value.find((b) => b.id === id)
+  const book = findBook(id)
   if (!book) return
 
   const statusChanged = book.status !== status
+  // 読了カラムはキー（読了日など）で並べるため手動並び替えの対象外
+  const sortedByKey = status === 'read'
+  if (sortedByKey && !statusChanged) return
+
   const index = dropIndex(event.currentTarget as HTMLElement, status, id, event.clientY)
 
-  // 対象カラムの新しい id 順（移動カードを除いて挿入位置へ）
-  const targetIds = booksByStatus.value[status].map((b) => b.id).filter((x) => x !== id)
-  targetIds.splice(index, 0, id)
-
-  // 楽観的更新：status と position をローカルに反映（失敗時はサーバーから再取得）
-  const previousStatus = book.status
-  if (statusChanged) book.status = status
-  targetIds.forEach((bookId, i) => {
-    const target = books.value.find((b) => b.id === bookId)
-    if (target) target.position = i
-  })
+  // 楽観的更新：カードを移して status と position をローカルに反映（失敗時はサーバーから再取得）。
+  // reorder には読み込み済みの分だけ渡す（残りはサーバーが既存順で後ろに詰める）
+  const targetIds = moveBook(book, status, index)
 
   try {
     if (statusChanged) await updateBook(id, { status })
-    await reorderBooks(targetIds)
+    if (sortedByKey) {
+      await reloadColumn(status, true) // キー順の正しい位置に置き直す
+    } else {
+      await reorderBooks(targetIds)
+    }
   } catch (e) {
-    if (statusChanged) book.status = previousStatus
+    if (handleAuthError(e)) return
     error.value =
       e instanceof ApiError ? e.message : '並び替えに失敗しました。時間をおいて再度お試しください。'
-    loadBooks() // 状態を確実に元へ戻す
+    loadBooks(true) // 状態を確実に元へ戻す
   }
 }
 
@@ -259,7 +247,7 @@ function closeModal() {
 // 保存/削除後はボードとタグ選択肢を再取得して反映
 function onModalDone() {
   closeModal()
-  loadBooks()
+  loadBooks(true)
   loadTagOptions()
 }
 </script>
@@ -279,14 +267,14 @@ function onModalDone() {
         />
         <label class="filter-field">
           ジャンル
-          <select v-model="filters.genre" @change="loadBooks">
+          <select v-model="filters.genre" @change="loadBooks()">
             <option value="">すべて</option>
             <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
           </select>
         </label>
         <label class="filter-field">
           タグ
-          <select v-model="filters.tag" @change="loadBooks">
+          <select v-model="filters.tag" @change="loadBooks()">
             <option value="">すべて</option>
             <option v-for="t in tagOptions" :key="t" :value="t">{{ t }}</option>
           </select>
@@ -305,7 +293,7 @@ function onModalDone() {
 
     <div v-else-if="error" class="board-state board-error" role="alert">
       <span>{{ error }}</span>
-      <button type="button" class="retry-btn" @click="loadBooks">再読み込み</button>
+      <button type="button" class="retry-btn" @click="loadBooks()">再読み込み</button>
     </div>
 
     <main v-else class="board">
@@ -321,7 +309,7 @@ function onModalDone() {
       >
         <div class="column-header">
           <span class="column-title">{{ COLUMN_LABELS[status] }}</span>
-          <span class="column-count">{{ booksByStatus[status].length }}</span>
+          <span class="column-count">{{ columns[status].total }}</span>
           <div v-if="status === 'read'" class="sort-control">
             <select v-model="readSort.key" aria-label="読了カラムの並び替え">
               <option v-for="s in SORT_KEYS" :key="s.key" :value="s.key">{{ s.label }}</option>
@@ -338,7 +326,7 @@ function onModalDone() {
         </div>
         <div class="card-list">
           <BookCard
-            v-for="book in columnBooks(status)"
+            v-for="book in columns[status].items"
             :key="book.id"
             :book="book"
             draggable="true"
@@ -352,7 +340,20 @@ function onModalDone() {
             @keydown.enter="openEdit(book)"
             @keydown.space.prevent="openEdit(book)"
           />
-          <p v-if="booksByStatus[status].length === 0" class="column-empty">まだありません</p>
+          <p v-if="columns[status].items.length === 0" class="column-empty">まだありません</p>
+          <button
+            v-if="hasMore(status)"
+            type="button"
+            class="load-more-btn"
+            :disabled="columns[status].loadingMore"
+            @click="onLoadMore(status)"
+          >
+            {{
+              columns[status].loadingMore
+                ? '読み込み中…'
+                : `もっと見る（残り ${columns[status].total - columns[status].items.length} 件）`
+            }}
+          </button>
         </div>
       </section>
     </main>
@@ -551,6 +552,23 @@ function onModalDone() {
   cursor: grabbing;
 }
 
+.load-more-btn {
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-sub);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.load-more-btn:hover:not(:disabled) {
+  background: var(--surface);
+}
+.load-more-btn:disabled {
+  cursor: default;
+}
 .column-empty {
   color: var(--text-sub);
   font-size: 13px;

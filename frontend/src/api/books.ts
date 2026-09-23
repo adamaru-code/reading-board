@@ -5,35 +5,39 @@ import type {
   BookCreateInput,
   BookUpdateInput,
   BookListParams,
+  BookListPaging,
   BookListResult,
   BookLookupResult,
 } from '../types/book'
 
-// GET /api/books （絞り込み＋ページング。1ページ分を返す）
+// GET /api/books （絞り込み＋並び替え＋ページング。1ページ分を返す）
 export function listBooks(
   params: BookListParams = {},
-  page = 1,
-  perPage = 100,
+  paging: BookListPaging = {},
 ): Promise<BookListResult> {
+  const { page, offset, perPage = 100, sort, dir } = paging
   return request<BookListResult>('/books', {
     query: {
       status: params.status,
       genre: params.genre,
       author: params.author,
       tag: params.tag,
-      page: String(page),
+      page: page === undefined ? undefined : String(page),
+      offset: offset === undefined ? undefined : String(offset),
       per_page: String(perPage),
+      sort,
+      dir,
     },
   })
 }
 
-// 全ページを集約して全件を返す（カンバンは全件をカラムに振り分けるため）
+// 全ページを集約して全件を返す（タグ選択肢の収集など、全件が要る場合）
 export async function listAllBooks(params: BookListParams = {}): Promise<Book[]> {
   const perPage = 100
-  const first = await listBooks(params, 1, perPage)
+  const first = await listBooks(params, { page: 1, perPage })
   const items = [...first.items]
   for (let page = 2; page <= first.pagination.total_pages; page++) {
-    const next = await listBooks(params, page, perPage)
+    const next = await listBooks(params, { page, perPage })
     items.push(...next.items)
   }
   return items

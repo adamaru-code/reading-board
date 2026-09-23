@@ -4,8 +4,26 @@ module Api
     # 不正な status（enum に無い値）の代入は ArgumentError になるため 422 で返す
     rescue_from ArgumentError, with: :render_bad_argument
 
+    # 既定の並び：position 昇順（未設定は後ろ）→ created_at → id（ページ境界を安定させる）
+    DEFAULT_ORDER = "position IS NULL, position ASC, created_at ASC, id ASC".freeze
+
+    # 各状態に「最初に入った日」（Book#registered_on 等と同じ定義）の SQL
+    def self.first_occurred_on_sql(status)
+      "(SELECT MIN(e.occurred_on) FROM book_status_events e " \
+        "WHERE e.book_id = books.id AND e.status = #{Book.statuses.fetch(status)})"
+    end
+
+    # sort パラメータ → 並び替え式（値が無い本は常に末尾、同値はタイトル順）
+    SORT_EXPRESSIONS = {
+      "registered_on" => first_occurred_on_sql("want_to_read"),
+      "finished_on" => first_occurred_on_sql("read"),
+      "rating" => "rating",
+      "duration_days" => "DATEDIFF(#{first_occurred_on_sql('read')}, #{first_occurred_on_sql('reading')})"
+    }.freeze
+
     # GET /api/books
     # status（enum キー）・author（部分一致）で絞り込める。併用は AND。
+    # sort（SORT_EXPRESSIONS のキー）/ dir（asc|desc）で並び替え、page または offset ＋ per_page で分割する。
     def index
       books = current_user.books.includes(:tags, :status_events) # 所有者スコープ＋N+1 回避
       books = books.where(status: params[:status]) if valid_status?(params[:status])
@@ -15,18 +33,15 @@ module Api
       if params[:tag].present?
         books = books.where(id: Book.joins(:tags).where(tags: { name: params[:tag] }))
       end
-      # position 昇順（未設定は後ろ）→ created_at
-      books = books.order(Arel.sql("position IS NULL, position ASC, created_at ASC"))
-
       total = books.count
-      page = pagination_page
       per_page = pagination_per_page
-      items = books.limit(per_page).offset((page - 1) * per_page)
+      offset = pagination_offset(per_page)
+      items = books.order(Arel.sql(order_clause)).limit(per_page).offset(offset)
 
       render json: {
         items: items.map { |book| book_json(book) },
         pagination: {
-          page: page,
+          page: (offset / per_page) + 1,
           per_page: per_page,
           total: total,
           total_pages: total.zero? ? 0 : (total.to_f / per_page).ceil
@@ -84,14 +99,26 @@ module Api
     end
 
     # PATCH /api/books/reorder
-    # 渡された id 順に position を 0..n-1 で保存（カラム内の並び順）
+    # 渡された id 順に position を 0..n-1 で保存（カラム内の並び順）。
+    # フロントはページングで読み込み済みの分しか送れないため、同じ status の残りの本は
+    # 既存の並びのまま n.. に詰める（位置の重複で順序が崩れないように）
     def reorder
-      ids = Array(params[:ids]).map(&:to_i)
+      ids = Array(params[:ids]).map(&:to_i).uniq
       return head :no_content if ids.empty?
 
-      # id → position(0..n-1) を CASE 式で 1 クエリ更新（所有者スコープ）。id は整数化済みで安全
-      whens = ids.each_with_index.map { |id, index| "WHEN #{id} THEN #{index}" }.join(" ")
-      current_user.books.where(id: ids).update_all("position = CASE id #{whens} END")
+      books = current_user.books
+      statuses = books.where(id: ids).distinct.pluck(:status)
+      rest_ids =
+        if statuses.one?
+          books.where(status: statuses.first).where.not(id: ids).order(Arel.sql(DEFAULT_ORDER)).pluck(:id)
+        else
+          []
+        end
+      ordered = ids + rest_ids
+
+      # id → position を CASE 式で 1 クエリ更新（所有者スコープ）。id は整数化済みで安全
+      whens = ordered.each_with_index.map { |id, index| "WHEN #{id} THEN #{index}" }.join(" ")
+      books.where(id: ordered).update_all("position = CASE id #{whens} END")
       head :no_content
     end
 
@@ -119,9 +146,22 @@ module Api
       genre.present? && Book.genres.key?(genre)
     end
 
-    # ページ番号（1 以上）
-    def pagination_page
-      [params[:page].to_i, 1].max
+    # 取得開始位置。offset（0 以上）があれば優先し、無ければ page（1 以上）から求める。
+    # offset はカード移動で件数がずれた後の「もっと見る」に使う
+    def pagination_offset(per_page)
+      return [params[:offset].to_i, 0].max if params[:offset].present?
+
+      ([params[:page].to_i, 1].max - 1) * per_page
+    end
+
+    # sort 指定があればその式（値なしは末尾）→ 同値はタイトル順。
+    # キーで並べる場合は手動順（position）を混ぜない（読了カラムは手動並び替えの対象外）
+    def order_clause
+      expression = SORT_EXPRESSIONS[params[:sort]]
+      return DEFAULT_ORDER unless expression
+
+      direction = params[:dir] == "desc" ? "DESC" : "ASC"
+      "#{expression} IS NULL, #{expression} #{direction}, title ASC, id ASC"
     end
 
     # 1 ページ件数（既定 100・1〜200 にクランプ）

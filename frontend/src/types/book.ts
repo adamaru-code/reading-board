@@ -85,6 +85,19 @@ export interface BookListParams {
   tag?: string
 }
 
+// 並び替えキー（読了カラムで使用。値が無い本は常に末尾）
+export type BookSortKey = 'finished_on' | 'rating' | 'registered_on' | 'duration_days'
+export type SortDir = 'asc' | 'desc'
+
+// 一覧の取得範囲と並び。offset を指定すると page より優先（API 側も同じ）
+export interface BookListPaging {
+  page?: number
+  offset?: number
+  perPage?: number
+  sort?: BookSortKey
+  dir?: SortDir
+}
+
 // ページ情報
 export interface Pagination {
   page: number

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { listAllBooks } from '../books'
+import { listAllBooks, listBooks } from '../books'
 import type { Book } from '../../types/book'
 
 const book = (id: number) => ({ id, title: `本${id}` }) as Book
@@ -23,5 +23,26 @@ describe('listAllBooks', () => {
     expect(books.map((b) => b.id)).toEqual([1, 2, 3])
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(fetchMock.mock.calls[1][0]).toContain('status=read')
+    expect(fetchMock.mock.calls[1][0]).toContain('page=2')
+  })
+})
+
+describe('listBooks', () => {
+  it('offset・並び替えをクエリに載せ、未指定の page は送らない', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [], pagination: {} })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listBooks({ status: 'read' }, { offset: 40, perPage: 20, sort: 'finished_on', dir: 'desc' })
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      status: 'read',
+      offset: '40',
+      per_page: '20',
+      sort: 'finished_on',
+      dir: 'desc',
+    })
   })
 })

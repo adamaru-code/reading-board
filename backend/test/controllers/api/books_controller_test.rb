@@ -281,5 +281,76 @@ module Api
       ids = JSON.parse(response.body)["items"].map { |x| x["id"] }
       assert_equal [b.id, a.id, old.id], ids # position 付き→未設定の順
     end
+
+    test "index は offset 指定でその位置から返す（page より優先）" do
+      Book.delete_all
+      books = 5.times.map { |i| @owner.books.create!(title: "本#{i}", position: i) }
+      get api_books_url, params: { offset: 3, per_page: 2, page: 1 }
+      body = JSON.parse(response.body)
+      assert_equal books[3..4].map(&:id), body["items"].map { |x| x["id"] }
+      assert_equal 5, body["pagination"]["total"]
+    end
+
+    # 読了カラムの並び替え用に、状態へ入った日を指定して作る
+    def create_read_book(title, started:, finished:, rating: nil)
+      book = @owner.books.create!(title: title, status: :read, rating: rating)
+      book.status_events.delete_all
+      book.status_events.create!(status: :reading, occurred_on: started) if started
+      book.status_events.create!(status: :read, occurred_on: finished) if finished
+      book
+    end
+
+    test "index は sort=finished_on&dir=desc で読了日の新しい順（値なしは末尾）" do
+      Book.delete_all
+      old = create_read_book("古い", started: nil, finished: Date.new(2026, 1, 1))
+      none = create_read_book("日付なし", started: nil, finished: nil)
+      recent = create_read_book("新しい", started: nil, finished: Date.new(2026, 5, 1))
+      get api_books_url, params: { status: "read", sort: "finished_on", dir: "desc" }
+      assert_equal [recent.id, old.id, none.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+    end
+
+    test "index は sort=rating（昇順）と sort=duration_days で並ぶ" do
+      Book.delete_all
+      long = create_read_book("長い", started: Date.new(2026, 1, 1), finished: Date.new(2026, 1, 31), rating: 5)
+      short = create_read_book("短い", started: Date.new(2026, 2, 1), finished: Date.new(2026, 2, 3), rating: 2)
+      unrated = create_read_book("未評価", started: nil, finished: Date.new(2026, 3, 1))
+
+      get api_books_url, params: { sort: "rating", dir: "asc" }
+      assert_equal [short.id, long.id, unrated.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+
+      get api_books_url, params: { sort: "duration_days", dir: "desc" }
+      assert_equal [long.id, short.id, unrated.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+    end
+
+    test "index の sort は同値をタイトル順に並べ、手動順（position）を混ぜない" do
+      Book.delete_all
+      same_day = Date.new(2026, 9, 23)
+      c = create_read_book("う", started: nil, finished: same_day)
+      a = create_read_book("あ", started: nil, finished: same_day)
+      b = create_read_book("い", started: nil, finished: same_day)
+      c.update!(position: 0)
+      a.update!(position: 2)
+      b.update!(position: 1)
+      get api_books_url, params: { status: "read", sort: "finished_on", dir: "desc" }
+      assert_equal [a.id, b.id, c.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+    end
+
+    test "index は不正な sort を無視して既定の並びで返す" do
+      get api_books_url, params: { sort: "title; DROP TABLE books", dir: "desc" }
+      assert_response :success
+      assert_equal Book.count, JSON.parse(response.body)["items"].size
+    end
+
+    test "reorder は同じ status の未送信の本を既存順のまま後ろに詰める" do
+      Book.delete_all
+      a, b, c, d = %w[A B C D].each_with_index.map { |t, i| @owner.books.create!(title: t, position: i) }
+      moved = @owner.books.create!(title: "移動してきた本", position: 0)
+      # フロントは読み込み済みの先頭 2 件＋移動した本だけ送る（詰めないと C と moved が position 2 で衝突し C が先になる）
+      patch reorder_api_books_url, params: { ids: [a.id, b.id, moved.id] }
+      assert_response :no_content
+      get api_books_url, params: { status: "want_to_read" }
+      assert_equal [a.id, b.id, moved.id, c.id, d.id],
+        JSON.parse(response.body)["items"].map { |x| x["id"] }
+    end
   end
 end
