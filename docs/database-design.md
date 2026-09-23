@@ -16,7 +16,7 @@
 | フィールド | 型 | 制約 | 説明 |
 |---|---|---|---|
 | `id` | bigint | PK, auto | 主キー |
-| `user_id` | bigint | FK → users | 所有者（単一ユーザー認証。§7） |
+| `user_id` | bigint | FK → users, NOT NULL | 所有者（§7） |
 | `title` | string | NOT NULL | 書名（必須） |
 | `author` | string | NULL 可 | 著者名 |
 | `status` | integer(enum) | NOT NULL, default: `want_to_read` | 状態（§2 enum） |
