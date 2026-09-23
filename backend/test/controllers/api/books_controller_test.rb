@@ -257,6 +257,20 @@ module Api
       assert_equal 2, b.reload.position
     end
 
+    test "reorder は空配列なら 204 で何もしない" do
+      patch reorder_api_books_url, params: { ids: [] }
+      assert_response :no_content
+    end
+
+    test "reorder は他ユーザーの本を更新しない" do
+      mine = @owner.books.create!(title: "自分の本")
+      others = users(:other).books.create!(title: "他人の本", position: 99)
+      patch reorder_api_books_url, params: { ids: [others.id, mine.id] }
+      assert_response :no_content
+      assert_equal 99, others.reload.position # 他人の本は不変
+      assert_equal 1, mine.reload.position # 自分の本だけ 0..n-1 で採番
+    end
+
     test "index は position 昇順（未設定は後ろ）で返る" do
       Book.delete_all
       old = @owner.books.create!(title: "古い未設定")
