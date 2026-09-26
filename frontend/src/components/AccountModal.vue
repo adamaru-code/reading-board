@@ -3,9 +3,7 @@ import { ref, computed } from 'vue'
 import { changePassword } from '../api/password'
 import { deleteAccount } from '../api/registration'
 import { ApiError } from '../api/http'
-
-// バックエンド User::PASSWORD_MIN_LENGTH と揃える
-const MIN_LENGTH = 8
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 
 const emit = defineEmits<{ close: []; unauthorized: []; deleted: [] }>()
 

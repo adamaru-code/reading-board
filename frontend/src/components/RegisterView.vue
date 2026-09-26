@@ -2,10 +2,8 @@
 import { ref, computed } from 'vue'
 import { register } from '../api/registration'
 import { ApiError } from '../api/http'
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 import type { User } from '../types/auth'
-
-// バックエンド User::PASSWORD_MIN_LENGTH と揃える
-const MIN_LENGTH = 8
 
 const props = defineProps<{ initialCode?: string }>()
 const emit = defineEmits<{ 'logged-in': [user: User]; 'show-login': [] }>()

@@ -83,7 +83,7 @@ jobs:
         run: bin/bundler-audit
 
   frontend:
-    name: Frontend (test + build)
+    name: Frontend (lint + test + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -99,6 +99,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # 書き方のチェック（ESLint）と見た目の整形チェック（Prettier）
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Format check (Prettier)
+        run: npm run format:check
 
       - name: Run tests (vitest)
         run: npm test

@@ -2,10 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { checkPasswordResetToken, resetPassword } from '../api/passwordReset'
 import { ApiError } from '../api/http'
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 import type { User } from '../types/auth'
-
-// バックエンド User::PASSWORD_MIN_LENGTH と揃える
-const MIN_LENGTH = 8
 
 // 管理者が発行した再設定リンク（/?reset=TOKEN）から開く
 const props = defineProps<{ token: string }>()
