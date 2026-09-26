@@ -27,14 +27,28 @@ const TAG_RULES: TagRule[] = [
 ]
 
 const GENERIC_TAGS = ['名著', '再読したい', '積読'] // 常に候補に加える定番タグ
-const MAX_SUGGEST = 8
+// 最初に表示する候補の数（残りは「すべて表示」で出す）
+export const SUGGEST_LIMIT = 8
 
-// タイトル・著者から提案タグを返す（入力済みタグは除外・重複除去・上限あり）
+export interface SuggestOptions {
+  // 自分が過去に付けたタグ（よく使う順）。辞書の候補の後ろに並べる
+  knownTags?: readonly string[]
+  // タグ欄に入力中の文字。あれば、この文字を含む候補だけに絞り込む
+  query?: string
+  // 返す最大件数（既定 SUGGEST_LIMIT。Infinity で全件）
+  limit?: number
+}
+
+// 提案タグを返す（入力済みタグは除外・重複除去・上限あり）。
+// 並び：タイトル・著者に合う辞書の候補 → 過去に付けたタグ → 定番タグ。
+// 入力中の文字があれば、辞書の全タグも含めてその文字を含むものに絞り込み、前方一致を先にする
 export function suggestTags(
   title: string,
   author: string,
   currentTags: readonly string[],
+  options: SuggestOptions = {},
 ): string[] {
+  const { knownTags = [], query = '', limit = SUGGEST_LIMIT } = options
   const hay = `${title} ${author}`
   const has = new Set(currentTags)
   const out: string[] = []
@@ -44,6 +58,16 @@ export function suggestTags(
   for (const rule of TAG_RULES) {
     if (rule.kw.some((k) => hay.includes(k))) rule.tags.forEach(push)
   }
+  knownTags.forEach(push)
   GENERIC_TAGS.forEach(push)
-  return out.slice(0, MAX_SUGGEST)
+
+  const q = query.trim().toLowerCase()
+  if (q === '') return out.slice(0, limit)
+
+  // 絞り込み時は、タイトル・著者に合わない辞書のタグも対象にする
+  TAG_RULES.forEach((rule) => rule.tags.forEach(push))
+  const matches = out.filter((tag) => tag.toLowerCase().includes(q))
+  const startsWith = matches.filter((tag) => tag.toLowerCase().startsWith(q))
+  const contains = matches.filter((tag) => !tag.toLowerCase().startsWith(q))
+  return [...startsWith, ...contains].slice(0, limit)
 }

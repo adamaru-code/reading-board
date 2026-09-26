@@ -10,11 +10,14 @@ import {
   MEDIA_TYPE_LABELS,
 } from '../types/book'
 import type { Book, BookStatus, BookGenre, BookMediaType, BookCreateInput } from '../types/book'
-import { suggestTags } from '../lib/tagSuggestions'
+import { suggestTags, SUGGEST_LIMIT } from '../lib/tagSuggestions'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 // book が渡されれば編集モード、null なら新規追加モード
-const props = defineProps<{ book: Book | null }>()
+// knownTags：自分が過去に付けたタグ（よく使う順）。タグ候補に使う
+const props = withDefaults(defineProps<{ book: Book | null; knownTags?: string[] }>(), {
+  knownTags: () => [],
+})
 const emit = defineEmits<{
   close: []
   saved: []
@@ -54,11 +57,28 @@ function removeTag(name: string) {
   tags.value = tags.value.filter((t) => t !== name)
 }
 
-// タイトル・著者からの候補タグ（入力済みは除外）
-const suggestedTags = computed(() => suggestTags(form.title, form.author, tags.value))
+// 候補タグ：辞書（タイトル・著者）＋過去に付けたタグ。入力中の文字があれば絞り込む（入力済みは除外）。
+// 最初は SUGGEST_LIMIT 件だけ出し、「すべて表示」で全部出す
+const showAllSuggestions = ref(false)
+const allSuggestedTags = computed(() =>
+  suggestTags(form.title, form.author, tags.value, {
+    knownTags: props.knownTags,
+    query: tagInput.value,
+    limit: Infinity,
+  }),
+)
+const suggestedTags = computed(() =>
+  showAllSuggestions.value
+    ? allSuggestedTags.value
+    : allSuggestedTags.value.slice(0, SUGGEST_LIMIT),
+)
+const hiddenSuggestionCount = computed(
+  () => allSuggestedTags.value.length - suggestedTags.value.length,
+)
 
 function addSuggestedTag(tag: string) {
   if (!tags.value.includes(tag)) tags.value.push(tag)
+  tagInput.value = '' // 絞り込みに使った入力中の文字は消す
 }
 
 // ISBN 照会（追加時のみ）。成功でタイトル/著者/形態を反映
@@ -339,6 +359,22 @@ async function onConfirmDelete() {
             >
               ＋ {{ tag }}
             </button>
+            <button
+              v-if="hiddenSuggestionCount > 0"
+              type="button"
+              class="tag-suggest-more"
+              @click="showAllSuggestions = true"
+            >
+              すべて表示（残り {{ hiddenSuggestionCount }} 件）
+            </button>
+            <button
+              v-else-if="showAllSuggestions && allSuggestedTags.length > SUGGEST_LIMIT"
+              type="button"
+              class="tag-suggest-more"
+              @click="showAllSuggestions = false"
+            >
+              少なく表示
+            </button>
           </div>
         </div>
 
@@ -518,6 +554,15 @@ async function onConfirmDelete() {
   color: var(--primary);
   border-radius: 4px;
   padding: 2px 6px;
+  cursor: pointer;
+}
+.tag-suggest-more {
+  font-size: 12px;
+  border: none;
+  background: none;
+  color: var(--text-sub);
+  text-decoration: underline;
+  padding: 2px 4px;
   cursor: pointer;
 }
 
