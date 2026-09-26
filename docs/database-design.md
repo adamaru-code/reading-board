@@ -2,7 +2,7 @@
 
 > この文書は [要件定義書（概要）](requirements.md) から分割した詳細ドキュメントです。
 > データモデル（テーブル・カラム・enum）を定義します。実装は [schema.rb](../backend/db/schema.rb) に準拠します。
-> ER 図・将来の拡張（認証導入時）は [基本設計（図）](basic-design.md) を参照してください。
+> ER 図は [基本設計（図）](basic-design.md) §3 を参照してください。
 
 関連：[機能要件](functional-requirements.md) / [画面設計](screen-design.md) / [技術スタック](tech-stack.md)
 
@@ -17,14 +17,14 @@
 |---|---|---|---|
 | `id` | bigint | PK, auto | 主キー |
 | `user_id` | bigint | FK → users, NOT NULL | 所有者（§7） |
-| `title` | string | NOT NULL | 書名（必須） |
+| `title` | string | NOT NULL | 書名（必須・255 文字以内） |
 | `author` | string | NULL 可 | 著者名 |
 | `status` | integer(enum) | NOT NULL, default: `want_to_read` | 状態（§2 enum） |
 | `rating` | integer | NULL 可, 0〜5 | 評価（★）。0/未設定は評価なし |
 | `memo` | text | NULL 可 | 感想メモ |
 | `genre` | integer(enum) | NOT NULL, default: `other` | 主ジャンル（単一。§3 enum） |
 | `media_type` | integer(enum) | NOT NULL, default: `book` | 形態（書籍/雑誌。§4 enum） |
-| `position` | integer | NULL 可 | カラム内の並び順（将来の並べ替え用） |
+| `position` | integer | NULL 可 | カラム内の並び順（ドラッグでの並び替えで保存。未設定は後ろ。読了カラムはキーで並ぶため使わない） |
 | `created_at` | datetime | NOT NULL | 作成日時 |
 | `updated_at` | datetime | NOT NULL | 更新日時 |
 
@@ -43,6 +43,7 @@
 | `read` | 2 | 読了 |
 
 API のリクエスト/レスポンスでは文字列値（`want_to_read` など）でやり取りする（[機能要件](functional-requirements.md) §3 参照）。
+enum に無い値は**検証エラー（422）**になる（`status` / `genre` / `media_type` とも `enum ..., validate: true`）。
 
 ---
 
@@ -90,8 +91,9 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `book_id` | bigint | FK → books, NOT NULL | 書籍 |
 | `tag_id` | bigint | FK → tags, NOT NULL | タグ |
 
-- API では `tags: string[]`（名称配列）でやり取りし、サーバー側で `find_or_create` して紐づける。
-- 簡易実装（多対多が過剰な場合）は `books.tags` を JSON/text カラムで持つ選択肢もあるが、絞り込み・集計のしやすさから多対多を基本とする。
+- `(book_id, tag_id)` は UNIQUE（同じ本に同じタグを重複して付けない）。
+- API では `tags: string[]`（名称配列）でやり取りし、サーバー側で前後の空白を除いて重複をまとめ、`find_or_create` して紐づける。
+- タグは全ユーザー共通の名称マスタ。タグの選択肢は自分の本から集めるため、他人のタグ名は見えない。
 
 ---
 
@@ -110,10 +112,9 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `occurred_on` | date | NOT NULL | 入った日（日付のみ） |
 | `created_at` | datetime | NOT NULL | 記録日時 |
 
-- **導出値**：登録日＝最初の `want_to_read` / 開始日＝最初の `reading` / 読了日＝`read`（複数可）。
+- **導出値**（API の `registered_on` / `started_on` / `finished_on`）：それぞれ最初の `want_to_read` / `reading` / `read` の日。
 - **所要日数**＝（最初の `read` の `occurred_on`）−（最初の `reading` の `occurred_on`）。開始が無ければ非表示。
-- 同一状態・同一日の重複は記録しない（プロトタイプ挙動に合わせる）。
-- ※ 履歴が不要なら、代替として `books` に `want_to_read_at` / `reading_at` / `read_at` の 3 date カラムを持つ簡易案もある（再読・出戻りの履歴は表現できない）。
+- 同一状態・同一日の重複は記録しない（`(book_id, status, occurred_on)` が UNIQUE）。
 
 ---
 
