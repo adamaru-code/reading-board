@@ -49,4 +49,14 @@ describe('suggestTags', () => {
     expect(suggestTags('', '', [], { knownTags: known })).toHaveLength(8)
     expect(suggestTags('', '', [], { knownTags: known, limit: Infinity })).toHaveLength(15) // 12＋定番 3
   })
+
+  it('隠したタグは、辞書・過去のタグ・絞り込みのどれでも出さない', () => {
+    const hiddenTags = ['積読', '仕事']
+    const plain = suggestTags('', '', [], { knownTags: ['仕事', '読書会'], hiddenTags })
+    expect(plain).not.toContain('積読')
+    expect(plain).not.toContain('仕事')
+    expect(plain).toContain('読書会')
+    const typed = suggestTags('', '', [], { knownTags: ['仕事'], hiddenTags, query: '積' })
+    expect(typed).toEqual([])
+  })
 })

@@ -111,3 +111,9 @@ export interface BookListResult {
   items: Book[]
   pagination: Pagination
 }
+
+// タグ候補から隠したタグ（Api::HiddenTagsController の JSON 契約に一致）
+export interface HiddenTag {
+  id: number
+  name: string
+}

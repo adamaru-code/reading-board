@@ -37,6 +37,8 @@ export interface SuggestOptions {
   query?: string
   // 返す最大件数（既定 SUGGEST_LIMIT。Infinity で全件）
   limit?: number
+  // 候補から隠したタグ（辞書の候補・過去のタグ・絞り込みのどれでも出さない）
+  hiddenTags?: readonly string[]
 }
 
 // 提案タグを返す（入力済みタグは除外・重複除去・上限あり）。
@@ -48,9 +50,9 @@ export function suggestTags(
   currentTags: readonly string[],
   options: SuggestOptions = {},
 ): string[] {
-  const { knownTags = [], query = '', limit = SUGGEST_LIMIT } = options
+  const { knownTags = [], query = '', limit = SUGGEST_LIMIT, hiddenTags = [] } = options
   const hay = `${title} ${author}`
-  const has = new Set(currentTags)
+  const has = new Set([...currentTags, ...hiddenTags])
   const out: string[] = []
   const push = (tag: string) => {
     if (!has.has(tag) && !out.includes(tag)) out.push(tag)

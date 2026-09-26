@@ -16,6 +16,7 @@ Rails.application.routes.draw do
       resource :password_reset_link, only: :create
     end
     resource :password_reset, only: %i[show update] # 再設定リンクの確認 / 新パスワードの設定
+    resources :hidden_tags, only: %i[index create destroy] # タグ候補から隠したタグ
 
     resources :books, only: %i[index show create update destroy] do
       collection do

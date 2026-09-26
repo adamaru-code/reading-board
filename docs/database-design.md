@@ -156,3 +156,20 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 
 - ログイン時に `sessions` を 1 行作成し、その `token` を署名付き httpOnly Cookie に入れる。ログアウトで該当行を削除。
 - 全 `/api/books*` は認証必須で `current_user` にスコープ。未認証は 401。
+
+---
+
+## 8. HiddenTag（タグ候補から隠したタグ）
+
+書籍フォームのタグ候補から、ユーザーが「×」で隠したタグ名。辞書の候補（`tags` に無い名前）も隠せるよう、`tags` への FK ではなく**名前**で持つ。本に付いているタグには影響しない。
+
+`hidden_tags`
+
+| フィールド | 型 | 制約 | 説明 |
+|---|---|---|---|
+| `id` | bigint | PK, auto | 主キー |
+| `user_id` | bigint | FK → users, NOT NULL | 隠したユーザー（ユーザー削除で一緒に削除） |
+| `name` | string | NOT NULL, 255 文字以内 | タグ名（前後の空白は除いて保存） |
+| `created_at` / `updated_at` | datetime | NOT NULL | |
+
+- `(user_id, name)` は UNIQUE（同じタグを 2 回隠しても 1 件）。
