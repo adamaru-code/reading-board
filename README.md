@@ -41,14 +41,17 @@ npm run dev
 
 ブラウザで `http://localhost:5173` を開く。`/api/*` は Vite プロキシ経由で Rails(3000) に転送される。
 
-## テスト
+## テスト・チェック
 
 ```bash
 cd backend && bin/rails test     # Rails（minitest）
+cd backend && bin/rubocop        # Ruby の書き方チェック（rubocop-rails-omakase）
+cd backend && bin/brakeman       # Rails のセキュリティ検査
+cd backend && bin/bundler-audit  # gem の脆弱性検査
 cd frontend && npm test          # Vue/TS（vitest）
 ```
 
-CI（GitHub Actions）で PR ごとに両方と `npm run build` を実行する。
+CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terraform の fmt / validate を実行する。backend はまとめて `bin/ci` でも実行できる。
 
 ## ディレクトリ構成
 
