@@ -54,7 +54,7 @@ module Api
       assert_response :unauthorized
       post api_session_url, params: { email: @owner.email, password: "password" }
       assert_response :too_many_requests
-      assert_equal [AttemptLimiting::TOO_MANY_ATTEMPTS], JSON.parse(response.body)["errors"]
+      assert_equal [ AttemptLimiting::TOO_MANY_ATTEMPTS ], JSON.parse(response.body)["errors"]
 
       travel 3.minutes + 1.second do
         post api_session_url, params: { email: @owner.email, password: "password" }

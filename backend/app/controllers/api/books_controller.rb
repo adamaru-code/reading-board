@@ -59,7 +59,7 @@ module Api
     def lookup
       isbn = OpenbdClient.normalize(params[:isbn])
       unless OpenbdClient.valid?(isbn)
-        return render json: { errors: ["ISBN が不正です"] }, status: :unprocessable_content
+        return render json: { errors: [ "ISBN が不正です" ] }, status: :unprocessable_content
       end
 
       info = OpenbdClient.fetch(isbn)
@@ -149,9 +149,9 @@ module Api
     # 取得開始位置。offset（0 以上）があれば優先し、無ければ page（1 以上）から求める。
     # offset はカード移動で件数がずれた後の「もっと見る」に使う
     def pagination_offset(per_page)
-      return [params[:offset].to_i, 0].max if params[:offset].present?
+      return [ params[:offset].to_i, 0 ].max if params[:offset].present?
 
-      ([params[:page].to_i, 1].max - 1) * per_page
+      ([ params[:page].to_i, 1 ].max - 1) * per_page
     end
 
     # sort 指定があればその式（値なしは末尾）→ 同値はタイトル順。
@@ -196,11 +196,11 @@ module Api
     end
 
     def render_not_found
-      render json: { errors: ["Book not found"] }, status: :not_found
+      render json: { errors: [ "Book not found" ] }, status: :not_found
     end
 
     def render_bad_argument(error)
-      render json: { errors: [error.message] }, status: :unprocessable_content
+      render json: { errors: [ error.message ] }, status: :unprocessable_content
     end
   end
 end

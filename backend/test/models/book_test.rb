@@ -40,19 +40,19 @@ class BookTest < ActiveSupport::TestCase
   end
 
   test "tag_names= は名称配列を正規化して紐づける（重複・空白除去）" do
-    book = @user.books.create!(title: "x", tag_names: ["名著", " 名著 ", "", "入門"])
+    book = @user.books.create!(title: "x", tag_names: [ "名著", " 名著 ", "", "入門" ])
     assert_equal %w[名著 入門], book.reload.tags.map(&:name)
   end
 
   test "同名タグは既存を再利用する（find_or_create）" do
-    @user.books.create!(title: "a", tag_names: ["再読"])
+    @user.books.create!(title: "a", tag_names: [ "再読" ])
     assert_difference "Tag.count", 0 do
-      @user.books.create!(title: "b", tag_names: ["再読"])
+      @user.books.create!(title: "b", tag_names: [ "再読" ])
     end
   end
 
   test "tag_names= に空配列を渡すと全タグを外す" do
-    book = @user.books.create!(title: "x", tag_names: ["名著"])
+    book = @user.books.create!(title: "x", tag_names: [ "名著" ])
     book.update!(tag_names: [])
     assert_empty book.reload.tags
   end

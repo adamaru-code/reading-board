@@ -13,7 +13,7 @@ module Api
     # 再設定画面を開いた時点でリンクが使えるか確かめる（使えれば対象のメールアドレスを返す）
     def show
       user = User.find_by_password_reset_token(params[:token].to_s)
-      return render_errors([INVALID_LINK]) unless user
+      return render_errors([ INVALID_LINK ]) unless user
 
       render json: { email: user.email }
     end
@@ -23,11 +23,11 @@ module Api
     def update
       # 無効・期限切れ・使用済み（パスワード変更済み）は区別しない
       user = User.find_by_password_reset_token(params[:token].to_s)
-      return render_errors([INVALID_LINK]) unless user
+      return render_errors([ INVALID_LINK ]) unless user
 
       password = params[:password].to_s
       error = password_error(password, params[:password_confirmation].to_s, label: "新しいパスワード")
-      return render_errors([error]) if error
+      return render_errors([ error ]) if error
 
       if user.update(password: password)
         user.sessions.destroy_all

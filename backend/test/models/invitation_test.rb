@@ -20,6 +20,6 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert_equal "used", used.status
     assert_equal "expired", expired.status
-    assert_equal [unused], Invitation.usable.to_a
+    assert_equal [ unused ], Invitation.usable.to_a
   end
 end

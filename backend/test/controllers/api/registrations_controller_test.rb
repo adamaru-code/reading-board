@@ -39,41 +39,41 @@ module Api
         register(email: "second@example.com")
       end
       assert_response :unprocessable_content
-      assert_equal ["招待コードが無効です"], errors
+      assert_equal [ "招待コードが無効です" ], errors
     end
 
     test "存在しない・期限切れのコードは 422" do
       register(code: "unknown-code")
       assert_response :unprocessable_content
-      assert_equal ["招待コードが無効です"], errors
+      assert_equal [ "招待コードが無効です" ], errors
 
       @invitation.update!(expires_at: 1.minute.ago)
       register
       assert_response :unprocessable_content
-      assert_equal ["招待コードが無効です"], errors
+      assert_equal [ "招待コードが無効です" ], errors
     end
 
     test "メールが登録済みなら 422 で、招待は未使用のまま" do
       register(email: "OWNER@example.com")
       assert_response :unprocessable_content
-      assert_equal ["このメールアドレスは登録済みです"], errors
+      assert_equal [ "このメールアドレスは登録済みです" ], errors
       assert_nil @invitation.reload.used_at
     end
 
     test "メール形式が不正なら 422" do
       register(email: "not-an-email")
       assert_response :unprocessable_content
-      assert_equal ["メールアドレスの形式が正しくありません"], errors
+      assert_equal [ "メールアドレスの形式が正しくありません" ], errors
     end
 
     test "パスワードが短い・確認が一致しないと 422" do
       register(password: "short")
       assert_response :unprocessable_content
-      assert_equal ["パスワードは 8 文字以上にしてください"], errors
+      assert_equal [ "パスワードは 8 文字以上にしてください" ], errors
 
       register(confirmation: "different-password")
       assert_response :unprocessable_content
-      assert_equal ["パスワード（確認）が一致しません"], errors
+      assert_equal [ "パスワード（確認）が一致しません" ], errors
       assert_nil @invitation.reload.used_at
     end
 
@@ -107,7 +107,7 @@ module Api
       log_in(users(:other))
       delete api_registration_url, params: { current_password: "wrong" }
       assert_response :unprocessable_content
-      assert_equal ["現在のパスワードが違います"], errors
+      assert_equal [ "現在のパスワードが違います" ], errors
       assert User.exists?(users(:other).id)
     end
 
@@ -116,7 +116,7 @@ module Api
       log_in(owner)
       delete api_registration_url, params: { current_password: "password" }
       assert_response :unprocessable_content
-      assert_equal ["最後の管理者は削除できません"], errors
+      assert_equal [ "最後の管理者は削除できません" ], errors
 
       users(:other).update!(admin: true)
       delete api_registration_url, params: { current_password: "password" }

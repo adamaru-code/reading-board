@@ -12,7 +12,7 @@ module Api
     def create
       password = params[:password].to_s
       error = password_error(password, params[:password_confirmation].to_s, label: "パスワード")
-      return render_errors([error]) if error
+      return render_errors([ error ]) if error
 
       user = User.new(email: params[:email].to_s, password: password)
       result = Invitation.transaction do
@@ -31,7 +31,7 @@ module Api
         render json: user_json(user), status: :created
       when :invalid_invitation
         # 存在しない・使用済み・期限切れは区別しない
-        render_errors(["招待コードが無効です"])
+        render_errors([ "招待コードが無効です" ])
       else
         render_errors(user_error_messages(user))
       end
@@ -41,10 +41,10 @@ module Api
     # 現在のパスワードで確認し、本・セッション・発行した招待ごと削除する（最後の管理者は不可）
     def destroy
       unless current_user.authenticate(params[:current_password].to_s)
-        return render_errors(["現在のパスワードが違います"])
+        return render_errors([ "現在のパスワードが違います" ])
       end
       if current_user.admin? && !User.where(admin: true).where.not(id: current_user.id).exists?
-        return render_errors(["最後の管理者は削除できません"])
+        return render_errors([ "最後の管理者は削除できません" ])
       end
 
       current_user.destroy!
@@ -56,9 +56,9 @@ module Api
 
     def user_error_messages(user)
       if user.errors.of_kind?(:email, :taken)
-        ["このメールアドレスは登録済みです"]
+        [ "このメールアドレスは登録済みです" ]
       elsif user.errors.include?(:email)
-        ["メールアドレスの形式が正しくありません"]
+        [ "メールアドレスの形式が正しくありません" ]
       else
         user.errors.full_messages
       end
