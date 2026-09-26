@@ -115,6 +115,7 @@ erDiagram
     users ||--o{ books : "owns"
     users ||--o{ sessions : "has"
     users ||--o{ invitations : "issues"
+    users ||--o{ hidden_tags : "hides"
     users {
         bigint id PK
         string email "ログイン ID"
@@ -127,6 +128,11 @@ erDiagram
         bigint inviter_id FK
         bigint used_by_id FK
         datetime expires_at "7 日"
+    }
+    hidden_tags {
+        bigint id PK
+        bigint user_id FK
+        string name "候補から隠したタグ名"
     }
     sessions {
         bigint id PK
@@ -210,6 +216,7 @@ sequenceDiagram
 | 再設定リンクの発行 | 管理 → ユーザータブ（管理者のみ） | POST /api/users/:user_id/password_reset_link | 署名付きトークン（`has_secure_password` の reset token・24 時間・DB 非保存）を返す |
 | 再設定リンクの確認 | 再設定画面を開いた時 | GET /api/password_reset?token= | 使えれば `{ email }`、無効・期限切れ・使用済みは 422（フォームを出さない）。3 分 30 回まで |
 | パスワード再設定 | 再設定画面（`/?reset=TOKEN`） | PATCH /api/password_reset { token, password, password_confirmation } | users UPDATE ＋ そのユーザーの sessions 全 DELETE ＋ sessions INSERT（この端末でログイン）。無効・期限切れ・使用済みは 422。3 分 10 回まで |
+| タグ候補を隠す / 戻す | S3・S4 のタグ候補（× / 「隠した候補」） | GET / POST /api/hidden_tags、DELETE /api/hidden_tags/:id | hidden_tags SELECT / INSERT / DELETE（ユーザーごと。本のタグは変えない） |
 | アカウント削除 | ヘッダ「アカウント」→ アカウント削除タブ | DELETE /api/registration { current_password } | users DELETE（books・sessions・発行した invitations も削除、使った invitations の used_by_id は NULL）＋ Cookie 削除。パスワード違い・最後の管理者は 422。3 分 10 回まで |
 | 招待の一覧 / 発行 / 削除 | 管理 → 招待タブ（管理者のみ） | GET / POST /api/invitations、DELETE /api/invitations/:id | invitations SELECT / INSERT / DELETE（未使用のみ）。一般ユーザーは 403 |
 | パスワード変更 | ヘッダ「アカウント」→ パスワード変更タブ | PATCH /api/password { current_password, password, password_confirmation } | users UPDATE（8 文字以上）＋ 自分以外の sessions DELETE（他端末は失効・操作中は維持）。不備は 422 |

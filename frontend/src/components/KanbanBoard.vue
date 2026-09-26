@@ -2,6 +2,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { listAllBooks, updateBook, reorderBooks } from '../api/books'
 import { logout } from '../api/session'
+import { listHiddenTags } from '../api/hiddenTags'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type {
@@ -11,6 +12,7 @@ import type {
   BookListParams,
   BookSortKey,
   SortDir,
+  HiddenTag,
 } from '../types/book'
 import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
@@ -63,6 +65,16 @@ const filters = reactive<{ genre: '' | BookGenre; author: string; tag: string }>
 const tagOptions = ref<string[]>([])
 // 自分が付けたタグをよく使う順に（書籍フォームのタグ候補に使う）
 const frequentTags = ref<string[]>([])
+// タグ候補から隠したタグ（書籍フォームで隠す・戻すと更新される）
+const hiddenTags = ref<HiddenTag[]>([])
+
+async function loadHiddenTags() {
+  try {
+    hiddenTags.value = await listHiddenTags()
+  } catch {
+    // 取得できなくても候補がすべて出るだけなので、ボード表示は妨げない
+  }
+}
 const hasFilters = computed(
   () => filters.genre !== '' || filters.author.trim() !== '' || filters.tag !== '',
 )
@@ -155,6 +167,7 @@ async function onLoadMore(status: BookStatus) {
 onMounted(() => {
   loadBooks()
   loadTagOptions()
+  loadHiddenTags()
 })
 
 // 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す
@@ -388,6 +401,7 @@ function onModalDone() {
       v-if="modalOpen"
       :book="editingBook"
       :known-tags="frequentTags"
+      v-model:hidden-tags="hiddenTags"
       @close="closeModal"
       @saved="onModalDone"
       @deleted="onModalDone"

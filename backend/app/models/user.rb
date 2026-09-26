@@ -7,6 +7,7 @@ class User < ApplicationRecord
   has_secure_password reset_token: { expires_in: PASSWORD_RESET_VALID_FOR }
   has_many :sessions, dependent: :destroy
   has_many :books, dependent: :destroy
+  has_many :hidden_tags, dependent: :destroy
   # 自分が発行した招待 / 自分が登録に使った招待
   has_many :issued_invitations, class_name: "Invitation", foreign_key: :inviter_id,
     inverse_of: :inviter, dependent: :destroy

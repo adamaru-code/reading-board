@@ -9,19 +9,30 @@ import {
   BOOK_MEDIA_TYPES,
   MEDIA_TYPE_LABELS,
 } from '../types/book'
-import type { Book, BookStatus, BookGenre, BookMediaType, BookCreateInput } from '../types/book'
+import type {
+  Book,
+  BookStatus,
+  BookGenre,
+  BookMediaType,
+  BookCreateInput,
+  HiddenTag,
+} from '../types/book'
 import { suggestTags, SUGGEST_LIMIT } from '../lib/tagSuggestions'
+import { hideTag, unhideTag } from '../api/hiddenTags'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 // book が渡されれば編集モード、null なら新規追加モード
 // knownTags：自分が過去に付けたタグ（よく使う順）。タグ候補に使う
-const props = withDefaults(defineProps<{ book: Book | null; knownTags?: string[] }>(), {
-  knownTags: () => [],
-})
+// hiddenTags：候補から隠したタグ（v-model:hidden-tags。隠す・戻すと更新後の一覧を返す）
+const props = withDefaults(
+  defineProps<{ book: Book | null; knownTags?: string[]; hiddenTags?: HiddenTag[] }>(),
+  { knownTags: () => [], hiddenTags: () => [] },
+)
 const emit = defineEmits<{
   close: []
   saved: []
   deleted: []
+  'update:hiddenTags': [tags: HiddenTag[]]
 }>()
 
 const isEdit = computed(() => props.book !== null)
@@ -65,6 +76,7 @@ const allSuggestedTags = computed(() =>
     knownTags: props.knownTags,
     query: tagInput.value,
     limit: Infinity,
+    hiddenTags: props.hiddenTags.map((t) => t.name),
   }),
 )
 const suggestedTags = computed(() =>
@@ -72,9 +84,46 @@ const suggestedTags = computed(() =>
     ? allSuggestedTags.value
     : allSuggestedTags.value.slice(0, SUGGEST_LIMIT),
 )
-const hiddenSuggestionCount = computed(
+const moreSuggestionCount = computed(
   () => allSuggestedTags.value.length - suggestedTags.value.length,
 )
+
+// ---------- 候補から隠す / 戻す（本に付いているタグは変わらない） ----------
+const showHiddenTags = ref(false)
+const hidingTag = ref(false)
+
+async function onHideSuggestion(name: string) {
+  hidingTag.value = true
+  try {
+    const hidden = await hideTag(name)
+    const rest = props.hiddenTags.filter((t) => t.id !== hidden.id)
+    emit(
+      'update:hiddenTags',
+      [...rest, hidden].sort((a, b) => a.name.localeCompare(b.name, 'ja')),
+    )
+  } catch (e) {
+    errors.value =
+      e instanceof ApiError && e.errors.length > 0 ? e.errors : ['候補を隠せませんでした。']
+  } finally {
+    hidingTag.value = false
+  }
+}
+
+async function onUnhideSuggestion(tag: HiddenTag) {
+  hidingTag.value = true
+  try {
+    await unhideTag(tag.id)
+    emit(
+      'update:hiddenTags',
+      props.hiddenTags.filter((t) => t.id !== tag.id),
+    )
+  } catch (e) {
+    errors.value =
+      e instanceof ApiError && e.errors.length > 0 ? e.errors : ['候補に戻せませんでした。']
+  } finally {
+    hidingTag.value = false
+  }
+}
 
 function addSuggestedTag(tag: string) {
   if (!tags.value.includes(tag)) tags.value.push(tag)
@@ -350,22 +399,28 @@ async function onConfirmDelete() {
           />
           <div v-if="suggestedTags.length" class="tag-suggest">
             <span class="tag-suggest-label">候補:</span>
+            <span v-for="tag in suggestedTags" :key="tag" class="tag-suggest-item">
+              <button type="button" class="tag-suggest-chip" @click="addSuggestedTag(tag)">
+                ＋ {{ tag }}
+              </button>
+              <button
+                type="button"
+                class="tag-suggest-hide"
+                :aria-label="`「${tag}」を候補から隠す`"
+                title="候補から隠す（本のタグは消えません）"
+                :disabled="hidingTag"
+                @click="onHideSuggestion(tag)"
+              >
+                ×
+              </button>
+            </span>
             <button
-              v-for="tag in suggestedTags"
-              :key="tag"
-              type="button"
-              class="tag-suggest-chip"
-              @click="addSuggestedTag(tag)"
-            >
-              ＋ {{ tag }}
-            </button>
-            <button
-              v-if="hiddenSuggestionCount > 0"
+              v-if="moreSuggestionCount > 0"
               type="button"
               class="tag-suggest-more"
               @click="showAllSuggestions = true"
             >
-              すべて表示（残り {{ hiddenSuggestionCount }} 件）
+              すべて表示（残り {{ moreSuggestionCount }} 件）
             </button>
             <button
               v-else-if="showAllSuggestions && allSuggestedTags.length > SUGGEST_LIMIT"
@@ -375,6 +430,29 @@ async function onConfirmDelete() {
             >
               少なく表示
             </button>
+          </div>
+          <div v-if="hiddenTags.length" class="tag-hidden">
+            <button
+              type="button"
+              class="tag-suggest-more"
+              :aria-expanded="showHiddenTags"
+              @click="showHiddenTags = !showHiddenTags"
+            >
+              隠した候補（{{ hiddenTags.length }}）{{ showHiddenTags ? '▲' : '▼' }}
+            </button>
+            <ul v-if="showHiddenTags" class="tag-hidden-list">
+              <li v-for="tag in hiddenTags" :key="tag.id" class="tag-hidden-item">
+                <span>{{ tag.name }}</span>
+                <button
+                  type="button"
+                  class="tag-unhide"
+                  :disabled="hidingTag"
+                  @click="onUnhideSuggestion(tag)"
+                >
+                  候補に戻す
+                </button>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -563,6 +641,56 @@ async function onConfirmDelete() {
   color: var(--text-sub);
   text-decoration: underline;
   padding: 2px 4px;
+  cursor: pointer;
+}
+.tag-suggest-item {
+  display: inline-flex;
+  align-items: stretch;
+}
+.tag-suggest-item .tag-suggest-chip {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.tag-suggest-hide {
+  font-size: 12px;
+  border: 1px dashed var(--border);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background: var(--surface);
+  color: var(--text-sub);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.tag-suggest-hide:hover:not(:disabled) {
+  color: var(--danger);
+}
+.tag-hidden {
+  margin-top: 6px;
+}
+.tag-hidden-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag-hidden-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-sub);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 2px 4px 2px 8px;
+}
+.tag-unhide {
+  font-size: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 4px;
+  padding: 1px 6px;
   cursor: pointer;
 }
 
