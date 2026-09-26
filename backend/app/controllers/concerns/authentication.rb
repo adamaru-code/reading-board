@@ -35,7 +35,7 @@ module Authentication
 
   # 管理者専用のアクションで before_action に使う（require_authentication の後に実行される）
   def require_admin
-    current_user.admin? || render(json: { errors: ["権限がありません"] }, status: :forbidden)
+    current_user.admin? || render(json: { errors: [ "権限がありません" ] }, status: :forbidden)
   end
 
   # ログイン中ユーザーとして返す JSON（session / registration で共通）
@@ -44,7 +44,7 @@ module Authentication
   end
 
   def render_unauthorized
-    render json: { errors: ["ログインが必要です"] }, status: :unauthorized
+    render json: { errors: [ "ログインが必要です" ] }, status: :unauthorized
   end
 
   def start_new_session_for(user)

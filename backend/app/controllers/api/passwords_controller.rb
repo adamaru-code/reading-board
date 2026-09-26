@@ -15,7 +15,7 @@ module Api
         else
           "現在のパスワードが違います"
         end
-      return render_errors([error]) if error
+      return render_errors([ error ]) if error
 
       if current_user.update(password: password)
         current_user.sessions.where.not(id: current_session.id).destroy_all

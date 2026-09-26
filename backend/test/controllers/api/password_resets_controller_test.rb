@@ -73,7 +73,7 @@ module Api
 
       reset(token, password: "another-password-2")
       assert_response :unprocessable_content
-      assert_equal ["再設定リンクが無効か、期限切れです"], errors
+      assert_equal [ "再設定リンクが無効か、期限切れです" ], errors
     end
 
     test "24 時間を過ぎたリンク・改ざんしたリンクは 422" do
@@ -81,7 +81,7 @@ module Api
       travel 24.hours + 1.second do
         reset(token)
         assert_response :unprocessable_content
-        assert_equal ["再設定リンクが無効か、期限切れです"], errors
+        assert_equal [ "再設定リンクが無効か、期限切れです" ], errors
       end
 
       reset("#{token}x")
@@ -93,7 +93,7 @@ module Api
       token = issue_token_as_admin
       reset(token, password: "short")
       assert_response :unprocessable_content
-      assert_equal ["新しいパスワードは 8 文字以上にしてください"], errors
+      assert_equal [ "新しいパスワードは 8 文字以上にしてください" ], errors
 
       reset(token, confirmation: "different-password")
       assert_response :unprocessable_content
@@ -110,7 +110,7 @@ module Api
       delete api_session_url
       get api_password_reset_url, params: { token: token }
       assert_response :unprocessable_content
-      assert_equal ["再設定リンクが無効か、期限切れです"], errors
+      assert_equal [ "再設定リンクが無効か、期限切れです" ], errors
 
       get api_password_reset_url, params: { token: "tampered" }
       assert_response :unprocessable_content

@@ -37,7 +37,7 @@ module Api
       get api_books_url, params: { author: "Boswell" }
       assert_response :success
       items = JSON.parse(response.body)["items"]
-      assert_equal [@book.id], items.map { |b| b["id"] }
+      assert_equal [ @book.id ], items.map { |b| b["id"] }
     end
 
     test "index は genre で絞り込める" do
@@ -56,11 +56,11 @@ module Api
     end
 
     test "index は tag（名称）で絞り込める" do
-      tagged = @owner.books.create!(title: "名著本", tag_names: ["名著"])
+      tagged = @owner.books.create!(title: "名著本", tag_names: [ "名著" ])
       get api_books_url, params: { tag: "名著" }
       assert_response :success
       ids = JSON.parse(response.body)["items"].map { |b| b["id"] }
-      assert_equal [tagged.id], ids
+      assert_equal [ tagged.id ], ids
     end
 
     test "index は複数条件を AND で併用できる" do
@@ -68,7 +68,7 @@ module Api
       @owner.books.create!(title: "miss", status: :read, genre: :liberal_arts, author: "Ada")
       get api_books_url, params: { status: "reading", genre: "liberal_arts", author: "Ada" }
       assert_response :success
-      assert_equal [hit.id], JSON.parse(response.body)["items"].map { |b| b["id"] }
+      assert_equal [ hit.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
     end
 
     test "index は per_page と page で分割し total を返す" do
@@ -162,7 +162,7 @@ module Api
     end
 
     test "create は tags を保存し、JSON に名称配列で含む" do
-      post api_books_url, params: { book: { title: "タグ本", tags: ["名著", "入門"] } }
+      post api_books_url, params: { book: { title: "タグ本", tags: [ "名著", "入門" ] } }
       assert_response :created
       assert_equal %w[名著 入門], JSON.parse(response.body)["tags"]
     end
@@ -183,8 +183,8 @@ module Api
     end
 
     test "update で tags を差し替えられる" do
-      @book.update!(tag_names: ["旧"])
-      patch api_book_url(@book), params: { book: { tags: ["新A", "新B"] } }
+      @book.update!(tag_names: [ "旧" ])
+      patch api_book_url(@book), params: { book: { tags: [ "新A", "新B" ] } }
       assert_response :success
       assert_equal %w[新A 新B], @book.reload.tags.map(&:name)
     end
@@ -250,7 +250,7 @@ module Api
       a = @owner.books.create!(title: "A")
       b = @owner.books.create!(title: "B")
       c = @owner.books.create!(title: "C")
-      patch reorder_api_books_url, params: { ids: [c.id, a.id, b.id] }
+      patch reorder_api_books_url, params: { ids: [ c.id, a.id, b.id ] }
       assert_response :no_content
       assert_equal 0, c.reload.position
       assert_equal 1, a.reload.position
@@ -265,7 +265,7 @@ module Api
     test "reorder は他ユーザーの本を更新しない" do
       mine = @owner.books.create!(title: "自分の本")
       others = users(:other).books.create!(title: "他人の本", position: 99)
-      patch reorder_api_books_url, params: { ids: [others.id, mine.id] }
+      patch reorder_api_books_url, params: { ids: [ others.id, mine.id ] }
       assert_response :no_content
       assert_equal 99, others.reload.position # 他人の本は不変
       assert_equal 1, mine.reload.position # 自分の本だけ 0..n-1 で採番
@@ -276,10 +276,10 @@ module Api
       old = @owner.books.create!(title: "古い未設定")
       a = @owner.books.create!(title: "後で1番")
       b = @owner.books.create!(title: "後で2番")
-      patch reorder_api_books_url, params: { ids: [b.id, a.id] }
+      patch reorder_api_books_url, params: { ids: [ b.id, a.id ] }
       get api_books_url
       ids = JSON.parse(response.body)["items"].map { |x| x["id"] }
-      assert_equal [b.id, a.id, old.id], ids # position 付き→未設定の順
+      assert_equal [ b.id, a.id, old.id ], ids # position 付き→未設定の順
     end
 
     test "index は offset 指定でその位置から返す（page より優先）" do
@@ -306,7 +306,7 @@ module Api
       none = create_read_book("日付なし", started: nil, finished: nil)
       recent = create_read_book("新しい", started: nil, finished: Date.new(2026, 5, 1))
       get api_books_url, params: { status: "read", sort: "finished_on", dir: "desc" }
-      assert_equal [recent.id, old.id, none.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+      assert_equal [ recent.id, old.id, none.id ], JSON.parse(response.body)["items"].map { |x| x["id"] }
     end
 
     test "index は sort=rating（昇順）と sort=duration_days で並ぶ" do
@@ -316,10 +316,10 @@ module Api
       unrated = create_read_book("未評価", started: nil, finished: Date.new(2026, 3, 1))
 
       get api_books_url, params: { sort: "rating", dir: "asc" }
-      assert_equal [short.id, long.id, unrated.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+      assert_equal [ short.id, long.id, unrated.id ], JSON.parse(response.body)["items"].map { |x| x["id"] }
 
       get api_books_url, params: { sort: "duration_days", dir: "desc" }
-      assert_equal [long.id, short.id, unrated.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+      assert_equal [ long.id, short.id, unrated.id ], JSON.parse(response.body)["items"].map { |x| x["id"] }
     end
 
     test "index の sort は同値をタイトル順に並べ、手動順（position）を混ぜない" do
@@ -332,7 +332,7 @@ module Api
       a.update!(position: 2)
       b.update!(position: 1)
       get api_books_url, params: { status: "read", sort: "finished_on", dir: "desc" }
-      assert_equal [a.id, b.id, c.id], JSON.parse(response.body)["items"].map { |x| x["id"] }
+      assert_equal [ a.id, b.id, c.id ], JSON.parse(response.body)["items"].map { |x| x["id"] }
     end
 
     test "index は不正な sort を無視して既定の並びで返す" do
@@ -346,10 +346,10 @@ module Api
       a, b, c, d = %w[A B C D].each_with_index.map { |t, i| @owner.books.create!(title: t, position: i) }
       moved = @owner.books.create!(title: "移動してきた本", position: 0)
       # フロントは読み込み済みの先頭 2 件＋移動した本だけ送る（詰めないと C と moved が position 2 で衝突し C が先になる）
-      patch reorder_api_books_url, params: { ids: [a.id, b.id, moved.id] }
+      patch reorder_api_books_url, params: { ids: [ a.id, b.id, moved.id ] }
       assert_response :no_content
       get api_books_url, params: { status: "want_to_read" }
-      assert_equal [a.id, b.id, moved.id, c.id, d.id],
+      assert_equal [ a.id, b.id, moved.id, c.id, d.id ],
         JSON.parse(response.body)["items"].map { |x| x["id"] }
     end
   end

@@ -59,7 +59,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 ### 1.7 Lint / テスト
 
-- [ ] **RuboCop** が通る（導入時。`bundle exec rubocop`）
+- [ ] **RuboCop** が通る（`bin/rubocop`。rubocop-rails-omakase。CI の Backend (lint + security) ジョブで実行）
+- [ ] **Brakeman**（`bin/brakeman`）・**bundler-audit**（`bin/bundler-audit`）が警告なし。gem の更新は patch / minor に限定し、メジャー更新は別 PR で検討
 - [ ] テストが通る（`bin/rails test` または RSpec）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 

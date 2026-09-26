@@ -30,7 +30,7 @@ module Api
       get api_invitations_url
       assert_response :success
       body = JSON.parse(response.body)
-      assert_equal [recent.id, old.id], body.map { |i| i["id"] }
+      assert_equal [ recent.id, old.id ], body.map { |i| i["id"] }
       assert_equal "other@example.com", body.last["used_by_email"]
       assert_equal "used", body.last["status"]
     end

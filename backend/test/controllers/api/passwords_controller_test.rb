@@ -29,7 +29,7 @@ module Api
     test "現在のパスワードが違うと 422 で変更されない" do
       change_password(current: "wrong")
       assert_response :unprocessable_content
-      assert_equal ["現在のパスワードが違います"], JSON.parse(response.body)["errors"]
+      assert_equal [ "現在のパスワードが違います" ], JSON.parse(response.body)["errors"]
       assert @owner.reload.authenticate("password")
     end
 
@@ -49,7 +49,7 @@ module Api
     test "確認が一致しないと 422" do
       change_password(confirmation: "different-password")
       assert_response :unprocessable_content
-      assert_equal ["新しいパスワード（確認）が一致しません"], JSON.parse(response.body)["errors"]
+      assert_equal [ "新しいパスワード（確認）が一致しません" ], JSON.parse(response.body)["errors"]
     end
 
     test "変更すると他端末のセッションは失効し、操作中のセッションは維持される" do

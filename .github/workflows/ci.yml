@@ -51,6 +51,37 @@ jobs:
       - name: Run tests
         run: bin/rails test
 
+  backend-lint:
+    name: Backend (lint + security)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      # mysql2 gem のネイティブ拡張ビルドに必要
+      - name: Install libmysqlclient
+        run: sudo apt-get update && sudo apt-get install -y libmysqlclient-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.11"
+          bundler-cache: true
+          working-directory: backend
+
+      # 書き方のチェック（Rails 8 標準の rubocop-rails-omakase）
+      - name: RuboCop
+        run: bin/rubocop -f github
+
+      # Rails のセキュリティ上の弱点を静的に検査
+      - name: Brakeman
+        run: bin/brakeman --no-pager --exit-on-warn --exit-on-error
+
+      # 使っている gem の既知の脆弱性を検査
+      - name: bundler-audit
+        run: bin/bundler-audit
+
   frontend:
     name: Frontend (test + build)
     runs-on: ubuntu-latest

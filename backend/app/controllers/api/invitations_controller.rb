@@ -17,9 +17,9 @@ module Api
     # DELETE /api/invitations/:id （未使用のものだけ）
     def destroy
       invitation = current_user.issued_invitations.find_by(id: params[:id])
-      return render json: { errors: ["招待が見つかりません"] }, status: :not_found unless invitation
+      return render json: { errors: [ "招待が見つかりません" ] }, status: :not_found unless invitation
       if invitation.used_at
-        return render json: { errors: ["使用済みの招待は削除できません"] }, status: :unprocessable_content
+        return render json: { errors: [ "使用済みの招待は削除できません" ] }, status: :unprocessable_content
       end
 
       invitation.destroy

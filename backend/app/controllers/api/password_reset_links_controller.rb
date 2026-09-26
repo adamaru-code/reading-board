@@ -6,7 +6,7 @@ module Api
     # POST /api/users/:user_id/password_reset_link
     def create
       user = User.find_by(id: params[:user_id])
-      return render json: { errors: ["ユーザーが見つかりません"] }, status: :not_found unless user
+      return render json: { errors: [ "ユーザーが見つかりません" ] }, status: :not_found unless user
 
       render json: {
         token: user.password_reset_token,
