@@ -4,7 +4,7 @@ import * as hiddenTagsApi from '../../api/hiddenTags'
 import BookFormModal from '../BookFormModal.vue'
 
 const chips = (wrapper: ReturnType<typeof mount>) =>
-  wrapper.findAll('.tag-suggest-chip').map((c) => c.text().replace('＋', '').trim())
+  wrapper.findAll('.tag-suggest-chip').map((c) => c.text().trim())
 
 describe('BookFormModal のタグ候補', () => {
   it('過去に付けたタグを候補に出す', () => {
@@ -93,5 +93,12 @@ describe('BookFormModal のタグ候補', () => {
 
     expect(spy).toHaveBeenCalledWith(5)
     expect(wrapper.emitted('update:hiddenTags')).toEqual([[[]]])
+  })
+
+  it('候補はタグ名だけを表示し（「＋」なし）、読み上げ用に「追加」の説明を付ける', () => {
+    const wrapper = mount(BookFormModal, { props: { book: null, knownTags: ['仕事'] } })
+    const chip = wrapper.findAll('.tag-suggest-chip').find((c) => c.text() === '仕事')!
+    expect(chip.text()).toBe('仕事')
+    expect(chip.attributes('aria-label')).toBe('「仕事」をタグに追加')
   })
 })
