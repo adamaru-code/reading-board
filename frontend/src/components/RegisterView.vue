@@ -80,7 +80,12 @@ async function onSubmit() {
 
       <label class="field">
         <span class="field-label">パスワード（確認）</span>
-        <input v-model="passwordConfirmation" type="password" autocomplete="new-password" required />
+        <input
+          v-model="passwordConfirmation"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
       </label>
 
       <p v-if="clientError" class="field-hint">{{ clientError }}</p>

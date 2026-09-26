@@ -29,12 +29,15 @@ describe('listAllBooks', () => {
 
 describe('listBooks', () => {
   it('offset・並び替えをクエリに載せ、未指定の page は送らない', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ items: [], pagination: {} })),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ items: [], pagination: {} })))
     vi.stubGlobal('fetch', fetchMock)
 
-    await listBooks({ status: 'read' }, { offset: 40, perPage: 20, sort: 'finished_on', dir: 'desc' })
+    await listBooks(
+      { status: 'read' },
+      { offset: 40, perPage: 20, sort: 'finished_on', dir: 'desc' },
+    )
 
     const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
     expect(Object.fromEntries(url.searchParams)).toEqual({

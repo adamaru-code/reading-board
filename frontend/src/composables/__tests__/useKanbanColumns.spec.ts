@@ -25,7 +25,11 @@ const range = (from: number, count: number, status: BookStatus) =>
   Array.from({ length: count }, (_, i) => book(from + i, status))
 
 beforeEach(() => {
-  server = { want_to_read: range(1, 25, 'want_to_read'), reading: range(101, 3, 'reading'), read: [] }
+  server = {
+    want_to_read: range(1, 25, 'want_to_read'),
+    reading: range(101, 3, 'reading'),
+    read: [],
+  }
 })
 
 describe('useKanbanColumns', () => {
@@ -67,7 +71,9 @@ describe('useKanbanColumns', () => {
 
     await loadMore('want_to_read')
 
-    expect(columns.want_to_read.items.map((b) => b.id)).toEqual(range(1, 25, 'want_to_read').map((b) => b.id))
+    expect(columns.want_to_read.items.map((b) => b.id)).toEqual(
+      range(1, 25, 'want_to_read').map((b) => b.id),
+    )
     expect(hasMore('want_to_read')).toBe(false)
   })
 
@@ -88,7 +94,9 @@ describe('useKanbanColumns', () => {
     await loadMore('want_to_read')
 
     // 2..25 が欠けも重複もなく揃う（page 番号方式だと 21 番を取りこぼす）
-    expect(columns.want_to_read.items.map((b) => b.id)).toEqual(range(2, 24, 'want_to_read').map((b) => b.id))
+    expect(columns.want_to_read.items.map((b) => b.id)).toEqual(
+      range(2, 24, 'want_to_read').map((b) => b.id),
+    )
   })
 
   it('同じカラム内の移動は件数を変えず、position を振り直す', async () => {

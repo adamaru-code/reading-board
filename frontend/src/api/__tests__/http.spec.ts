@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { request, ApiError } from '../http'
 
 function mockFetch(status: number, body?: unknown) {
-  const fetchMock = vi.fn().mockResolvedValue(
-    new Response(body === undefined ? null : JSON.stringify(body), { status }),
-  )
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValue(new Response(body === undefined ? null : JSON.stringify(body), { status }))
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
 }

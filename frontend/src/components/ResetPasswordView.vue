@@ -97,7 +97,12 @@ async function onSubmit() {
 
       <label class="field">
         <span class="field-label">新しいパスワード（確認）</span>
-        <input v-model="passwordConfirmation" type="password" autocomplete="new-password" required />
+        <input
+          v-model="passwordConfirmation"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
       </label>
 
       <p v-if="clientError" class="field-hint">{{ clientError }}</p>
@@ -106,9 +111,7 @@ async function onSubmit() {
         {{ submitting ? '設定中…' : '設定してログイン' }}
       </button>
 
-      <button type="button" class="switch-link" @click="emit('show-login')">
-        ログイン画面へ
-      </button>
+      <button type="button" class="switch-link" @click="emit('show-login')">ログイン画面へ</button>
     </form>
   </div>
 </template>

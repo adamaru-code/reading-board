@@ -108,7 +108,9 @@ async function startScan() {
   scanError.value = ''
   try {
     barcodeDetector ||= new BarcodeDetector({ formats: ['ean_13'] })
-    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+    })
     scanning.value = true
     await nextTick() // video 要素が描画されてから接続
     if (videoEl.value) {
@@ -241,7 +243,9 @@ async function onDelete() {
             >
               📷 カメラ
             </button>
-            <button v-if="scanning" type="button" class="btn btn-ghost" @click="stopScan">停止</button>
+            <button v-if="scanning" type="button" class="btn btn-ghost" @click="stopScan">
+              停止
+            </button>
           </div>
           <div v-if="scanning" class="scanner">
             <video ref="videoEl" class="scan-video" playsinline muted></video>
@@ -278,7 +282,9 @@ async function onDelete() {
         <label class="field">
           <span class="field-label">形態</span>
           <select v-model="form.media_type">
-            <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">{{ MEDIA_TYPE_LABELS[m] }}</option>
+            <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">
+              {{ MEDIA_TYPE_LABELS[m] }}
+            </option>
           </select>
         </label>
 
@@ -300,7 +306,14 @@ async function onDelete() {
           <div v-if="tags.length" class="tag-list">
             <span v-for="tag in tags" :key="tag" class="tag-chip">
               {{ tag }}
-              <button type="button" class="tag-remove" :aria-label="`${tag} を削除`" @click="removeTag(tag)">×</button>
+              <button
+                type="button"
+                class="tag-remove"
+                :aria-label="`${tag} を削除`"
+                @click="removeTag(tag)"
+              >
+                ×
+              </button>
             </span>
           </div>
           <input

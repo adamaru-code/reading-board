@@ -57,7 +57,11 @@ async function onIssue(user: UserSummary) {
   busy.value = true
   try {
     const link = await createPasswordResetLink(user.id)
-    issued.value = { userId: user.id, url: passwordResetUrl(link.token), expiresAt: link.expires_at }
+    issued.value = {
+      userId: user.id,
+      url: passwordResetUrl(link.token),
+      expiresAt: link.expires_at,
+    }
     copied.value = false
   } catch (e) {
     handleError(e, '再設定リンクの発行に失敗しました。')
@@ -81,7 +85,8 @@ async function onCopy() {
 <template>
   <div>
     <p class="panel-sub">
-      パスワードを忘れた人に再設定リンクを発行して渡します。リンクは 24 時間有効で、1 回使うと無効になります。
+      パスワードを忘れた人に再設定リンクを発行して渡します。リンクは 24 時間有効で、1
+      回使うと無効になります。
     </p>
 
     <p v-if="error" class="form-error" role="alert">{{ error }}</p>
