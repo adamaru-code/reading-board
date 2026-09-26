@@ -11,6 +11,7 @@ import {
 } from '../types/book'
 import type { Book, BookStatus, BookGenre, BookMediaType, BookCreateInput } from '../types/book'
 import { suggestTags } from '../lib/tagSuggestions'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 // book が渡されれば編集モード、null なら新規追加モード
 const props = defineProps<{ book: Book | null }>()
@@ -192,15 +193,19 @@ async function onSubmit() {
   }
 }
 
-async function onDelete() {
+// 「削除」を押したら確認ダイアログを出し、そこで「削除」を選んだら実行する
+const confirmingDelete = ref(false)
+
+async function onConfirmDelete() {
   if (!props.book) return
-  if (!window.confirm(`「${props.book.title}」を削除しますか？`)) return
   errors.value = []
   submitting.value = true
   try {
     await deleteBook(props.book.id)
+    confirmingDelete.value = false
     emit('deleted')
   } catch (e) {
+    confirmingDelete.value = false
     errors.value =
       e instanceof ApiError && e.errors.length > 0
         ? e.errors
@@ -343,7 +348,7 @@ async function onDelete() {
             type="button"
             class="btn btn-danger"
             :disabled="submitting"
-            @click="onDelete"
+            @click="confirmingDelete = true"
           >
             削除
           </button>
@@ -357,6 +362,16 @@ async function onDelete() {
         </div>
       </form>
     </div>
+
+    <ConfirmDialog
+      v-if="confirmingDelete && book"
+      title="本を削除しますか？"
+      :message="`「${book.title}」を削除します。`"
+      note="この操作は取り消せません。"
+      :busy="submitting"
+      @confirm="onConfirmDelete"
+      @cancel="confirmingDelete = false"
+    />
   </div>
 </template>
 
