@@ -131,9 +131,14 @@ onMounted(() => cancelButton.value?.focus())
 .btn-ghost {
   background: var(--bg);
 }
+/* 削除ボタン：柔らかい赤の背景＋黒系の文字（文字とのコントラスト比は約 6:1） */
 .btn-danger {
-  background: var(--danger);
-  color: #fff;
+  background: #f28b82;
+  color: var(--text);
+  font-weight: 600;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #ec7369;
 }
 .btn-ghost:focus-visible,
 .btn-danger:focus-visible {
