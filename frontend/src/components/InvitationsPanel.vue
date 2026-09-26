@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { listInvitations, createInvitation, deleteInvitation, invitationUrl } from '../api/invitations'
+import {
+  listInvitations,
+  createInvitation,
+  deleteInvitation,
+  invitationUrl,
+} from '../api/invitations'
 import { ApiError } from '../api/http'
 import type { Invitation, InvitationStatus } from '../types/auth'
 

@@ -4,7 +4,14 @@ import { listAllBooks, updateBook, reorderBooks } from '../api/books'
 import { logout } from '../api/session'
 import { ApiError } from '../api/http'
 import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
-import type { Book, BookStatus, BookGenre, BookListParams, BookSortKey, SortDir } from '../types/book'
+import type {
+  Book,
+  BookStatus,
+  BookGenre,
+  BookListParams,
+  BookSortKey,
+  SortDir,
+} from '../types/book'
 import type { User } from '../types/auth'
 import BookCard from './BookCard.vue'
 import BookFormModal from './BookFormModal.vue'
@@ -177,7 +184,12 @@ function onDragEnd() {
 }
 
 // ドロップ位置（カーソル Y）から、移動カードを除いた挿入インデックスを求める
-function dropIndex(section: HTMLElement, status: BookStatus, movedId: number, clientY: number): number {
+function dropIndex(
+  section: HTMLElement,
+  status: BookStatus,
+  movedId: number,
+  clientY: number,
+): number {
   const displayed = columns[status].items
   const cardEls = Array.from(section.querySelectorAll<HTMLElement>('.card'))
   let index = 0
@@ -281,15 +293,12 @@ function onModalDone() {
             <option v-for="t in tagOptions" :key="t" :value="t">{{ t }}</option>
           </select>
         </label>
-        <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">クリア</button>
+        <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">
+          クリア
+        </button>
         <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
         <span class="user-email" :title="user.email">{{ user.email }}</span>
-        <button
-          v-if="user.admin"
-          type="button"
-          class="header-btn"
-          @click="adminModalOpen = true"
-        >
+        <button v-if="user.admin" type="button" class="header-btn" @click="adminModalOpen = true">
           管理
         </button>
         <button type="button" class="header-btn" @click="accountModalOpen = true">

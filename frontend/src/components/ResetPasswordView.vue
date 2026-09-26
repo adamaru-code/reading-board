@@ -2,10 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { checkPasswordResetToken, resetPassword } from '../api/passwordReset'
 import { ApiError } from '../api/http'
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 import type { User } from '../types/auth'
-
-// バックエンド User::PASSWORD_MIN_LENGTH と揃える
-const MIN_LENGTH = 8
 
 // 管理者が発行した再設定リンク（/?reset=TOKEN）から開く
 const props = defineProps<{ token: string }>()
@@ -97,7 +95,12 @@ async function onSubmit() {
 
       <label class="field">
         <span class="field-label">新しいパスワード（確認）</span>
-        <input v-model="passwordConfirmation" type="password" autocomplete="new-password" required />
+        <input
+          v-model="passwordConfirmation"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
       </label>
 
       <p v-if="clientError" class="field-hint">{{ clientError }}</p>
@@ -106,9 +109,7 @@ async function onSubmit() {
         {{ submitting ? '設定中…' : '設定してログイン' }}
       </button>
 
-      <button type="button" class="switch-link" @click="emit('show-login')">
-        ログイン画面へ
-      </button>
+      <button type="button" class="switch-link" @click="emit('show-login')">ログイン画面へ</button>
     </form>
   </div>
 </template>

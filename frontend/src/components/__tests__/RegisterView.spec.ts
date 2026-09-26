@@ -4,7 +4,11 @@ import RegisterView from '../RegisterView.vue'
 import * as registrationApi from '../../api/registration'
 import { ApiError } from '../../api/http'
 
-async function fill(wrapper: ReturnType<typeof mount>, code: string | null, password = 'new-password') {
+async function fill(
+  wrapper: ReturnType<typeof mount>,
+  code: string | null,
+  password = 'new-password',
+) {
   if (code !== null) await wrapper.find('input[type="text"]').setValue(code)
   await wrapper.find('input[type="email"]').setValue(' new@example.com ')
   const passwords = wrapper.findAll('input[type="password"]')

@@ -37,11 +37,7 @@ const tab = ref<'invitations' | 'users'>('invitations')
       </div>
 
       <InvitationsPanel v-if="tab === 'invitations'" @unauthorized="emit('unauthorized')" />
-      <UsersPanel
-        v-else
-        :current-user-id="currentUserId"
-        @unauthorized="emit('unauthorized')"
-      />
+      <UsersPanel v-else :current-user-id="currentUserId" @unauthorized="emit('unauthorized')" />
 
       <div class="modal-actions">
         <span class="spacer"></span>

@@ -3,9 +3,7 @@ import { ref, computed } from 'vue'
 import { changePassword } from '../api/password'
 import { deleteAccount } from '../api/registration'
 import { ApiError } from '../api/http'
-
-// バックエンド User::PASSWORD_MIN_LENGTH と揃える
-const MIN_LENGTH = 8
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 
 const emit = defineEmits<{ close: []; unauthorized: []; deleted: [] }>()
 
@@ -119,7 +117,12 @@ async function onSubmit() {
 
         <label class="field">
           <span class="field-label">現在のパスワード</span>
-          <input v-model="deletePassword" type="password" autocomplete="current-password" required />
+          <input
+            v-model="deletePassword"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
         </label>
 
         <label class="confirm-check">
@@ -177,7 +180,12 @@ async function onSubmit() {
 
         <label class="field">
           <span class="field-label">新しいパスワード（確認）</span>
-          <input v-model="passwordConfirmation" type="password" autocomplete="new-password" required />
+          <input
+            v-model="passwordConfirmation"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
         </label>
 
         <p v-if="clientError" class="field-hint">{{ clientError }}</p>

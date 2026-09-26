@@ -49,6 +49,8 @@ cd backend && bin/rubocop        # Ruby の書き方チェック（rubocop-rails
 cd backend && bin/brakeman       # Rails のセキュリティ検査
 cd backend && bin/bundler-audit  # gem の脆弱性検査
 cd frontend && npm test          # Vue/TS（vitest）
+cd frontend && npm run lint      # 書き方チェック（ESLint）
+cd frontend && npm run format    # 見た目の自動整形（Prettier）。確認だけなら npm run format:check
 ```
 
 CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terraform の fmt / validate を実行する。backend はまとめて `bin/ci` でも実行できる。
