@@ -353,7 +353,12 @@ async function onConfirmDelete() {
             削除
           </button>
           <span class="spacer"></span>
-          <button type="button" class="btn btn-ghost" :disabled="submitting" @click="emit('close')">
+          <button
+            type="button"
+            class="btn btn-cancel"
+            :disabled="submitting"
+            @click="emit('close')"
+          >
             キャンセル
           </button>
           <button type="submit" class="btn btn-primary" :disabled="submitting">
@@ -543,6 +548,12 @@ async function onConfirmDelete() {
 .btn-ghost {
   background: var(--surface);
   border-color: var(--border);
+}
+/* キャンセル：確認ダイアログ（ConfirmDialog.vue）の「キャンセル」と同じ見た目 */
+.btn-cancel {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 18px;
 }
 .btn-danger {
   background: var(--surface);
