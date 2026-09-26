@@ -116,9 +116,11 @@ module Api
         end
       ordered = ids + rest_ids
 
-      # id → position を CASE 式で 1 クエリ更新（所有者スコープ）。id は整数化済みで安全
-      whens = ordered.each_with_index.map { |id, index| "WHEN #{id} THEN #{index}" }.join(" ")
-      books.where(id: ordered).update_all("position = CASE id #{whens} END")
+      # id → position を CASE 式で 1 クエリ更新（所有者スコープ）。
+      # SQL を文字列で組み立てず Arel で作る（値は Arel がクォートする）
+      position_case = Arel::Nodes::Case.new(Book.arel_table[:id])
+      ordered.each_with_index { |id, index| position_case.when(id).then(index) }
+      books.where(id: ordered).update_all(position: position_case)
       head :no_content
     end
 
