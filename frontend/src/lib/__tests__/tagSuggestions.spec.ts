@@ -13,6 +13,10 @@ describe('suggestTags', () => {
     expect(new Set(tags).size).toBe(tags.length)
   })
 
+  it('著者に「野口」「晴哉」があっても辞書から「野口整体」は出さない', () => {
+    expect(suggestTags('整体入門', '野口晴哉', [])).not.toContain('野口整体')
+  })
+
   it('キーワードに当たらなくても定番タグを返す', () => {
     expect(suggestTags('無関係な本', '', [])).toEqual(['名著', '再読したい', '積読'])
   })
