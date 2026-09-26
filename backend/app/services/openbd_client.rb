@@ -5,6 +5,9 @@ require "json"
 # ISBN の正規化・妥当性判定・形態判定などの純粋関数もここに集約する。
 class OpenbdClient
   ENDPOINT = "https://api.openbd.jp/v1/get".freeze
+  # 外部 API が応答しないときに Puma のスレッドを長く塞がないよう、待ち時間の上限を決める（既定は 60 秒）
+  OPEN_TIMEOUT = 3
+  READ_TIMEOUT = 5
 
   # ハイフン・空白などを除去し、数字（と ISBN-10 末尾の X）だけにする
   def self.normalize(raw)
@@ -25,7 +28,10 @@ class OpenbdClient
   def self.fetch(isbn)
     uri = URI(ENDPOINT)
     uri.query = URI.encode_www_form(isbn: isbn)
-    response = Net::HTTP.get_response(uri)
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
+                               open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
+      http.get(uri.request_uri)
+    end
     return nil unless response.is_a?(Net::HTTPSuccess)
 
     record = JSON.parse(response.body)&.first

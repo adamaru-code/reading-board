@@ -19,4 +19,22 @@ class OpenbdClientTest < ActiveSupport::TestCase
     assert_equal "book", OpenbdClient.media_type_for("9784873115658")
     assert_equal "book", OpenbdClient.media_type_for("4873115655")
   end
+
+  # Net::HTTP.start を一時的に差し替える（minitest 6 には stub が無いため）
+  def with_http_start(replacement)
+    original = Net::HTTP.method(:start)
+    Net::HTTP.define_singleton_method(:start, replacement)
+    yield
+  ensure
+    Net::HTTP.define_singleton_method(:start, original)
+  end
+
+  test "fetch は接続・読み取りのタイムアウトを指定し、タイムアウトしたら nil を返す" do
+    received = nil
+    with_http_start(->(*_args, **options, &_block) { received = options; raise Net::ReadTimeout }) do
+      assert_nil OpenbdClient.fetch("9784873115658")
+    end
+    assert_equal OpenbdClient::OPEN_TIMEOUT, received[:open_timeout]
+    assert_equal OpenbdClient::READ_TIMEOUT, received[:read_timeout]
+  end
 end

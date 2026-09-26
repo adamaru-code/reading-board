@@ -110,9 +110,10 @@ module Api
       assert_equal @book.title, JSON.parse(response.body)["title"]
     end
 
-    test "show は存在しない id で 404" do
+    test "show は存在しない id で 404（日本語のメッセージ）" do
       get api_book_url(id: 0)
       assert_response :not_found
+      assert_equal [ "本が見つかりません" ], JSON.parse(response.body)["errors"]
     end
 
     test "create は書籍を作成して 201" do
@@ -131,11 +132,19 @@ module Api
       assert JSON.parse(response.body)["errors"].present?
     end
 
-    test "create は不正な status で 422" do
+    test "create は不正な status で 422（例外ではなく検証エラー）" do
       assert_no_difference "Book.count" do
         post api_books_url, params: { book: { title: "x", status: "flying" } }
       end
       assert_response :unprocessable_content
+      assert JSON.parse(response.body)["errors"].any? { |msg| msg.include?("Status") }
+    end
+
+    test "create は book キーが無いと 400" do
+      assert_no_difference "Book.count" do
+        post api_books_url, params: { title: "x" }
+      end
+      assert_response :bad_request
     end
 
     test "create は genre / media_type を保存し、JSON に含む" do
