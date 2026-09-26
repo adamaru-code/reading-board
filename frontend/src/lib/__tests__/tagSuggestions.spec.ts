@@ -43,4 +43,10 @@ describe('suggestTags', () => {
   it('一致する候補が無ければ空', () => {
     expect(suggestTags('', '', [], { knownTags: ['仕事'], query: 'zzz' })).toEqual([])
   })
+
+  it('limit で件数を変えられる（Infinity で全件）', () => {
+    const known = Array.from({ length: 12 }, (_, n) => `タグ${n}`)
+    expect(suggestTags('', '', [], { knownTags: known })).toHaveLength(8)
+    expect(suggestTags('', '', [], { knownTags: known, limit: Infinity })).toHaveLength(15) // 12＋定番 3
+  })
 })
