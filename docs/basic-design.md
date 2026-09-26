@@ -23,28 +23,41 @@ flowchart LR
 ```
 
 - フロントは `/api/*` を叩くだけで、プロキシが `http://localhost:3000` に転送する（CORS/ポート差異を吸収）。
-- 本番構成では Vite プロキシの代わりに Web サーバ/リバースプロキシが同じ役割を担う想定。
+- 本番（AWS、[インフラ設計](infrastructure.md)）では EC2 上の **nginx** が同じ役割を担う（SPA を配信し、`/api` と `/up` を Rails コンテナへ転送）。HTTPS は CloudFront で終端する。
 
 ---
 
 ## 2. 画面遷移図
 
-画面は [画面設計](screen-design.md) の S1〜S4。ボードを中心に、追加/編集はモーダルで開いて閉じると戻る。
+画面は [画面設計](screen-design.md) の S1〜S7。未ログインならログイン画面（S5）、ログイン後はボード（S1）を中心に、各機能はモーダルで開いて閉じると戻る。
 
 ```mermaid
 flowchart TD
+    S5L["S5 ログイン"]
+    S5R["S5 新規登録<br/>（/?invite=コード）"]
+    S5P["S5 パスワード再設定<br/>（/?reset=トークン）"]
     S1["S1 カンバンボード<br/>（メイン画面）"]
     S3["S3 追加フォーム<br/>（モーダル）"]
     S4["S4 編集フォーム<br/>（モーダル）"]
+    S6["S6 管理<br/>（モーダル・管理者のみ）"]
+    S7["S7 アカウント<br/>（モーダル）"]
 
+    S5L -->|"ログイン"| S1
+    S5L <-->|"新規登録 / ログインへ"| S5R
+    S5R -->|"登録"| S1
+    S5P -->|"設定"| S1
+    S1 -->|"ログアウト / 401"| S5L
     S1 -->|"＋追加"| S3
     S3 -->|"保存 / キャンセル"| S1
     S1 -->|"カードをクリック"| S4
     S4 -->|"更新 / 削除 / キャンセル"| S1
-    S1 -->|"カードを別カラムへドラッグ<br/>（status 更新・画面は留まる）"| S1
+    S1 -->|"管理"| S6
+    S1 -->|"アカウント"| S7
+    S7 -->|"アカウント削除"| S5L
+    S1 -->|"カードをドラッグ<br/>（status 更新・並び替え。画面は留まる）"| S1
 ```
 
-- 画面遷移の実体は 1 画面（SPA）で、S3/S4 はモーダルの開閉。
+- 画面遷移の実体は 1 画面（SPA）で、`App.vue` がログイン状態と URL の `?invite=` / `?reset=` を見て S5 / S1 を切り替える（vue-router は未使用。導入は #158）。S3・S4・S6・S7 はモーダルの開閉。
 - カード移動はページ遷移せず、その場で状態更新して再描画する。
 
 ---
@@ -60,12 +73,12 @@ erDiagram
     books ||--o{ book_status_events : "logs"
     books {
         bigint id PK "主キー"
+        bigint user_id FK "NOT NULL, 所有者"
         string title "NOT NULL, 書名"
         string author "NULL可, 著者"
         int status "NOT NULL default 0, enum(0:読みたい/1:読書中/2:読了)"
         int rating "NULL可, 0-5, 評価"
         text memo "NULL可, 感想"
-        string isbn "NULL可, ISBN/JAN"
         int genre "NOT NULL default 4, enum(0-4 主ジャンル)"
         int media_type "NOT NULL default 0, enum(0:書籍/1:雑誌)"
         int position "NULL可, カラム内並び順"
@@ -90,7 +103,7 @@ erDiagram
     }
 ```
 
-- 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。
+- 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。ISBN は照会（lookup）にだけ使い、保存しない。
 - `books` は `user_id` で所有者（`users`）に紐づく（認証は実装済み。§3.1）。
 
 ### 3.1 認証（招待制の複数ユーザー・実装済み）
@@ -127,7 +140,7 @@ erDiagram
     }
 ```
 
-- ログインで `sessions` を作成し `token` を署名付き httpOnly Cookie（`session_token`, SameSite=Lax）に保持。フロントは同一オリジン（Vite プロキシ）なので Cookie が自動送受信される。
+- ログインで `sessions` を作成し `token` を署名付き httpOnly Cookie（`session_token`, SameSite=Lax。本番は secure）に保持。フロントは同一オリジン（開発は Vite プロキシ、本番は nginx）なので Cookie が自動送受信される。
 - 全 `/api/books*` は認証必須で `current_user` にスコープ。**未認証は 401**（フロントはログイン画面へ）。
 
 ---
@@ -174,7 +187,7 @@ sequenceDiagram
     R->>D: UPDATE books SET status=1 WHERE id=1
     R->>D: INSERT book_status_events (book_id=1, status=1, occurred_on=today)
     D-->>R: OK
-    R-->>V: 200 { id:1, status:"reading", status_dates:{...}, ... }
+    R-->>V: 200 { id:1, status:"reading", started_on:"2026-07-10", ... }
     V-->>U: カードを移動先カラムに再描画（日付・所要日数を反映）
     Note over V,R: 失敗時(422/404)は元のカラムに戻し、エラー表示
     Note over R,D: 状態に入った日を履歴として記録（同一状態・同一日は重複記録しない）
@@ -207,16 +220,18 @@ sequenceDiagram
 sequenceDiagram
     participant U as 利用者
     participant V as Vue SPA
+    participant R as Rails API
     participant O as 書誌API(openBD)
     U->>V: ISBN入力 or バーコード読取
-    V->>O: GET /v1/get?isbn=<code>
-    O-->>V: 書誌(タイトル/著者/書影) or null
-    alt 書籍(978/979)で取得成功
-        V-->>U: タイトル・著者を自動補完 / 形態=書籍
+    V->>R: GET /api/books/lookup?isbn=<code>
+    R->>O: GET /v1/get?isbn=<code>（接続 3 秒・読み取り 5 秒で打ち切り）
+    O-->>R: 書誌(タイトル/著者) or null
+    R-->>V: 200 { isbn, found, title, author, media_type }（不正な ISBN は 422）
+    alt 取得成功（found: true）
+        V-->>U: タイトル・著者を自動補完 / 形態を自動セット
     else 雑誌(491)・該当なし・失敗
-        V-->>U: 手入力にフォールバック（コードは保持）
+        V-->>U: 手入力にフォールバック（形態は判定結果をセット）
     end
-    Note over V,O: 本番はバックエンドが openBD をプロキシする案（キャッシュ/CORS 回避）
 ```
 
 ---
@@ -229,16 +244,17 @@ sequenceDiagram
 |---|---|---|---|
 | S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（著者/ジャンル/タグ）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&author=&tag=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
 | S2 書籍カード | ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
-| S3 追加フォーム | ISBN/バーコード登録、タイトル(必須)・著者・初期ステータス・ジャンル・形態・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
+| S3 追加フォーム | ISBN/バーコード登録、タイトル(必須)・著者・ステータス・ジャンル・形態・評価・メモ・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
 | S4 編集フォーム | 全項目入力（種別・タグ含む）、更新/削除/キャンセル | PATCH・DELETE /api/books/:id | 削除は確認の上 |
+| S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
+| S6 管理 | 招待タブ・ユーザータブ | /api/invitations、/api/users、/api/users/:id/password_reset_link | 管理者のみ |
+| S7 アカウント | パスワード変更・アカウント削除タブ | /api/password、DELETE /api/registration | |
 
 ---
 
 ## 6. フロントの状態管理方針（概要）
 
-- ボードは取得した書籍配列を保持し、`status` でグルーピングして 3 カラムに描画する。
-- カード移動・登録・編集・削除の後は、レスポンスを反映してカラム表示を更新する（楽観的更新＋失敗時ロールバックも可）。
-- API クライアントは `/api` を基点に CRUD をまとめる（実装ステップは [要件定義書](requirements.md) §5-4 で作成）。
-
-> 詳細なバリデーション仕様・コンポーネント分割・状態管理ライブラリの要否は、
-> 各実装ステップ（[要件定義書](requirements.md) §5 実装の分割方針）で詰める。
+- ボードの書籍は composable `useKanbanColumns`（`frontend/src/composables/`）がカラム（status）ごとに保持する（§4.1）。状態管理ライブラリ（Pinia 等）は使わない。
+- カード移動は**楽観的更新**（先に画面を動かし、API 失敗時はサーバーから取り直して元に戻す）。登録・編集・削除の後は読み込み済み件数を保って取り直す。
+- ログイン中のユーザーは `App.vue` が保持し、props でボードへ渡す。API が 401 を返したらログイン画面へ戻す。
+- API クライアントは `frontend/src/api/`（`http.ts` の `request` を基点に、books / session / registration / invitations / users / password / passwordReset）。エラーは `{ errors: [...] }` を `ApiError` に変換する。
