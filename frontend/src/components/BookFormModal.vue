@@ -400,8 +400,14 @@ async function onConfirmDelete() {
           <div v-if="suggestedTags.length" class="tag-suggest">
             <span class="tag-suggest-label">候補:</span>
             <span v-for="tag in suggestedTags" :key="tag" class="tag-suggest-item">
-              <button type="button" class="tag-suggest-chip" @click="addSuggestedTag(tag)">
-                ＋ {{ tag }}
+              <button
+                type="button"
+                class="tag-suggest-chip"
+                :aria-label="`「${tag}」をタグに追加`"
+                :title="`「${tag}」をタグに追加`"
+                @click="addSuggestedTag(tag)"
+              >
+                {{ tag }}
               </button>
               <button
                 type="button"
