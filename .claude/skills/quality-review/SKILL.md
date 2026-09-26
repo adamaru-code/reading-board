@@ -10,6 +10,16 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 > 大規模監査時の進め方: 「Backend → Frontend → Docs → Terraform → PR フロー」の順で各章を点検し、
 > 違反箇所をファイル: 行番号付きで列挙する。修正は CLAUDE.md のフロー（Issue → Branch → PR）に従って分割する。
+>
+> まず自動チェックを一通り流して機械的な指摘を集め、そのあとコードとドキュメントを読んで「標準からのずれ」を探す：
+>
+> ```bash
+> cd backend && bin/rails test && bin/rubocop && bin/brakeman --no-pager && bin/bundler-audit   # または bin/ci
+> cd frontend && npm test && npm run lint && npm run format:check && npm run build
+> cd infra && terraform fmt -check -recursive && terraform validate
+> ```
+>
+> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n・#161 本番の config.hosts）。
 
 ---
 
@@ -18,7 +28,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 ### 1.1 責務分離 / Fat Controller 回避
 
 - [ ] **Controller は薄く**保つ（複雑な業務ロジックはモデルのメソッド、または Service オブジェクトへ）
-- [ ] **Strong Parameters**（`params.require(...).permit(...)`）で mass assignment を防いでいる
+- [ ] **Strong Parameters** で mass assignment を防いでいる。Rails 8 では **`params.expect(book: [...])`** が標準（形が違えば 400。`require(...).permit(...)` は旧来の書き方）
 - [ ] クエリは **N+1 を回避**（`includes` / `eager_load`）
 
 なぜ: テストしやすさ・責務分離。Controller に業務ロジックを積むと肥大化し再利用も効かない。
@@ -26,22 +36,23 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 ### 1.2 モデル / バリデーション
 
 - [ ] バリデーションを**モデルに定義**（`presence` / `inclusion` / `numericality` / `length` 等）
-- [ ] `status` のような列挙値は **enum または `inclusion`** で許容値を制約
+- [ ] `status` のような列挙値は **enum または `inclusion`** で許容値を制約。enum は **`validate: true`** を付け、不正値を例外ではなく検証エラー（422）にする（`rescue_from ArgumentError` で受けるのは、関係のないバグまで 422 にしてしまうので避ける）
 - [ ] マイグレーションと `schema.rb` が整合（`bin/rails db:migrate` 済み・未コミットの schema 差分なし）
 - [ ] DB 制約（NOT NULL / index）も適切に付与（アプリ側 validation だけに頼らない）
 
 ### 1.3 トランザクション境界
 
-- [ ] **複数レコードを更新する処理（カンバンの reorder 等）は `ActiveRecord::Base.transaction` で囲む**
+- [ ] **複数レコードを更新する処理は `ActiveRecord::Base.transaction` で囲む**か、reorder のように **1 本の SQL（`update_all` ＋ CASE 式）**にまとめる
 - [ ] 途中失敗で DB が中間状態にならないことを担保
 
 ### 1.4 例外ハンドリング / エラーレスポンス
 
-- [ ] `rescue_from` 等で例外を適切な HTTP ステータスに変換
+- [ ] `rescue_from` 等で例外を適切な HTTP ステータスに変換（広すぎる例外クラスは捕まえない）
   - `ActiveRecord::RecordNotFound` → **404**
-  - `ActiveRecord::RecordInvalid` / バリデーション失敗 → **422**（`{ "errors": {...} }`）
-  - 不正 JSON / パラメータ不足 → **400**
-- [ ] エラーレスポンスは**統一形**（例: `{ "errors": { field: [msg] } }`）
+  - バリデーション失敗 → **422**
+  - 不正 JSON / パラメータ不足（`ActionController::ParameterMissing`）→ **400**（Rails が自動で返す）
+- [ ] エラーレスポンスは**このプロジェクトの統一形 `{ "errors": ["メッセージ", ...] }`**（文字列の配列。フロントの `ApiError` がこの形を前提にしている）
+- [ ] ユーザーに見えるメッセージは日本語に揃える（モデルの検証メッセージは英語のまま＝I18n 化は #160）
 - [ ] レスポンス形を変える時はフロント（`frontend/src/api/books.ts`）への影響を確認
 
 ### 1.5 REST API 設計
@@ -56,11 +67,16 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] 秘密情報（DB パスワード・APIキー）を**コードに直書きしない**（`Rails.application.credentials` または環境変数）
 - [ ] **CORS**：開発は Vite プロキシで同一オリジンのため未構成でよい。もし有効化するなら**許可オリジンを限定**（ワイルドカード `*` 禁止。本番で別オリジンにする場合は本番ドメインのみ）
 - [ ] `config/database.yml` の接続情報は環境変数化されている
+- [ ] **SQL を文字列の組み立て（`"... #{値} ..."`）で作らない**。`where(id: ...)`・プレースホルダ・Arel（例：`Arel::Nodes::Case`）を使う（値を整数化していても Brakeman は安全を判定できない）
+- [ ] **外部 API 呼び出しにはタイムアウトを付ける**（`Net::HTTP.start(..., open_timeout:, read_timeout:)`。既定 60 秒のままだと Puma のスレッドを塞ぐ）。失敗時の扱い（nil を返して手入力にフォールバック等）も決めておく
 
 ### 1.7 Lint / テスト
 
 - [ ] **RuboCop** が通る（`bin/rubocop`。rubocop-rails-omakase。CI の Backend (lint + security) ジョブで実行）
-- [ ] **Brakeman**（`bin/brakeman`）・**bundler-audit**（`bin/bundler-audit`）が警告なし。gem の更新は patch / minor に限定し、メジャー更新は別 PR で検討
+- [ ] **Brakeman**（`bin/brakeman`）・**bundler-audit**（`bin/bundler-audit`）が警告なし
+  - gem の更新は **patch / minor に限定**（`bundle update <gem> --minor --strict` / `--patch --strict`）。素の `bundle update` はメジャー更新まで進むことがある（例：json 2 → 3）。メジャー更新は別 PR で検討
+  - `bin/brakeman` は `--ensure-latest` 付き（Rails 8 標準）。Brakeman 自体が古いだけでも失敗するので、そのときは brakeman を patch 更新する
+  - 脆弱性の情報は日々更新される。CI で毎回実行し、見つかったら小さな PR で直す
 - [ ] テストが通る（`bin/rails test` または RSpec）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 
@@ -83,7 +99,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 ### 2.3 描画 / a11y
 
-- [ ] `v-for` の **`:key` は安定した一意 id**（配列インデックスではなく `book.id`）
+- [ ] `v-for` の **`:key` は安定した一意 id**（配列インデックスではなく `book.id`）。並び替わらない固定の一覧（★の表示・エラーメッセージの列挙）は index でも可
 - [ ] クリッカブル要素は `button` を使う（`div` の場合は `role` / `tabindex` / `@keydown`）
 - [ ] フォーム要素に `label` が紐付いている
 
@@ -97,30 +113,48 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 - [ ] スタイルの当て方が無秩序に混在していない（scoped CSS / ユーティリティの方針が一貫）
 - [ ] 命名（コンポーネント PascalCase / 関数・変数 camelCase / 型 PascalCase）が一貫
+- [ ] 同じ値・同じ見た目を複数の部品に書いていない（定数は `src/lib/`（例：`PASSWORD_MIN_LENGTH`）、繰り返す見た目は共通部品へ）。モーダルの CSS の重複は既知の課題（#159）
+- [ ] 1 部品が大きくなりすぎていない（目安 300 行。`KanbanBoard.vue`・`BookFormModal.vue` の分割は既知の課題（#159））
 
 ### 2.6 Lint / テスト / 型チェック / Build
 
 - [ ] `npm test`（vitest）が成功。ロジック（`api/` `lib/`）やコンポーネントの振る舞いを変えたらテストを追加・更新（`src/**/__tests__/*.spec.ts`）
 - [ ] `npm run build`（`vue-tsc` の型チェック含む）が成功
-- [ ] Lint 導入時は `npm run lint` 成功
+- [ ] `npm run lint`（ESLint：eslint-plugin-vue ＋ @vue/eslint-config-typescript ＋ @vitest/eslint-plugin。create-vue と同じ構成）が 0 件
+- [ ] `npm run format:check`（Prettier：セミコロンなし・シングルクォート・100 文字）が通る。崩れていれば `npm run format`
+- [ ] テンプレートのイベントで、引数を取る関数を `@click="fn"` と書いていない（イベントオブジェクトが第 1 引数に入る。`@click="fn()"` と書く。vue-tsc が検出する）
+
+### 2.7 標準構成からのずれ（既知・Issue で管理）
+
+- 画面の切り替えは `App.vue` の手作り（vue-router 未導入。#158）
+- 状態管理ライブラリ（Pinia）は未使用（今の規模では不要。props と composable で足りている）
 
 ---
 
-## 3. Docs（要件定義・画面設計・データ定義）
+## 3. Docs（要件定義・機能要件・画面設計・データベース設計）
 
-`docs/` 配下のドキュメントは「実装を正」とする。実装変更時は併せて更新する。
+`docs/` 配下のドキュメントは**「実装を正」**とする。実装とずれていたら、コードではなくドキュメントを直す（書類にあって未実装のもの＝例：書影は `requirements.md` §4.2「将来拡張候補」へ移す）。実装変更時は同じ PR で更新する。
 
-- [ ] **API 一覧（`docs/data-definition.md`）が `Api::BooksController` のエンドポイントと一致**
-  - 新規エンドポイントを追加したら、メソッド・パス・リクエスト/レスポンス例を追記
-- [ ] **画面設計（`docs/screen-design.md`）の主要コンポーネント名 / UI 要素配置が実装と一致**
-- [ ] **ユースケース（`docs/use-cases.md`）の基本フローが実装挙動と一致**
-- [ ] データモデル（`docs/data-definition.md` の ER 図・列挙値）が **`Book` モデル / migration** と一致
-- [ ] バリデーションルールがモデルの validation と一致
-- [ ] README から docs への相対リンクが壊れていない
+| ドキュメント | 実装の何と一致させるか |
+|---|---|
+| `docs/functional-requirements.md` | F 一覧・ユースケース・**API 表（§3）**・リクエスト / レスポンス例・エラー形式 ↔ `bin/rails routes -g api`・各 Controller の JSON |
+| `docs/basic-design.md` | 画面遷移図・ER 図・データフロー・§4.3（操作と API / DB の対応） ↔ `App.vue`・`schema.rb`・Controller |
+| `docs/screen-design.md` | 画面 S1〜S7 の表示項目・ボタン名・操作 ↔ `frontend/src/components/` |
+| `docs/database-design.md` | テーブル・カラム・制約（NOT NULL / UNIQUE）・enum ↔ `backend/db/schema.rb`・モデル |
+| `docs/requirements.md` | スコープ（§2）・非機能（§3）・将来候補（§4.2。実装済みのものが残っていないか） |
+| `docs/tech-stack.md`・`README.md` | 使っている道具・コマンド・起動手順（seed・ログイン情報） |
+| `docs/multi-user.md`・`docs/infrastructure.md` | 認証・招待・再設定の設計、`infra/` の構成・手順 |
+
+- [ ] 上の表のとおり実装と一致している（特に API を足したら `functional-requirements.md` §3 と `basic-design.md` §4.3 の両方を更新）
+- [ ] 「単一ユーザー」「将来」「予定」「想定」など、実装が進んで古くなりやすい言葉を検索し、**実装済みなのに古いまま**の記述が無いか見直す（将来候補・見積もり・規模の想定としての記述は正当なので残してよい）
+- [ ] バリデーションルール（文字数・範囲・必須）がモデルの validation と一致
+- [ ] README・docs の相対リンクが壊れていない
 
 確認方法:
 ```bash
-grep -rn "data-definition\|screen-design\|use-cases" docs/ README.md
+cd backend && bin/rails routes -g api            # API の一覧（docs の API 表と見比べる）
+grep -rn "単一ユーザー\|将来\|予定\|想定\|書影" docs/ README.md   # 古くなりやすい言葉
+python3 -c "import re,os;[print(f,t) for f in ['README.md']+['docs/'+x for x in os.listdir('docs') if x.endswith('.md')] for t in re.findall(r'\]\(([^)#\s]+)',open(f).read()) if not t.startswith('http') and not os.path.exists(os.path.normpath(os.path.join(os.path.dirname(f),t)))]"   # リンク切れ（何も出なければ OK）
 ```
 
 ---
@@ -176,7 +210,7 @@ cd infra && terraform fmt -check && terraform validate
 
 - [ ] Issue を立ててから着手している（`gh issue create`）
 - [ ] ブランチ命名が `<type>/<issue#>-<short-desc>` に従っている
-- [ ] コミットメッセージが Conventional Commits（`feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`）+ 日本語本文
+- [ ] コミットメッセージが Conventional Commits（`feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`）+ 日本語本文。**`style:` など他の type は使わない**（整形だけのコミットも `chore:`）
 - [ ] PR 本文に `Closes #<issue#>` が含まれる
 - [ ] PR テンプレ（`.github/pull_request_template.md`）に沿っている
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
