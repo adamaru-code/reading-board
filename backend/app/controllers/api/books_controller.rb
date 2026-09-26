@@ -1,8 +1,6 @@
 module Api
   class BooksController < ApplicationController
     rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
-    # 不正な status（enum に無い値）の代入は ArgumentError になるため 422 で返す
-    rescue_from ArgumentError, with: :render_bad_argument
 
     # 既定の並び：position 昇順（未設定は後ろ）→ created_at → id（ページ境界を安定させる）
     DEFAULT_ORDER = "position IS NULL, position ASC, created_at ASC, id ASC".freeze
@@ -131,8 +129,9 @@ module Api
     end
 
     def book_params
-      permitted = params.require(:book).permit(
-        :title, :author, :status, :rating, :memo, :position, :genre, :media_type, tags: []
+      # Rails 8 の params.expect：book キーが無い・形が違う場合は 400（ParameterMissing）
+      permitted = params.expect(
+        book: [ :title, :author, :status, :rating, :memo, :position, :genre, :media_type, tags: [] ]
       )
       # API の tags(名称配列) はモデルの tag_names= で受ける
       permitted[:tag_names] = permitted.delete(:tags) if permitted.key?(:tags)
@@ -198,11 +197,7 @@ module Api
     end
 
     def render_not_found
-      render json: { errors: [ "Book not found" ] }, status: :not_found
-    end
-
-    def render_bad_argument(error)
-      render json: { errors: [ error.message ] }, status: :unprocessable_content
+      render json: { errors: [ "本が見つかりません" ] }, status: :not_found
     end
   end
 end
