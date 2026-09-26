@@ -40,6 +40,12 @@ variable "db_engine_version" {
   default     = "8.4"
 }
 
+variable "restore_snapshot_id" {
+  description = "復元に使う RDS スナップショット ID。空なら新しい DB を作る（scripts/up.sh が最新の最終スナップショットを探して渡す）"
+  type        = string
+  default     = ""
+}
+
 variable "admin_email" {
   description = "初期管理者のメールアドレス（ログイン ID。メール送信には使わない）"
   type        = string

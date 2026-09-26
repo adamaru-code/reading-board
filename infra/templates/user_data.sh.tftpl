@@ -48,7 +48,11 @@ SEED_USER_PASSWORD=$(param admin_password)
 ENV
 umask 022
 
-# 起動時に db:prepare（DB 作成・マイグレーション・新規 DB なら管理者とデモ用の本を seed）
+# DB の準備：db:prepare（新規 DB なら作成・seed、復元した DB ならマイグレーションのみ）と、
+# 初期管理者のパスワードを今回の SSM の値に合わせる（復元時に前回のパスワードが残らないように）
+docker run --rm --env-file /etc/reading-board.env reading-board-api \
+  ./bin/rails db:prepare admin:ensure
+
 docker run -d --name reading-board-api --restart unless-stopped \
   --env-file /etc/reading-board.env -p 127.0.0.1:3000:80 reading-board-api
 

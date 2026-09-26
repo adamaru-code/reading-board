@@ -16,6 +16,7 @@
 | 運用 | **使うときだけ起動**：学習・動作確認のときに `terraform apply`、終わったら `terraform destroy`（常時公開しない） |
 | ドメイン | **取らない**（`*.cloudfront.net` の URL で HTTPS）。SES（メール）はドメインを取るときに |
 | 予算アラート | **既存のまま**（AWS Budgets に日次 $0.5・月次 $12 が設定済み。Terraform では作らない） |
+| DB データ | **最終スナップショットで次回に引き継ぐ**（2026-09-26 決定）。destroy 時に自動で取り、次回の起動で復元。最新 1 つだけ残す（`infra/scripts/up.sh`・`down.sh`） |
 
 ---
 
@@ -90,7 +91,8 @@ flowchart LR
 2. 学習中は**常時起動しない**。`terraform destroy` を README に明記し、終了時に必ず実行する。
 3. RDS は停止しても 7 日で自動起動するため、長期間使わないなら destroy（必要ならスナップショットを残す）。
 4. NAT Gateway・Elastic IP の放置・マルチ AZ など、固定費の大きい設定は使わない。
-5. destroy 後、課金中のリソースが残っていないか確かめる（すべて 0 / None なら OK）：
+5. 停止中も、DB の最終スナップショット 1 つ分の保管料（このアプリのデータ量なら月数円〜数十円程度）がかかる。`down.sh` が古いスナップショットを消して 1 つに保つ。
+6. destroy 後、課金中のリソースが残っていないか確かめる（すべて 0 / None なら OK。スナップショットが 1 つ残るのは正常）：
 
 ```bash
 aws ec2 describe-instances --query 'length(Reservations[].Instances[?State.Name!=`terminated`][])'
@@ -115,10 +117,11 @@ aws cloudfront list-distributions --query 'DistributionList.Quantity'
 
 ## 5. デプロイ手順
 
-「使うときだけ起動」なので、デプロイ＝`terraform apply` で作り直す（更新の仕組みは持たない）。EC2 の起動スクリプト（`infra/templates/user_data.sh.tftpl`）が次を行う：
+「使うときだけ起動」なので、デプロイ＝`infra/scripts/up.sh`（`terraform apply`）で作り直す（更新の仕組みは持たない）。停止は `infra/scripts/down.sh`。
+`up.sh` は前回の最終スナップショットがあれば DB をそこから復元する（データの引き継ぎ）。EC2 の起動スクリプト（`infra/templates/user_data.sh.tftpl`）が次を行う：
 
 1. GitHub から `git_ref`（既定 `main`）を取得
-2. `backend/Dockerfile` で API イメージをビルドし、SSM から取ったシークレットを環境変数にして起動（`db:prepare` で DB 作成・マイグレーション・管理者とデモ用の本を seed）
+2. `backend/Dockerfile` で API イメージをビルドし、`db:prepare`（新規 DB なら作成・seed、復元した DB ならマイグレーションのみ）と `admin:ensure`（初期管理者のパスワードを今回の SSM の値に合わせる）を実行してから、SSM から取ったシークレットを環境変数にして起動
 3. Node コンテナで `frontend` をビルドし、nginx で配信（`/api` と `/up` はコンテナへ転送）
 
 手順の詳細は [infra/README.md](../infra/README.md)。
