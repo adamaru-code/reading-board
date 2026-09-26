@@ -339,36 +339,42 @@ async function onConfirmDelete() {
           <input v-model="form.author" type="text" />
         </label>
 
-        <label class="field">
-          <span class="field-label">ステータス</span>
-          <select v-model="form.status">
-            <option v-for="s in BOOK_STATUSES" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
-          </select>
-        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">ジャンル</span>
+            <select v-model="form.genre">
+              <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
+            </select>
+          </label>
 
-        <label class="field">
-          <span class="field-label">ジャンル</span>
-          <select v-model="form.genre">
-            <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
-          </select>
-        </label>
+          <label class="field">
+            <span class="field-label">ステータス</span>
+            <select v-model="form.status">
+              <option v-for="s in BOOK_STATUSES" :key="s" :value="s">
+                {{ STATUS_LABELS[s] }}
+              </option>
+            </select>
+          </label>
+        </div>
 
-        <label class="field">
-          <span class="field-label">形態</span>
-          <select v-model="form.media_type">
-            <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">
-              {{ MEDIA_TYPE_LABELS[m] }}
-            </option>
-          </select>
-        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">形態</span>
+            <select v-model="form.media_type">
+              <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">
+                {{ MEDIA_TYPE_LABELS[m] }}
+              </option>
+            </select>
+          </label>
 
-        <label class="field">
-          <span class="field-label">評価</span>
-          <select v-model.number="form.rating">
-            <option :value="0">未評価</option>
-            <option v-for="n in 5" :key="n" :value="n">{{ '★'.repeat(n) }}（{{ n }}）</option>
-          </select>
-        </label>
+          <label class="field">
+            <span class="field-label">評価</span>
+            <select v-model.number="form.rating">
+              <option :value="0">未評価</option>
+              <option v-for="n in 5" :key="n" :value="n">{{ '★'.repeat(n) }}（{{ n }}）</option>
+            </select>
+          </label>
+        </div>
 
         <label class="field">
           <span class="field-label">メモ</span>
@@ -538,6 +544,12 @@ async function onConfirmDelete() {
 .field {
   display: block;
   margin-bottom: 14px;
+}
+/* 2 項目を横に並べる行（ジャンル｜ステータス、形態｜評価） */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 半分ずつの幅 */
+  gap: 12px;
 }
 .isbn-lookup {
   padding: 10px;
