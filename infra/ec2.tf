@@ -28,8 +28,8 @@ resource "aws_instance" "app" {
     repo_url    = var.repo_url
     git_ref     = var.git_ref
     db_host     = aws_db_instance.main.address
-    db_username = aws_db_instance.main.username
-    db_name     = aws_db_instance.main.db_name
+    db_username = local.db_username
+    db_name     = local.db_name
     admin_email = var.admin_email
     nginx_conf  = file("${path.module}/templates/nginx.conf")
   })

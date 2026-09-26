@@ -8,6 +8,16 @@ output "instance_id" {
   value       = aws_instance.app.id
 }
 
+output "final_snapshot_id" {
+  description = "destroy 時に作られる最終スナップショットの ID（scripts/down.sh が古いものの削除に使う）"
+  value       = aws_db_instance.main.final_snapshot_identifier
+}
+
+output "restored_from" {
+  description = "今回 DB を復元したスナップショット（空なら新しい DB）"
+  value       = var.restore_snapshot_id
+}
+
 output "admin_email" {
   description = "初期管理者のメールアドレス"
   value       = var.admin_email
