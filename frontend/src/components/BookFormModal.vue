@@ -13,7 +13,10 @@ import type { Book, BookStatus, BookGenre, BookMediaType, BookCreateInput } from
 import { suggestTags } from '../lib/tagSuggestions'
 
 // book が渡されれば編集モード、null なら新規追加モード
-const props = defineProps<{ book: Book | null }>()
+// knownTags：自分が過去に付けたタグ（よく使う順）。タグ候補に使う
+const props = withDefaults(defineProps<{ book: Book | null; knownTags?: string[] }>(), {
+  knownTags: () => [],
+})
 const emit = defineEmits<{
   close: []
   saved: []
@@ -53,11 +56,17 @@ function removeTag(name: string) {
   tags.value = tags.value.filter((t) => t !== name)
 }
 
-// タイトル・著者からの候補タグ（入力済みは除外）
-const suggestedTags = computed(() => suggestTags(form.title, form.author, tags.value))
+// 候補タグ：辞書（タイトル・著者）＋過去に付けたタグ。入力中の文字があれば絞り込む（入力済みは除外）
+const suggestedTags = computed(() =>
+  suggestTags(form.title, form.author, tags.value, {
+    knownTags: props.knownTags,
+    query: tagInput.value,
+  }),
+)
 
 function addSuggestedTag(tag: string) {
   if (!tags.value.includes(tag)) tags.value.push(tag)
+  tagInput.value = '' // 絞り込みに使った入力中の文字は消す
 }
 
 // ISBN 照会（追加時のみ）。成功でタイトル/著者/形態を反映

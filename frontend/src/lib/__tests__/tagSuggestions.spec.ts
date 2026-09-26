@@ -21,4 +21,26 @@ describe('suggestTags', () => {
     const tags = suggestTags('入門 論語 整体 100分de名著 文庫 新書', '', [])
     expect(tags.length).toBe(8)
   })
+
+  it('過去に付けたタグを、辞書の候補の後・定番タグの前に並べる', () => {
+    const tags = suggestTags('罪と罰', 'ドストエフスキー', [], { knownTags: ['仕事', '海外文学'] })
+    expect(tags.slice(0, 5)).toEqual(['海外文学', '名著', 'ロシア文学', '仕事', '再読したい'])
+  })
+
+  it('入力中の文字を含む候補に絞り込み、前方一致を先にする（辞書の全タグも対象）', () => {
+    const tags = suggestTags('無関係な本', '', [], {
+      knownTags: ['仕事で読む', '読書会', 'あとで読む'],
+      query: '読',
+    })
+    expect(tags).toEqual(['読書会', '仕事で読む', 'あとで読む', '再読したい', '積読', '定期購読'])
+  })
+
+  it('絞り込みでも入力済みのタグは除き、英字は大文字小文字を区別しない', () => {
+    const tags = suggestTags('', '', ['Ruby入門'], { knownTags: ['Ruby入門', 'rails'], query: 'R' })
+    expect(tags).toEqual(['rails'])
+  })
+
+  it('一致する候補が無ければ空', () => {
+    expect(suggestTags('', '', [], { knownTags: ['仕事'], query: 'zzz' })).toEqual([])
+  })
 })

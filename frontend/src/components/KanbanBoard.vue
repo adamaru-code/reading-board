@@ -61,6 +61,8 @@ const filters = reactive<{ genre: '' | BookGenre; author: string; tag: string }>
 })
 // タグ選択肢は絞り込みで痩せないよう、未絞り込みの一覧から集める
 const tagOptions = ref<string[]>([])
+// 自分が付けたタグをよく使う順に（書籍フォームのタグ候補に使う）
+const frequentTags = ref<string[]>([])
 const hasFilters = computed(
   () => filters.genre !== '' || filters.author.trim() !== '' || filters.tag !== '',
 )
@@ -89,7 +91,12 @@ function clearFilters() {
 async function loadTagOptions() {
   try {
     const all = await listAllBooks()
-    tagOptions.value = [...new Set(all.flatMap((b) => b.tags))].sort()
+    const counts = new Map<string, number>()
+    for (const tag of all.flatMap((b) => b.tags)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+    tagOptions.value = [...counts.keys()].sort()
+    frequentTags.value = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'))
+      .map(([tag]) => tag)
   } catch {
     // タグ選択肢の取得失敗はボード表示を妨げないので黙って諦める
   }
@@ -380,6 +387,7 @@ function onModalDone() {
     <BookFormModal
       v-if="modalOpen"
       :book="editingBook"
+      :known-tags="frequentTags"
       @close="closeModal"
       @saved="onModalDone"
       @deleted="onModalDone"
