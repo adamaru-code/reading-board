@@ -1,4 +1,6 @@
 require "test_helper"
+# Net::HTTP を差し替えるテストがあるため、OpenbdClient より先に読み込んでおく（並列実行でプロセスによっては未読み込みになる）
+require "net/http"
 
 class OpenbdClientTest < ActiveSupport::TestCase
   test "normalize はハイフン・空白を除去し大文字化する" do
