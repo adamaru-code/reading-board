@@ -40,7 +40,7 @@ const TAG_RULES: TagRule[] = [
   { kw: ['貝原', '益軒'], tags: ['養生', '古典'] },
 ]
 
-const GENERIC_TAGS = ['名著', '再読したい', '積読', '宗教'] // 常に候補に加える定番タグ
+const GENERIC_TAGS = ['名著', '再読したい', '積読', '宗教', '歴史'] // 常に候補に加える定番タグ
 // 最初に表示する候補の数（残りは「すべて表示」で出す）
 export const SUGGEST_LIMIT = 8
 
