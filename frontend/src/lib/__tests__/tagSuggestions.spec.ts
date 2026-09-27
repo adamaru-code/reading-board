@@ -36,6 +36,11 @@ describe('suggestTags', () => {
     expect(suggestTags('経済と神経の本', '', [])).toEqual(['名著', '再読したい', '積読', '宗教'])
   })
 
+  it('「論語」「孔子」で「論語」と「東洋思想」を先頭に出す', () => {
+    expect(suggestTags('論語 入門', '', []).slice(0, 3)).toEqual(['論語', '東洋思想', '古典'])
+    expect(suggestTags('', '孔子', []).slice(0, 2)).toEqual(['論語', '東洋思想'])
+  })
+
   it('キーワードに当たらなくても定番タグを返す', () => {
     expect(suggestTags('無関係な本', '', [])).toEqual(['名著', '再読したい', '積読', '宗教'])
   })
