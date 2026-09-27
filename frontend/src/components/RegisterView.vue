@@ -135,24 +135,6 @@ async function onSubmit() {
   color: var(--danger);
   font-size: 13px;
 }
-.field {
-  display: block;
-  margin-bottom: 14px;
-}
-.field-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.field input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-  box-sizing: border-box;
-}
 .login-btn {
   width: 100%;
   margin-top: 6px;
