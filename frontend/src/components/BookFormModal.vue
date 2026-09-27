@@ -20,6 +20,7 @@ import type {
 import { suggestTags, SUGGEST_LIMIT } from '../lib/tagSuggestions'
 import { hideTag, unhideTag } from '../api/hiddenTags'
 import ConfirmDialog from './ConfirmDialog.vue'
+import BaseModal from './BaseModal.vue'
 
 // book が渡されれば編集モード、null なら新規追加モード
 // knownTags：自分が過去に付けたタグ（よく使う順）。タグ候補に使う
@@ -287,213 +288,210 @@ async function onConfirmDelete() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <h2 id="modal-title" class="modal-title">{{ isEdit ? '書籍を編集' : '書籍を追加' }}</h2>
+  <!-- 入力中のフォームを Esc で誤って閉じないよう、Esc では閉じない（背景クリック・キャンセルで閉じる） -->
+  <BaseModal
+    :title="isEdit ? '書籍を編集' : '書籍を追加'"
+    :max-width="440"
+    :close-on-esc="false"
+    @close="emit('close')"
+  >
+    <ul v-if="errors.length" class="form-errors" role="alert">
+      <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
+    </ul>
 
-      <ul v-if="errors.length" class="form-errors" role="alert">
-        <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
-      </ul>
-
-      <form @submit.prevent="onSubmit">
-        <div v-if="!isEdit" class="field isbn-lookup">
-          <label for="isbn-input" class="field-label">ISBN / バーコードで登録</label>
-          <div class="isbn-row">
-            <input
-              id="isbn-input"
-              v-model="isbnInput"
-              type="text"
-              inputmode="numeric"
-              placeholder="ISBN / JAN（13桁 or 10桁）"
-              @keydown.enter.prevent="onLookup"
-            />
-            <button type="button" class="btn btn-ghost" :disabled="lookingUp" @click="onLookup">
-              {{ lookingUp ? '照会中…' : '検索' }}
-            </button>
-            <button
-              v-if="scanSupported && !scanning"
-              type="button"
-              class="btn btn-ghost"
-              @click="startScan"
-            >
-              📷 カメラ
-            </button>
-            <button v-if="scanning" type="button" class="btn btn-ghost" @click="stopScan">
-              停止
-            </button>
-          </div>
-          <div v-if="scanning" class="scanner">
-            <video ref="videoEl" class="scan-video" playsinline muted></video>
-            <p class="isbn-message">バーコードを枠内に写してください</p>
-          </div>
-          <p v-if="lookupMessage" class="isbn-message">{{ lookupMessage }}</p>
-          <p v-if="scanError" class="isbn-message scan-error">{{ scanError }}</p>
-        </div>
-
-        <label class="field">
-          <span class="field-label">タイトル<span class="required">必須</span></span>
-          <input v-model="form.title" type="text" required autofocus />
-        </label>
-
-        <label class="field">
-          <span class="field-label">著者</span>
-          <input v-model="form.author" type="text" />
-        </label>
-
-        <div class="field-row">
-          <label class="field">
-            <span class="field-label">ジャンル</span>
-            <select v-model="form.genre">
-              <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span class="field-label">ステータス</span>
-            <select v-model="form.status">
-              <option v-for="s in BOOK_STATUSES" :key="s" :value="s">
-                {{ STATUS_LABELS[s] }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field-row">
-          <label class="field">
-            <span class="field-label">形態</span>
-            <select v-model="form.media_type">
-              <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">
-                {{ MEDIA_TYPE_LABELS[m] }}
-              </option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span class="field-label">評価</span>
-            <select v-model.number="form.rating">
-              <option :value="0">未評価</option>
-              <option v-for="n in 5" :key="n" :value="n">{{ '★'.repeat(n) }}（{{ n }}）</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field">
-          <span class="field-label">タグ</span>
-          <div v-if="tags.length" class="tag-list">
-            <span v-for="tag in tags" :key="tag" class="tag-chip">
-              {{ tag }}
-              <button
-                type="button"
-                class="tag-remove"
-                :aria-label="`${tag} を削除`"
-                @click="removeTag(tag)"
-              >
-                ×
-              </button>
-            </span>
-          </div>
+    <form @submit.prevent="onSubmit">
+      <div v-if="!isEdit" class="field isbn-lookup">
+        <label for="isbn-input" class="field-label">ISBN / バーコードで登録</label>
+        <div class="isbn-row">
           <input
-            v-model="tagInput"
+            id="isbn-input"
+            v-model="isbnInput"
             type="text"
-            placeholder="タグを入力して Enter"
-            @keydown.enter.prevent="addTag"
-            @keydown.,.prevent="addTag"
+            inputmode="numeric"
+            placeholder="ISBN / JAN（13桁 or 10桁）"
+            @keydown.enter.prevent="onLookup"
           />
-          <div v-if="suggestedTags.length" class="tag-suggest">
-            <span class="tag-suggest-label">候補:</span>
-            <span v-for="tag in suggestedTags" :key="tag" class="tag-suggest-item">
-              <button
-                type="button"
-                class="tag-suggest-chip"
-                :aria-label="`「${tag}」をタグに追加`"
-                :title="`「${tag}」をタグに追加`"
-                @click="addSuggestedTag(tag)"
-              >
-                {{ tag }}
-              </button>
-              <button
-                type="button"
-                class="tag-suggest-hide"
-                :aria-label="`「${tag}」を候補から隠す`"
-                title="候補から隠す（本のタグは消えません）"
-                :disabled="hidingTag"
-                @click="onHideSuggestion(tag)"
-              >
-                ×
-              </button>
-            </span>
-            <button
-              v-if="moreSuggestionCount > 0"
-              type="button"
-              class="tag-suggest-more"
-              @click="showAllSuggestions = true"
-            >
-              すべて表示（残り {{ moreSuggestionCount }} 件）
-            </button>
-            <button
-              v-else-if="showAllSuggestions && allSuggestedTags.length > SUGGEST_LIMIT"
-              type="button"
-              class="tag-suggest-more"
-              @click="showAllSuggestions = false"
-            >
-              少なく表示
-            </button>
-          </div>
-          <div v-if="hiddenTags.length" class="tag-hidden">
-            <button
-              type="button"
-              class="tag-suggest-more"
-              :aria-expanded="showHiddenTags"
-              @click="showHiddenTags = !showHiddenTags"
-            >
-              隠した候補（{{ hiddenTags.length }}）{{ showHiddenTags ? '▲' : '▼' }}
-            </button>
-            <ul v-if="showHiddenTags" class="tag-hidden-list">
-              <li v-for="tag in hiddenTags" :key="tag.id" class="tag-hidden-item">
-                <span>{{ tag.name }}</span>
-                <button
-                  type="button"
-                  class="tag-unhide"
-                  :disabled="hidingTag"
-                  @click="onUnhideSuggestion(tag)"
-                >
-                  候補に戻す
-                </button>
-              </li>
-            </ul>
-          </div>
+          <button type="button" class="btn btn-ghost" :disabled="lookingUp" @click="onLookup">
+            {{ lookingUp ? '照会中…' : '検索' }}
+          </button>
+          <button
+            v-if="scanSupported && !scanning"
+            type="button"
+            class="btn btn-ghost"
+            @click="startScan"
+          >
+            📷 カメラ
+          </button>
+          <button v-if="scanning" type="button" class="btn btn-ghost" @click="stopScan">
+            停止
+          </button>
         </div>
+        <div v-if="scanning" class="scanner">
+          <video ref="videoEl" class="scan-video" playsinline muted></video>
+          <p class="isbn-message">バーコードを枠内に写してください</p>
+        </div>
+        <p v-if="lookupMessage" class="isbn-message">{{ lookupMessage }}</p>
+        <p v-if="scanError" class="isbn-message scan-error">{{ scanError }}</p>
+      </div>
 
+      <label class="field">
+        <span class="field-label">タイトル<span class="required">必須</span></span>
+        <input v-model="form.title" type="text" required autofocus />
+      </label>
+
+      <label class="field">
+        <span class="field-label">著者</span>
+        <input v-model="form.author" type="text" />
+      </label>
+
+      <div class="field-row">
         <label class="field">
-          <span class="field-label">メモ</span>
-          <textarea v-model="form.memo" rows="1"></textarea>
+          <span class="field-label">ジャンル</span>
+          <select v-model="form.genre">
+            <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
+          </select>
         </label>
 
-        <div class="modal-actions">
+        <label class="field">
+          <span class="field-label">ステータス</span>
+          <select v-model="form.status">
+            <option v-for="s in BOOK_STATUSES" :key="s" :value="s">
+              {{ STATUS_LABELS[s] }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">形態</span>
+          <select v-model="form.media_type">
+            <option v-for="m in BOOK_MEDIA_TYPES" :key="m" :value="m">
+              {{ MEDIA_TYPE_LABELS[m] }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">評価</span>
+          <select v-model.number="form.rating">
+            <option :value="0">未評価</option>
+            <option v-for="n in 5" :key="n" :value="n">{{ '★'.repeat(n) }}（{{ n }}）</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field">
+        <span class="field-label">タグ</span>
+        <div v-if="tags.length" class="tag-list">
+          <span v-for="tag in tags" :key="tag" class="tag-chip">
+            {{ tag }}
+            <button
+              type="button"
+              class="tag-remove"
+              :aria-label="`${tag} を削除`"
+              @click="removeTag(tag)"
+            >
+              ×
+            </button>
+          </span>
+        </div>
+        <input
+          v-model="tagInput"
+          type="text"
+          placeholder="タグを入力して Enter"
+          @keydown.enter.prevent="addTag"
+          @keydown.,.prevent="addTag"
+        />
+        <div v-if="suggestedTags.length" class="tag-suggest">
+          <span class="tag-suggest-label">候補:</span>
+          <span v-for="tag in suggestedTags" :key="tag" class="tag-suggest-item">
+            <button
+              type="button"
+              class="tag-suggest-chip"
+              :aria-label="`「${tag}」をタグに追加`"
+              :title="`「${tag}」をタグに追加`"
+              @click="addSuggestedTag(tag)"
+            >
+              {{ tag }}
+            </button>
+            <button
+              type="button"
+              class="tag-suggest-hide"
+              :aria-label="`「${tag}」を候補から隠す`"
+              title="候補から隠す（本のタグは消えません）"
+              :disabled="hidingTag"
+              @click="onHideSuggestion(tag)"
+            >
+              ×
+            </button>
+          </span>
           <button
-            v-if="isEdit"
+            v-if="moreSuggestionCount > 0"
             type="button"
-            class="btn btn-danger"
-            :disabled="submitting"
-            @click="confirmingDelete = true"
+            class="tag-suggest-more"
+            @click="showAllSuggestions = true"
           >
-            削除
+            すべて表示（残り {{ moreSuggestionCount }} 件）
           </button>
-          <span class="spacer"></span>
           <button
+            v-else-if="showAllSuggestions && allSuggestedTags.length > SUGGEST_LIMIT"
             type="button"
-            class="btn btn-cancel"
-            :disabled="submitting"
-            @click="emit('close')"
+            class="tag-suggest-more"
+            @click="showAllSuggestions = false"
           >
-            キャンセル
-          </button>
-          <button type="submit" class="btn btn-primary" :disabled="submitting">
-            {{ isEdit ? '更新' : '追加' }}
+            少なく表示
           </button>
         </div>
-      </form>
-    </div>
+        <div v-if="hiddenTags.length" class="tag-hidden">
+          <button
+            type="button"
+            class="tag-suggest-more"
+            :aria-expanded="showHiddenTags"
+            @click="showHiddenTags = !showHiddenTags"
+          >
+            隠した候補（{{ hiddenTags.length }}）{{ showHiddenTags ? '▲' : '▼' }}
+          </button>
+          <ul v-if="showHiddenTags" class="tag-hidden-list">
+            <li v-for="tag in hiddenTags" :key="tag.id" class="tag-hidden-item">
+              <span>{{ tag.name }}</span>
+              <button
+                type="button"
+                class="tag-unhide"
+                :disabled="hidingTag"
+                @click="onUnhideSuggestion(tag)"
+              >
+                候補に戻す
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">メモ</span>
+        <textarea v-model="form.memo" rows="1"></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <button
+          v-if="isEdit"
+          type="button"
+          class="btn btn-danger"
+          :disabled="submitting"
+          @click="confirmingDelete = true"
+        >
+          削除
+        </button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-cancel" :disabled="submitting" @click="emit('close')">
+          キャンセル
+        </button>
+        <button type="submit" class="btn btn-primary" :disabled="submitting">
+          {{ isEdit ? '更新' : '追加' }}
+        </button>
+      </div>
+    </form>
 
     <ConfirmDialog
       v-if="confirmingDelete && book"
@@ -504,34 +502,10 @@ async function onConfirmDelete() {
       @confirm="onConfirmDelete"
       @cancel="confirmingDelete = false"
     />
-  </div>
+  </BaseModal>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(9, 30, 66, 0.5);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 48px 16px;
-  z-index: 100;
-}
-.modal {
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 20px;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.25);
-}
-.modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-
 .form-errors {
   margin: 0 0 16px;
   padding: 10px 12px 10px 28px;
