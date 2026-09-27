@@ -73,7 +73,7 @@ describe('InvitationsPanel', () => {
     await wrapper.find('.btn-ghost.btn-small').trigger('click')
     await flushPromises()
 
-    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/?invite=CODE1`)
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/register?invite=CODE1`)
     expect(wrapper.find('.btn-ghost.btn-small').text()).toBe('コピーしました')
   })
 

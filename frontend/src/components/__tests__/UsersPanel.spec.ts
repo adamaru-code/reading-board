@@ -67,7 +67,7 @@ describe('UsersPanel', () => {
     await flushPromises()
 
     expect(spy).toHaveBeenCalledWith(3)
-    const url = `${window.location.origin}/?reset=tok%2Fen`
+    const url = `${window.location.origin}/reset?token=tok%2Fen`
     const issued = wrapper.findAll('.user')[1].find('.issued-url')
     expect((issued.element as HTMLInputElement).value).toBe(url)
 

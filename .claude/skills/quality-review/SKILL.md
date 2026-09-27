@@ -19,7 +19,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 > cd infra && terraform fmt -check -recursive && terraform validate
 > ```
 >
-> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n（2026-09-27 対応済み）・#161 本番の config.hosts）。
+> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n（以上 2026-09-27 対応済み）・#161 本番の config.hosts）。
 
 ---
 
@@ -126,7 +126,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 ### 2.7 標準構成からのずれ（既知・Issue で管理）
 
-- 画面の切り替えは `App.vue` の手作り（vue-router 未導入。#158）
+- 画面の切り替えは vue-router（#158 で導入済み）。新しい画面は `src/router/index.ts` の routes に足し、ログインが要るかは `meta.requiresAuth` / `meta.guestOnly` で決める
 - 状態管理ライブラリ（Pinia）は未使用（今の規模では不要。props と composable で足りている）
 
 ---
