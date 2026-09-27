@@ -218,7 +218,10 @@ UC9 招待して登録してもらう:
 エラー（422 など）。`errors` はメッセージの配列:
 
 ```json
-{ "errors": ["Title can't be blank"] }
+{ "errors": ["タイトルを入力してください"] }
 ```
 
-- 認証・招待・パスワード関連のメッセージは日本語（例：`"招待コードが無効です"`）。モデルの検証メッセージは現状英語（I18n 化は #160）。
+- メッセージはすべて日本語で、`backend/config/locales/ja.yml` で管理する（`config.i18n.default_locale = :ja`）。
+  - モデルの検証メッセージ：属性名（`activerecord.attributes`）＋文言（`errors.messages`）で組み立てる（例：`タイトルを入力してください`・`ステータスは一覧にありません`）。
+  - コントローラが返すメッセージ：`api.errors.*` を `I18n.t` で取り出す（例：`"招待コードが無効です"`）。
+  - テスト環境は `raise_on_missing_translations = true`（ja.yml に無いキーを使うとテストが失敗する）。

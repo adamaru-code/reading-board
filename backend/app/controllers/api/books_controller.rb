@@ -57,7 +57,7 @@ module Api
     def lookup
       isbn = OpenbdClient.normalize(params[:isbn])
       unless OpenbdClient.valid?(isbn)
-        return render json: { errors: [ "ISBN が不正です" ] }, status: :unprocessable_content
+        return render json: { errors: [ I18n.t("api.errors.invalid_isbn") ] }, status: :unprocessable_content
       end
 
       info = OpenbdClient.fetch(isbn)
@@ -211,7 +211,7 @@ module Api
     end
 
     def render_not_found
-      render json: { errors: [ "本が見つかりません" ] }, status: :not_found
+      render json: { errors: [ I18n.t("api.errors.book_not_found") ] }, status: :not_found
     end
   end
 end

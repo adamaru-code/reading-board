@@ -19,7 +19,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 > cd infra && terraform fmt -check -recursive && terraform validate
 > ```
 >
-> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n・#161 本番の config.hosts）。
+> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n（2026-09-27 対応済み）・#161 本番の config.hosts）。
 
 ---
 
@@ -52,7 +52,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
   - バリデーション失敗 → **422**
   - 不正 JSON / パラメータ不足（`ActionController::ParameterMissing`）→ **400**（Rails が自動で返す）
 - [ ] エラーレスポンスは**このプロジェクトの統一形 `{ "errors": ["メッセージ", ...] }`**（文字列の配列。フロントの `ApiError` がこの形を前提にしている）
-- [ ] ユーザーに見えるメッセージは日本語に揃える（モデルの検証メッセージは英語のまま＝I18n 化は #160）
+- [ ] ユーザーに見えるメッセージは日本語に揃え、`config/locales/ja.yml` に置く（コントローラに日本語を直書きせず `I18n.t("api.errors.…")`。新しいモデル・属性を足したら `activerecord.attributes` にも追加）
 - [ ] レスポンス形を変える時はフロント（`frontend/src/api/books.ts`）への影響を確認
 
 ### 1.5 REST API 設計

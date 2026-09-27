@@ -14,14 +14,14 @@ module Api
       if tag.save
         render json: hidden_tag_json(tag), status: status
       else
-        render json: { errors: [ "タグ名を入力してください" ] }, status: :unprocessable_content
+        render json: { errors: [ I18n.t("api.errors.hidden_tag_name_blank") ] }, status: :unprocessable_content
       end
     end
 
     # DELETE /api/hidden_tags/:id （候補に戻す）
     def destroy
       tag = current_user.hidden_tags.find_by(id: params[:id])
-      return render json: { errors: [ "隠したタグが見つかりません" ] }, status: :not_found unless tag
+      return render json: { errors: [ I18n.t("api.errors.hidden_tag_not_found") ] }, status: :not_found unless tag
 
       tag.destroy
       head :no_content

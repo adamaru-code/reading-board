@@ -11,9 +11,9 @@ module Api
 
       error =
         if current_user.authenticate(params[:current_password].to_s)
-          password_error(password, params[:password_confirmation].to_s, label: "新しいパスワード")
+          password_error(password, params[:password_confirmation].to_s, label: I18n.t("api.errors.new_password_label"))
         else
-          "現在のパスワードが違います"
+          I18n.t("api.errors.wrong_current_password")
         end
       return render_errors([ error ]) if error
 

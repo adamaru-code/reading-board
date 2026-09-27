@@ -32,5 +32,9 @@ module Backend
     # セッション Cookie 認証のため Cookie ミドルウェアを明示的に有効化
     # （api_only では既定で外れるため）
     config.middleware.use ActionDispatch::Cookies
+
+    # エラーメッセージなどの文言は config/locales/ja.yml で管理する
+    config.i18n.available_locales = [ :ja, :en ]
+    config.i18n.default_locale = :ja
   end
 end

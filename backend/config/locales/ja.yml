@@ -1,0 +1,70 @@
+# 日本語の文言（config.i18n.default_locale = :ja）。
+# モデルの検証メッセージは errors.format＋属性名＋errors.messages で組み立てる（例: 「タイトル」＋「を入力してください」）
+ja:
+  activerecord:
+    models:
+      book: 本
+      user: ユーザー
+      tag: タグ
+      hidden_tag: 隠したタグ
+      invitation: 招待
+      book_status_event: 状態の履歴
+    attributes:
+      book:
+        title: タイトル
+        author: 著者
+        status: ステータス
+        genre: ジャンル
+        media_type: 形態
+        rating: 評価
+        memo: メモ
+        user: ユーザー
+      user:
+        email: メールアドレス
+        password: パスワード
+      tag:
+        name: タグ名
+      hidden_tag:
+        name: タグ名
+        user: ユーザー
+      invitation:
+        code: 招待コード
+        expires_at: 有効期限
+      book_status_event:
+        occurred_on: 日付
+
+  errors:
+    format: "%{attribute}%{message}"
+    messages:
+      blank: を入力してください
+      required: を入力してください
+      too_long: は%{count}文字以内で入力してください
+      too_short: は%{count}文字以上で入力してください
+      inclusion: は一覧にありません
+      taken: はすでに使われています
+      invalid: は不正な値です
+
+  # コントローラが返すエラー（{ errors: [...] } の中身）
+  api:
+    errors:
+      login_required: ログインが必要です
+      forbidden: 権限がありません
+      too_many_attempts: 試行回数が多すぎます。しばらくしてから再度お試しください
+      invalid_login: メールアドレスまたはパスワードが違います
+      wrong_current_password: 現在のパスワードが違います
+      password_too_short: "%{label}は %{count} 文字以上にしてください"
+      password_mismatch: "%{label}（確認）が一致しません"
+      password_label: パスワード
+      new_password_label: 新しいパスワード
+      invalid_invitation: 招待コードが無効です
+      email_taken: このメールアドレスは登録済みです
+      email_invalid: メールアドレスの形式が正しくありません
+      last_admin: 最後の管理者は削除できません
+      invalid_reset_link: 再設定リンクが無効か、期限切れです
+      user_not_found: ユーザーが見つかりません
+      invitation_not_found: 招待が見つかりません
+      used_invitation: 使用済みの招待は削除できません
+      book_not_found: 本が見つかりません
+      invalid_isbn: ISBN が不正です
+      hidden_tag_name_blank: タグ名を入力してください
+      hidden_tag_not_found: 隠したタグが見つかりません
