@@ -71,7 +71,7 @@ books = [
     status: :want_to_read,
     genre: :liberal_arts,
     media_type: :magazine,
-    tags: %w[評論 定期購読]
+    tags: %w[評論]
   }
 ]
 
