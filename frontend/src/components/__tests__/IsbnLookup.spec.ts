@@ -24,7 +24,28 @@ describe('IsbnLookup', () => {
     expect(spy).toHaveBeenCalledWith('9784480037060')
     expect(wrapper.emitted('start')).toHaveLength(1)
     expect(wrapper.emitted('result')).toEqual([[result]])
-    expect(wrapper.text()).toContain('書誌情報を取得しました。')
+    const banner = wrapper.find('[role="status"]')
+    expect(banner.classes()).toContain('lookup-found')
+    expect(banner.text()).toContain('書誌情報を取得しました。')
+  })
+
+  it('該当なしなら黄色の帯で「見つかりませんでした」を出す', async () => {
+    vi.spyOn(booksApi, 'lookupBook').mockResolvedValue({
+      isbn: '9780000000000',
+      found: false,
+      title: null,
+      author: null,
+      media_type: 'book',
+    })
+    const wrapper = mount(IsbnLookup)
+
+    await wrapper.find('#isbn-input').setValue('9780000000000')
+    await wrapper.find('.isbn-row button').trigger('click')
+    await flushPromises()
+
+    const banner = wrapper.find('[role="status"]')
+    expect(banner.classes()).toContain('lookup-not-found')
+    expect(banner.text()).toContain('該当が見つかりませんでした。')
   })
 
   it('照会に失敗したら error でメッセージを渡す', async () => {

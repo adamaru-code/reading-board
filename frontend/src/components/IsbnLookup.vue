@@ -14,19 +14,18 @@ const emit = defineEmits<{
 
 const isbnInput = ref('')
 const lookingUp = ref(false)
-const lookupMessage = ref('')
+// 照会結果の表示：found＝取得できた（緑の帯）／not_found＝該当なし（黄色の帯）／null＝表示なし
+const lookupStatus = ref<'found' | 'not_found' | null>(null)
 
 async function onLookup() {
   const isbn = isbnInput.value.trim()
   if (isbn === '') return
   lookingUp.value = true
-  lookupMessage.value = ''
+  lookupStatus.value = null
   emit('start')
   try {
     const result = await lookupBook(isbn)
-    lookupMessage.value = result.found
-      ? '書誌情報を取得しました。'
-      : '該当が見つかりませんでした。タイトルを手入力してください。'
+    lookupStatus.value = result.found ? 'found' : 'not_found'
     emit('result', result)
   } catch (e) {
     emit(
@@ -130,7 +129,17 @@ onBeforeUnmount(stopScan)
       <video ref="videoEl" class="scan-video" playsinline muted></video>
       <p class="isbn-message">バーコードを枠内に写してください</p>
     </div>
-    <p v-if="lookupMessage" class="isbn-message">{{ lookupMessage }}</p>
+    <!-- role="status"：読み上げソフトにも結果を伝える -->
+    <p v-if="lookupStatus === 'found'" class="lookup-result lookup-found" role="status">
+      <span aria-hidden="true">✓</span> 書誌情報を取得しました。
+    </p>
+    <p
+      v-else-if="lookupStatus === 'not_found'"
+      class="lookup-result lookup-not-found"
+      role="status"
+    >
+      <span aria-hidden="true">ℹ</span> 該当が見つかりませんでした。タイトルを手入力してください。
+    </p>
     <p v-if="scanError" class="isbn-message scan-error">{{ scanError }}</p>
   </div>
 </template>
@@ -164,6 +173,25 @@ onBeforeUnmount(stopScan)
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--text-sub);
+}
+/* 照会結果の帯（取得できた＝緑／該当なし＝黄）。文字と背景のコントラストは WCAG AA 以上 */
+.lookup-result {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lookup-found {
+  background: #dcfff1;
+  border-color: #4bce97;
+  color: #216e4e;
+}
+.lookup-not-found {
+  background: #fff7d6;
+  border-color: #e2b203;
+  color: #7f5f01;
 }
 .scan-error {
   color: var(--danger);
