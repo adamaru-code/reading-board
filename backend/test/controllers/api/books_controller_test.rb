@@ -129,7 +129,7 @@ module Api
         post api_books_url, params: { book: { title: "" } }
       end
       assert_response :unprocessable_content
-      assert JSON.parse(response.body)["errors"].present?
+      assert_equal [ "タイトルを入力してください" ], JSON.parse(response.body)["errors"]
     end
 
     test "create は不正な status で 422（例外ではなく検証エラー）" do
@@ -137,7 +137,7 @@ module Api
         post api_books_url, params: { book: { title: "x", status: "flying" } }
       end
       assert_response :unprocessable_content
-      assert JSON.parse(response.body)["errors"].any? { |msg| msg.include?("Status") }
+      assert JSON.parse(response.body)["errors"].any? { |msg| msg == "ステータスは一覧にありません" }
     end
 
     test "create は book キーが無いと 400" do

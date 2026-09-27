@@ -3,8 +3,6 @@ module Api
   class PasswordResetsController < ApplicationController
     include PasswordValidation
 
-    INVALID_LINK = "再設定リンクが無効か、期限切れです".freeze
-
     allow_unauthenticated_access only: %i[show update]
     limit_attempts to: 10, within: 3.minutes, only: :update
     limit_attempts to: 30, within: 3.minutes, only: :show
@@ -13,7 +11,7 @@ module Api
     # 再設定画面を開いた時点でリンクが使えるか確かめる（使えれば対象のメールアドレスを返す）
     def show
       user = User.find_by_password_reset_token(params[:token].to_s)
-      return render_errors([ INVALID_LINK ]) unless user
+      return render_errors([ I18n.t("api.errors.invalid_reset_link") ]) unless user
 
       render json: { email: user.email }
     end
@@ -23,10 +21,10 @@ module Api
     def update
       # 無効・期限切れ・使用済み（パスワード変更済み）は区別しない
       user = User.find_by_password_reset_token(params[:token].to_s)
-      return render_errors([ INVALID_LINK ]) unless user
+      return render_errors([ I18n.t("api.errors.invalid_reset_link") ]) unless user
 
       password = params[:password].to_s
-      error = password_error(password, params[:password_confirmation].to_s, label: "新しいパスワード")
+      error = password_error(password, params[:password_confirmation].to_s, label: I18n.t("api.errors.new_password_label"))
       return render_errors([ error ]) if error
 
       if user.update(password: password)

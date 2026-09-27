@@ -96,7 +96,7 @@ class BookTest < ActiveSupport::TestCase
   test "title が無いと無効" do
     book = Book.new(title: nil)
     assert_not book.valid?
-    assert_includes book.errors[:title], "can't be blank"
+    assert_includes book.errors[:title], "を入力してください"
   end
 
   test "rating が 0〜5 の範囲外だと無効" do

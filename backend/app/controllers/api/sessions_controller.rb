@@ -16,7 +16,7 @@ module Api
         start_new_session_for(user)
         render json: user_json(user)
       else
-        render json: { errors: [ "メールアドレスまたはパスワードが違います" ] }, status: :unauthorized
+        render json: { errors: [ I18n.t("api.errors.invalid_login") ] }, status: :unauthorized
       end
     end
 
