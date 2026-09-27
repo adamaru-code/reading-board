@@ -6,6 +6,8 @@ import { BOOK_STATUSES } from '../types/book'
 import type { Book, BookStatus, BookListParams, BookListPaging } from '../types/book'
 
 export const COLUMN_PAGE_SIZE = 20
+// 読了一覧（/read）で一度に読み込む件数（1 冊 1 行で左右 2 段に並べるので、ボードより多く出す）
+export const READ_LIST_PAGE_SIZE = 60
 // API の per_page 上限（Api::BooksController#pagination_per_page）
 const MAX_PER_PAGE = 200
 
@@ -51,13 +53,13 @@ export function useKanbanColumns(
     return columns[status].items.length < columns[status].total
   }
 
-  // 読み込み済み件数を offset にして次の分を足す（カード移動で件数がずれても取りこぼさない）
-  async function loadMore(status: BookStatus) {
+  // 読み込み済み件数を offset にして次の pageSize 件を足す（カード移動で件数がずれても取りこぼさない）
+  async function loadMore(status: BookStatus, pageSize = COLUMN_PAGE_SIZE) {
     const column = columns[status]
     if (column.loadingMore || !hasMore(status)) return
     column.loadingMore = true
     try {
-      const result = await fetchColumn(status, column.items.length, COLUMN_PAGE_SIZE)
+      const result = await fetchColumn(status, column.items.length, pageSize)
       const loadedIds = new Set(column.items.map((b) => b.id))
       column.items.push(...result.items.filter((b) => !loadedIds.has(b.id)))
       column.total = result.pagination.total

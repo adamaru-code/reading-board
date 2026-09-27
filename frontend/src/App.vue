@@ -23,11 +23,12 @@ function onLoggedOut() {
 <template>
   <p v-if="!authChecked" class="app-loading">読み込み中…</p>
   <RouterView v-else v-slot="{ Component, route }">
-    <!-- ボードにだけログイン中のユーザーを渡す。ログアウト直後（ユーザーを消してから /login へ移るまで）は描かない -->
+    <!-- ログインが必要な画面（ボード・読了一覧）にだけログイン中のユーザーを渡す。
+         ログアウト直後（ユーザーを消してから /login へ移るまで）は描かない -->
     <component
       :is="Component"
-      v-if="route.name !== 'board' || currentUser"
-      v-bind="route.name === 'board' ? { user: currentUser } : {}"
+      v-if="!route.meta.requiresAuth || currentUser"
+      v-bind="route.meta.requiresAuth ? { user: currentUser } : {}"
       @logged-in="onLoggedIn"
       @show-register="router.push({ name: 'register' })"
       @show-login="router.push({ name: 'login' })"

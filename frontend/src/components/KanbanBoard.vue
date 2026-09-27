@@ -14,16 +14,21 @@ import type {
   SortDir,
   HiddenTag,
 } from '../types/book'
+import type { BoardView } from '../types/view'
 import type { User } from '../types/auth'
 import BoardHeader from './BoardHeader.vue'
 import BoardFilters from './BoardFilters.vue'
 import KanbanColumn from './KanbanColumn.vue'
+import ReadList from './ReadList.vue'
+import ReadSortControl from './ReadSortControl.vue'
 import BookFormModal from './BookFormModal.vue'
 import AccountModal from './AccountModal.vue'
 import AdminModal from './AdminModal.vue'
-import { useKanbanColumns } from '../composables/useKanbanColumns'
+import { useKanbanColumns, READ_LIST_PAGE_SIZE } from '../composables/useKanbanColumns'
 
-defineProps<{ user: User }>()
+// view：board＝3 カラムのボード（/）、read＝読了一覧（/read）。
+// どちらもこの部品が受け持ち、ヘッダ・絞り込み・モーダル・読み込み済みの本を共有する（切り替えても条件が残る）
+const props = withDefaults(defineProps<{ user: User; view?: BoardView }>(), { view: 'board' })
 const emit = defineEmits<{ logout: [] }>()
 
 // カラムの見出しラベル
@@ -106,22 +111,11 @@ async function loadTagOptions() {
   }
 }
 
-// ---------- 読了カラムの並び替え ----------
-const SORT_KEYS: readonly { key: BookSortKey; label: string }[] = [
-  { key: 'finished_on', label: '読了日' },
-  { key: 'rating', label: '評価' },
-  { key: 'registered_on', label: '登録日' },
-  { key: 'duration_days', label: '所要日数' },
-]
-
+// ---------- 読了本の並び替え（ボードの読了カラムと読了一覧で共通） ----------
 const readSort = reactive<{ key: BookSortKey; dir: SortDir }>({
   key: 'finished_on',
   dir: 'desc',
 })
-
-function toggleSortDir() {
-  readSort.dir = readSort.dir === 'asc' ? 'desc' : 'asc'
-}
 
 // 各カラムを status ごとにページ取得する（読了カラムはサーバー側で並び替え）
 const { columns, reloadAll, reloadColumn, hasMore, loadMore, findBook, moveBook } =
@@ -146,14 +140,23 @@ async function loadBooks(keepLoaded = false) {
   } finally {
     loading.value = false
   }
+  // 先頭 20 件に戻したとき（最初の表示・絞り込みの変更）、読了一覧なら 60 件まで足す
+  if (!keepLoaded) fillReadList()
 }
 
-async function onLoadMore(status: BookStatus) {
+async function onLoadMore(status: BookStatus, pageSize?: number) {
   try {
-    await loadMore(status)
+    await loadMore(status, pageSize)
   } catch (e) {
     showLoadError(e)
   }
+}
+
+// 読了一覧では一度に READ_LIST_PAGE_SIZE 件まで出す。ボードで 20 件だけ読み込んでいたら、足りない分を足す
+function fillReadList() {
+  if (props.view !== 'read' || loading.value || error.value) return
+  const shortage = READ_LIST_PAGE_SIZE - columns.read.items.length
+  if (shortage > 0 && hasMore('read')) onLoadMore('read', shortage)
 }
 
 onMounted(() => {
@@ -162,10 +165,17 @@ onMounted(() => {
   loadHiddenTags()
 })
 
-// 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す
+// ボード → 読了一覧に切り替えたとき
+watch(
+  () => props.view,
+  () => fillReadList(),
+)
+
+// 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す（読了一覧なら 60 件まで）
 watch(readSort, async () => {
   try {
     await reloadColumn('read')
+    fillReadList()
   } catch (e) {
     showLoadError(e)
   }
@@ -264,6 +274,7 @@ function onBookDeleted() {
   <div class="app">
     <BoardHeader
       :user="user"
+      :view="view"
       @add="openAdd"
       @admin="adminModalOpen = true"
       @account="accountModalOpen = true"
@@ -286,6 +297,21 @@ function onBookDeleted() {
       <button type="button" class="retry-btn" @click="loadBooks()">再読み込み</button>
     </div>
 
+    <main v-else-if="view === 'read'">
+      <ReadList
+        :items="columns.read.items"
+        :total="columns.read.total"
+        :has-more="hasMore('read')"
+        :loading-more="columns.read.loadingMore"
+        @open="openEdit"
+        @load-more="onLoadMore('read', READ_LIST_PAGE_SIZE)"
+      >
+        <template #header-actions>
+          <ReadSortControl v-model:sort-key="readSort.key" v-model:dir="readSort.dir" />
+        </template>
+      </ReadList>
+    </main>
+
     <main v-else class="board">
       <KanbanColumn
         v-for="status in BOOK_STATUSES"
@@ -304,19 +330,7 @@ function onBookDeleted() {
         @load-more="onLoadMore(status)"
       >
         <template v-if="status === 'read'" #header-actions>
-          <div class="sort-control">
-            <select v-model="readSort.key" aria-label="読了カラムの並び替え">
-              <option v-for="s in SORT_KEYS" :key="s.key" :value="s.key">{{ s.label }}</option>
-            </select>
-            <button
-              type="button"
-              class="sort-dir"
-              :aria-label="readSort.dir === 'asc' ? '昇順' : '降順'"
-              @click="toggleSortDir"
-            >
-              {{ readSort.dir === 'asc' ? '▲' : '▼' }}
-            </button>
-          </div>
+          <ReadSortControl v-model:sort-key="readSort.key" v-model:dir="readSort.dir" />
         </template>
       </KanbanColumn>
     </main>
@@ -372,29 +386,6 @@ function onBookDeleted() {
   gap: 16px;
   padding: 24px;
   align-items: start;
-}
-
-.sort-control {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.sort-control select {
-  font-size: 11px;
-  padding: 2px 4px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-}
-.sort-dir {
-  font-size: 11px;
-  line-height: 1;
-  padding: 3px 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
 }
 
 @media (max-width: 768px) {

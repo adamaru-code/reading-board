@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useKanbanColumns, COLUMN_PAGE_SIZE } from '../useKanbanColumns'
+import { useKanbanColumns, COLUMN_PAGE_SIZE, READ_LIST_PAGE_SIZE } from '../useKanbanColumns'
 import * as booksApi from '../../api/books'
 import type { Book, BookStatus, BookListParams, BookListPaging } from '../../types/book'
 
@@ -75,6 +75,20 @@ describe('useKanbanColumns', () => {
       range(1, 25, 'want_to_read').map((b) => b.id),
     )
     expect(hasMore('want_to_read')).toBe(false)
+  })
+
+  it('もっと見るに件数を渡すと、その件数ずつ取得する（読了一覧は 60 件）', async () => {
+    const spy = fakeListBooks()
+    const { reloadAll, loadMore } = useKanbanColumns(() => ({}))
+    await reloadAll()
+    spy.mockClear()
+
+    await loadMore('want_to_read', READ_LIST_PAGE_SIZE)
+
+    expect(spy).toHaveBeenCalledWith(
+      { status: 'want_to_read' },
+      { offset: COLUMN_PAGE_SIZE, perPage: READ_LIST_PAGE_SIZE },
+    )
   })
 
   it('カードを他カラムへ移した後のもっと見るで取りこぼさない', async () => {
