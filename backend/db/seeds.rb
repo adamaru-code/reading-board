@@ -62,7 +62,7 @@ books = [
     genre: :health_body,
     media_type: :book,
     rating: 3,
-    tags: %w[野口整体 健康法],
+    tags: %w[野口整体 健康],
     events: { reading: 3.days.ago.to_date }
   },
   {
