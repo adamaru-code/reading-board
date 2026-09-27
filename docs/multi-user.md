@@ -31,10 +31,10 @@
 ## 2. 必要な変更
 
 1. **`books.user_id` を NOT NULL に**：マイグレーションで NULL の行を初期ユーザーに寄せてから制約を付ける。
-2. **招待制の登録**：管理者（`users.admin`）が `POST /api/invitations` でコードを発行し、`POST /api/registration { invitation_code, email, password, password_confirmation }` でユーザー作成＋ログイン。メール形式のバリデーションを追加。ログイン画面から登録画面へ切り替え、`?invite=CODE` 付きリンクで登録画面を開けるようにする。
+2. **招待制の登録**：管理者（`users.admin`）が `POST /api/invitations` でコードを発行し、`POST /api/registration { invitation_code, email, password, password_confirmation }` でユーザー作成＋ログイン。メール形式のバリデーションを追加。ログイン画面から登録画面へ切り替え、`/register?invite=CODE` のリンクで登録画面を開ける（以前の `/?invite=CODE` も転送される）ようにする。
 3. **レート制限**：Rails 8 の `rate_limit`（`AttemptLimiting#limit_attempts`）を IP ごとに付ける。ログイン 3 分 10 回・登録 1 時間 10 回・パスワード変更 3 分 10 回、超えたら 429。記録先は `RATE_LIMIT_STORE`（プロセス内メモリ・単一インスタンス前提）。複数台にするなら solid_cache / Redis などの共有ストアに移す。
 4. **アカウント削除**：`DELETE /api/registration`（現在のパスワードで確認）。本・セッション・発行した招待は削除、使った招待の `used_by_id` は NULL。**最後の管理者は削除できない**。画面はヘッダー「アカウント」モーダルの削除タブ（確認チェック必須）。
-5. **パスワードリセット**：当面は**管理者が再設定リンクを発行**して本人に渡す（`POST /api/users/:user_id/password_reset_link` → `/?reset=TOKEN` → `PATCH /api/password_reset`）。トークンは Rails 8 の `has_secure_password` 標準（署名付き・DB 非保存・24 時間・パスワードを変えると無効＝1 回限り）。再発行しても前のリンクは期限まで有効（どちらかを使えば両方無効）。メールでの自動送信は SES 導入時に、発行したリンクを ActionMailer で送る処理を足す。
+5. **パスワードリセット**：当面は**管理者が再設定リンクを発行**して本人に渡す（`POST /api/users/:user_id/password_reset_link` → `/reset?token=TOKEN` → `PATCH /api/password_reset`）。トークンは Rails 8 の `has_secure_password` 標準（署名付き・DB 非保存・24 時間・パスワードを変えると無効＝1 回限り）。再発行しても前のリンクは期限まで有効（どちらかを使えば両方無効）。メールでの自動送信は SES 導入時に、発行したリンクを ActionMailer で送る処理を足す。
 6. seed・テスト：複数ユーザーのデモデータ、サインアップ・レート制限・削除のテスト。
 
 ---

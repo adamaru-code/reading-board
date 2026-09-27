@@ -35,7 +35,7 @@
 
 ### フロントエンド（Vue 3 + TypeScript）
 
-ビルドツールは **Vite 8**（`@vitejs/plugin-vue`）。コマンドは `frontend/package.json` の scripts に定義。
+ビルドツールは **Vite 8**（`@vitejs/plugin-vue`）。画面の切り替えは **vue-router 4**（`src/router/index.ts`。URL ごとに画面を持ち、ログイン状態をナビゲーションガードで確認）。コマンドは `frontend/package.json` の scripts に定義。
 
 | コマンド | 内容 | 用途 |
 |---|---|---|

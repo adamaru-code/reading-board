@@ -33,10 +33,10 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    S5L["S5 ログイン"]
-    S5R["S5 新規登録<br/>（/?invite=コード）"]
-    S5P["S5 パスワード再設定<br/>（/?reset=トークン）"]
-    S1["S1 カンバンボード<br/>（メイン画面）"]
+    S5L["S5 ログイン<br/>（/login）"]
+    S5R["S5 新規登録<br/>（/register?invite=コード）"]
+    S5P["S5 パスワード再設定<br/>（/reset?token=トークン）"]
+    S1["S1 カンバンボード<br/>（/ ・メイン画面）"]
     S3["S3 追加フォーム<br/>（モーダル）"]
     S4["S4 編集フォーム<br/>（モーダル）"]
     S6["S6 管理<br/>（モーダル・管理者のみ）"]
@@ -57,7 +57,19 @@ flowchart TD
     S1 -->|"カードをドラッグ<br/>（status 更新・並び替え。画面は留まる）"| S1
 ```
 
-- 画面遷移の実体は 1 画面（SPA）で、`App.vue` がログイン状態と URL の `?invite=` / `?reset=` を見て S5 / S1 を切り替える（vue-router は未使用。導入は #158）。S3・S4・S6・S7 はモーダルの開閉。
+- 画面の切り替えは **vue-router**（`frontend/src/router/index.ts`）。URL ごとに画面を持つので、ブラウザの「戻る」・再読み込み・ブックマークが効く。S3・S4・S6・S7 はモーダルの開閉（URL は変わらない）。
+
+  | URL | 画面 | 条件（ナビゲーションガード） |
+  |---|---|---|
+  | `/` | S1 ボード | ログイン必須（未ログインなら `/login` へ） |
+  | `/login` | S5 ログイン | ログイン済みなら `/` へ |
+  | `/register?invite=<コード>` | S5 新規登録（コード入力済み） | ログイン済みなら `/` へ |
+  | `/reset?token=<トークン>` | S5 パスワード再設定 | ログイン状態に関係なく表示 |
+  | それ以外 | `/` へ転送 | |
+
+- 以前のリンク形式 `/?invite=<コード>` ・ `/?reset=<トークン>` も使えるよう、ガードで新しい URL へ転送する。
+- ログイン中のユーザーは `frontend/src/lib/auth.ts` で共有する（最初の 1 回だけ `GET /api/session` で確認）。`App.vue` は `RouterView` で画面を出し、各画面の「ログインした」「ログイン画面へ」などの知らせを受けて URL を移す。
+- 本番（nginx）は `try_files $uri $uri/ /index.html` なので `/login` などを直接開いてもアプリが返る。
 - カード移動はページ遷移せず、その場で状態更新して再描画する。
 
 ---
@@ -215,7 +227,7 @@ sequenceDiagram
 | ユーザー一覧 | 管理 → ユーザータブ（管理者のみ） | GET /api/users | users SELECT（`id` / `email` / `admin` / `created_at`）。一般ユーザーは 403 |
 | 再設定リンクの発行 | 管理 → ユーザータブ（管理者のみ） | POST /api/users/:user_id/password_reset_link | 署名付きトークン（`has_secure_password` の reset token・24 時間・DB 非保存）を返す |
 | 再設定リンクの確認 | 再設定画面を開いた時 | GET /api/password_reset?token= | 使えれば `{ email }`、無効・期限切れ・使用済みは 422（フォームを出さない）。3 分 30 回まで |
-| パスワード再設定 | 再設定画面（`/?reset=TOKEN`） | PATCH /api/password_reset { token, password, password_confirmation } | users UPDATE ＋ そのユーザーの sessions 全 DELETE ＋ sessions INSERT（この端末でログイン）。無効・期限切れ・使用済みは 422。3 分 10 回まで |
+| パスワード再設定 | 再設定画面（`/reset?token=TOKEN`） | PATCH /api/password_reset { token, password, password_confirmation } | users UPDATE ＋ そのユーザーの sessions 全 DELETE ＋ sessions INSERT（この端末でログイン）。無効・期限切れ・使用済みは 422。3 分 10 回まで |
 | タグ候補を隠す / 戻す | S3・S4 のタグ候補（× / 「隠した候補」） | GET / POST /api/hidden_tags、DELETE /api/hidden_tags/:id | hidden_tags SELECT / INSERT / DELETE（ユーザーごと。本のタグは変えない） |
 | アカウント削除 | ヘッダ「アカウント」→ アカウント削除タブ | DELETE /api/registration { current_password } | users DELETE（books・sessions・発行した invitations も削除、使った invitations の used_by_id は NULL）＋ Cookie 削除。パスワード違い・最後の管理者は 422。3 分 10 回まで |
 | 招待の一覧 / 発行 / 削除 | 管理 → 招待タブ（管理者のみ） | GET / POST /api/invitations、DELETE /api/invitations/:id | invitations SELECT / INSERT / DELETE（未使用のみ）。一般ユーザーは 403 |

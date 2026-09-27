@@ -14,5 +14,5 @@ export function createPasswordResetLink(userId: number): Promise<PasswordResetLi
 
 // 再設定リンク（開くと再設定画面になる）
 export function passwordResetUrl(token: string): string {
-  return `${window.location.origin}/?reset=${encodeURIComponent(token)}`
+  return `${window.location.origin}/reset?token=${encodeURIComponent(token)}`
 }

@@ -5,7 +5,7 @@ import { ApiError } from '../api/http'
 import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 import type { User } from '../types/auth'
 
-// 管理者が発行した再設定リンク（/?reset=TOKEN）から開く
+// 管理者が発行した再設定リンク（/reset?token=TOKEN。古い /?reset=TOKEN も転送される）から開く
 const props = defineProps<{ token: string }>()
 const emit = defineEmits<{ 'logged-in': [user: User]; 'show-login': [] }>()
 

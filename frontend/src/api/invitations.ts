@@ -19,5 +19,5 @@ export function deleteInvitation(id: number): Promise<void> {
 
 // 招待リンク（開くと登録画面にコードが入った状態になる）
 export function invitationUrl(code: string): string {
-  return `${window.location.origin}/?invite=${encodeURIComponent(code)}`
+  return `${window.location.origin}/register?invite=${encodeURIComponent(code)}`
 }
