@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { listAllBooks, updateBook, reorderBooks } from '../api/books'
 import { logout } from '../api/session'
 import { listHiddenTags } from '../api/hiddenTags'
 import { ApiError } from '../api/http'
-import { BOOK_STATUSES, BOOK_GENRES, GENRE_LABELS } from '../types/book'
+import { BOOK_STATUSES } from '../types/book'
 import type {
   Book,
   BookStatus,
@@ -15,7 +15,9 @@ import type {
   HiddenTag,
 } from '../types/book'
 import type { User } from '../types/auth'
-import BookCard from './BookCard.vue'
+import BoardHeader from './BoardHeader.vue'
+import BoardFilters from './BoardFilters.vue'
+import KanbanColumn from './KanbanColumn.vue'
 import BookFormModal from './BookFormModal.vue'
 import AccountModal from './AccountModal.vue'
 import AdminModal from './AdminModal.vue'
@@ -75,22 +77,12 @@ async function loadHiddenTags() {
     // 取得できなくても候補がすべて出るだけなので、ボード表示は妨げない
   }
 }
-const hasFilters = computed(
-  () => filters.genre !== '' || filters.author.trim() !== '' || filters.tag !== '',
-)
-
 function activeParams(): BookListParams {
   const params: BookListParams = {}
   if (filters.genre !== '') params.genre = filters.genre
   if (filters.author.trim() !== '') params.author = filters.author.trim()
   if (filters.tag !== '') params.tag = filters.tag
   return params
-}
-
-let authorTimer: ReturnType<typeof setTimeout> | undefined
-function onAuthorInput() {
-  clearTimeout(authorTimer)
-  authorTimer = setTimeout(() => loadBooks(), 300) // 入力が落ち着いてから再取得
 }
 
 function clearFilters() {
@@ -181,7 +173,6 @@ watch(readSort, async () => {
 
 // ---------- ドラッグ&ドロップでのステータス更新 ----------
 const draggingId = ref<number | null>(null)
-const dragOverStatus = ref<BookStatus | null>(null)
 
 function onDragStart(event: DragEvent, book: Book) {
   draggingId.value = book.id
@@ -196,37 +187,16 @@ let justDragged = false
 
 function onDragEnd() {
   draggingId.value = null
-  dragOverStatus.value = null
   justDragged = true
   setTimeout(() => {
     justDragged = false
   }, 0)
 }
 
-// ドロップ位置（カーソル Y）から、移動カードを除いた挿入インデックスを求める
-function dropIndex(
-  section: HTMLElement,
-  status: BookStatus,
-  movedId: number,
-  clientY: number,
-): number {
-  const displayed = columns[status].items
-  const cardEls = Array.from(section.querySelectorAll<HTMLElement>('.card'))
-  let index = 0
-  for (let i = 0; i < cardEls.length; i++) {
-    const book = displayed[i]
-    if (!book || book.id === movedId) continue // 移動中のカード自身は無視
-    const rect = cardEls[i].getBoundingClientRect()
-    if (clientY < rect.top + rect.height / 2) break
-    index++
-  }
-  return index
-}
-
-async function onDrop(status: BookStatus, event: DragEvent) {
+// index：落とされたカラム内の位置（KanbanColumn が移動中のカードを除いて数える）
+async function onDrop(status: BookStatus, index: number) {
   const id = draggingId.value
   draggingId.value = null
-  dragOverStatus.value = null
   if (id === null) return
 
   const book = findBook(id)
@@ -236,8 +206,6 @@ async function onDrop(status: BookStatus, event: DragEvent) {
   // 読了カラムはキー（読了日など）で並べるため手動並び替えの対象外
   const sortedByKey = status === 'read'
   if (sortedByKey && !statusChanged) return
-
-  const index = dropIndex(event.currentTarget as HTMLElement, status, id, event.clientY)
 
   // 楽観的更新：カードを移して status と position をローカルに反映（失敗時はサーバーから再取得）。
   // reorder には読み込み済みの分だけ渡す（残りはサーバーが既存順で後ろに詰める）
@@ -294,45 +262,22 @@ function onBookDeleted() {
 
 <template>
   <div class="app">
-    <header class="app-header">
-      <h1 class="app-title">📚 読書管理ボード</h1>
-      <div class="filters">
-        <input
-          v-model="filters.author"
-          type="search"
-          class="filter-author"
-          placeholder="著者名で絞り込み"
-          aria-label="著者名で絞り込み"
-          @input="onAuthorInput"
-        />
-        <label class="filter-field">
-          ジャンル
-          <select v-model="filters.genre" @change="loadBooks()">
-            <option value="">すべて</option>
-            <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
-          </select>
-        </label>
-        <label class="filter-field">
-          タグ
-          <select v-model="filters.tag" @change="loadBooks()">
-            <option value="">すべて</option>
-            <option v-for="t in tagOptions" :key="t" :value="t">{{ t }}</option>
-          </select>
-        </label>
-        <button v-if="hasFilters" type="button" class="clear-btn" @click="clearFilters">
-          クリア
-        </button>
-        <button type="button" class="add-btn" @click="openAdd">＋ 追加</button>
-        <span class="user-email" :title="user.email">{{ user.email }}</span>
-        <button v-if="user.admin" type="button" class="header-btn" @click="adminModalOpen = true">
-          管理
-        </button>
-        <button type="button" class="header-btn" @click="accountModalOpen = true">
-          アカウント
-        </button>
-        <button type="button" class="header-btn" @click="onLogout">ログアウト</button>
-      </div>
-    </header>
+    <BoardHeader
+      :user="user"
+      @add="openAdd"
+      @admin="adminModalOpen = true"
+      @account="accountModalOpen = true"
+      @logout="onLogout"
+    >
+      <BoardFilters
+        v-model:author="filters.author"
+        v-model:genre="filters.genre"
+        v-model:tag="filters.tag"
+        :tag-options="tagOptions"
+        @change="loadBooks()"
+        @clear="clearFilters"
+      />
+    </BoardHeader>
 
     <p v-if="loading" class="board-state">読み込み中…</p>
 
@@ -342,20 +287,24 @@ function onBookDeleted() {
     </div>
 
     <main v-else class="board">
-      <section
+      <KanbanColumn
         v-for="status in BOOK_STATUSES"
         :key="status"
-        class="column"
-        :class="{ 'drag-over': dragOverStatus === status }"
-        :data-status="status"
-        @dragover.prevent="dragOverStatus = status"
-        @dragleave="dragOverStatus = null"
-        @drop.prevent="onDrop(status, $event)"
+        :status="status"
+        :title="COLUMN_LABELS[status]"
+        :items="columns[status].items"
+        :total="columns[status].total"
+        :has-more="hasMore(status)"
+        :loading-more="columns[status].loadingMore"
+        :dragging-id="draggingId"
+        @open="openEdit"
+        @card-dragstart="onDragStart"
+        @card-dragend="onDragEnd"
+        @drop="onDrop(status, $event)"
+        @load-more="onLoadMore(status)"
       >
-        <div class="column-header">
-          <span class="column-title">{{ COLUMN_LABELS[status] }}</span>
-          <span class="column-count">{{ columns[status].total }}</span>
-          <div v-if="status === 'read'" class="sort-control">
+        <template v-if="status === 'read'" #header-actions>
+          <div class="sort-control">
             <select v-model="readSort.key" aria-label="読了カラムの並び替え">
               <option v-for="s in SORT_KEYS" :key="s.key" :value="s.key">{{ s.label }}</option>
             </select>
@@ -368,39 +317,8 @@ function onBookDeleted() {
               {{ readSort.dir === 'asc' ? '▲' : '▼' }}
             </button>
           </div>
-        </div>
-        <div class="card-list">
-          <BookCard
-            v-for="book in columns[status].items"
-            :key="book.id"
-            :book="book"
-            draggable="true"
-            role="button"
-            tabindex="0"
-            :aria-label="`${book.title} を編集`"
-            :class="{ dragging: draggingId === book.id }"
-            @dragstart="onDragStart($event, book)"
-            @dragend="onDragEnd"
-            @click="openEdit(book)"
-            @keydown.enter="openEdit(book)"
-            @keydown.space.prevent="openEdit(book)"
-          />
-          <p v-if="columns[status].items.length === 0" class="column-empty">まだありません</p>
-          <button
-            v-if="hasMore(status)"
-            type="button"
-            class="load-more-btn"
-            :disabled="columns[status].loadingMore"
-            @click="onLoadMore(status)"
-          >
-            {{
-              columns[status].loadingMore
-                ? '読み込み中…'
-                : `もっと見る（残り ${columns[status].total - columns[status].items.length} 件）`
-            }}
-          </button>
-        </div>
-      </section>
+        </template>
+      </KanbanColumn>
     </main>
 
     <BookFormModal
@@ -430,78 +348,6 @@ function onBookDeleted() {
 </template>
 
 <style scoped>
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.app-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-.filters {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.filter-author {
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-}
-.filter-field {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-sub);
-}
-.filter-field select {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-}
-.clear-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 7px 12px;
-  font: inherit;
-  cursor: pointer;
-}
-.add-btn {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  cursor: pointer;
-}
-.user-email {
-  font-size: 12px;
-  color: var(--text-sub);
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.header-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 7px 12px;
-  font: inherit;
-  cursor: pointer;
-}
-
 .board-state {
   padding: 24px;
   color: var(--text-sub);
@@ -528,41 +374,6 @@ function onBookDeleted() {
   align-items: start;
 }
 
-.column {
-  background: #ebecf0;
-  border-radius: 10px;
-  padding: 10px;
-  min-height: 120px;
-  border-top: 3px solid var(--col-accent, var(--border));
-}
-.column[data-status='want_to_read'] {
-  --col-accent: var(--col-want);
-}
-.column[data-status='reading'] {
-  --col-accent: var(--col-reading);
-}
-.column[data-status='read'] {
-  --col-accent: var(--col-read);
-}
-
-.column-header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 4px 6px 10px;
-}
-.column-title {
-  font-size: 14px;
-  font-weight: 700;
-}
-.column-count {
-  font-size: 12px;
-  color: var(--text-sub);
-  background: #dfe1e6;
-  border-radius: 999px;
-  padding: 1px 8px;
-}
-
 .sort-control {
   margin-left: auto;
   display: flex;
@@ -584,50 +395,6 @@ function onBookDeleted() {
   border-radius: 4px;
   background: var(--surface);
   cursor: pointer;
-}
-
-.card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 40px;
-}
-
-/* ドラッグ&ドロップの視覚フィードバック */
-.column.drag-over .card-list {
-  outline: 2px dashed var(--col-accent);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-.card-list :deep(.card) {
-  cursor: grab;
-}
-.card-list :deep(.card.dragging) {
-  opacity: 0.5;
-  cursor: grabbing;
-}
-
-.load-more-btn {
-  width: 100%;
-  padding: 8px;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-sub);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.load-more-btn:hover:not(:disabled) {
-  background: var(--surface);
-}
-.load-more-btn:disabled {
-  cursor: default;
-}
-.column-empty {
-  color: var(--text-sub);
-  font-size: 13px;
-  padding: 6px;
 }
 
 @media (max-width: 768px) {
