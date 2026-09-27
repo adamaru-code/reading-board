@@ -19,6 +19,7 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
       <nav class="view-switch" aria-label="表示の切り替え">
         <RouterLink
           :to="{ name: 'board' }"
+          class="to-board"
           :class="{ current: view === 'board' }"
           :aria-current="view === 'board' ? 'page' : undefined"
         >
@@ -26,6 +27,7 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
         </RouterLink>
         <RouterLink
           :to="{ name: 'read' }"
+          class="to-read"
           :class="{ current: view === 'read' }"
           :aria-current="view === 'read' ? 'page' : undefined"
         >
@@ -88,7 +90,8 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
   cursor: pointer;
   white-space: nowrap;
 }
-/* 画面の切り替え（ボード｜読了一覧）。今いる方を読了カラムと同じ緑で塗る（白文字とのコントラスト 4.66:1） */
+/* 画面の切り替え（ボード｜読了一覧）。今いる方を色で塗る：ボード＝読書中カラムと同じピンク、読了一覧＝読了カラムと同じ緑。
+   白文字を載せるので線の色より少し濃い --col-*-strong を使う（コントラスト ピンク 5.03:1 / 緑 4.66:1） */
 .view-switch {
   display: inline-flex;
   border: 1px solid var(--border);
@@ -106,9 +109,14 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
   border-left: 1px solid var(--border);
 }
 .view-switch a.current {
-  background: var(--col-read-strong);
   color: #fff;
   font-weight: 600;
+}
+.view-switch a.to-board.current {
+  background: var(--col-reading-strong);
+}
+.view-switch a.to-read.current {
+  background: var(--col-read-strong);
 }
 .view-switch a:focus-visible {
   outline: 2px solid var(--primary);
