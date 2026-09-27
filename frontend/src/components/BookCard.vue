@@ -99,10 +99,12 @@ const columnDate = () => {
   background: #e7e9ec;
   color: #4b5563;
 }
-/* 形態（雑誌のみ表示） */
+/* 形態（雑誌のみ表示）。ジャンル（淡い色の地）とは別の種類の印なので、白地に濃紺グレーの枠と文字にする。
+   紫（読みたい・＋ 本を追加）やジャンルの色と重ならない中立の色（コントラスト 7.65:1） */
 .media-badge {
-  background: var(--col-want);
-  color: #fff;
+  background: var(--surface);
+  color: #44546f;
+  box-shadow: inset 0 0 0 1px #44546f; /* 枠線（幅を増やさないよう内側に引く） */
 }
 
 .card-title {
