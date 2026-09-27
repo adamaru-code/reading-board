@@ -58,8 +58,9 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
   font-size: 20px;
   font-weight: 700;
 }
+/* 「読みたい」カラムと同じ紫（追加した本は既定で「読みたい」に入る）。白文字とのコントラスト 5.86:1 */
 .add-btn {
-  background: var(--primary);
+  background: var(--col-want);
   color: #fff;
   border: none;
   border-radius: 6px;
