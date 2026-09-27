@@ -41,6 +41,12 @@ describe('suggestTags', () => {
     expect(suggestTags('', '孔子', []).slice(0, 2)).toEqual(['論語', '東洋思想'])
   })
 
+  it('「クライテリオン」で「評論」は出すが「定期購読」は出さない', () => {
+    const tags = suggestTags('表現者クライテリオン', '', [])
+    expect(tags[0]).toBe('評論')
+    expect(tags).not.toContain('定期購読')
+  })
+
   it('キーワードに当たらなくても定番タグを返す', () => {
     expect(suggestTags('無関係な本', '', [])).toEqual(['名著', '再読したい', '積読', '宗教'])
   })
@@ -60,7 +66,7 @@ describe('suggestTags', () => {
       knownTags: ['仕事で読む', '読書会', 'あとで読む'],
       query: '読',
     })
-    expect(tags).toEqual(['読書会', '仕事で読む', 'あとで読む', '再読したい', '積読', '定期購読'])
+    expect(tags).toEqual(['読書会', '仕事で読む', 'あとで読む', '再読したい', '積読'])
   })
 
   it('絞り込みでも入力済みのタグは除き、英字は大文字小文字を区別しない', () => {
