@@ -95,6 +95,11 @@ const columnDate = () => {
   background: #fce4d5;
   color: #9c3d0f;
 }
+/* IT・技術：ほかのジャンル・カラムに無い黄（文字と地のコントラスト 5.33:1） */
+.genre-it_tech {
+  background: #fff3c4;
+  color: #7f5f01;
+}
 .genre-other {
   background: #e7e9ec;
   color: #4b5563;

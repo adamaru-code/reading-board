@@ -7,12 +7,14 @@ export type BookStatus = 'want_to_read' | 'reading' | 'read'
 export const BOOK_STATUSES: readonly BookStatus[] = ['want_to_read', 'reading', 'read']
 
 // 主ジャンル（単一）。Rails 側 enum のキー文字列（docs/database-design.md §3）
-export type BookGenre = 'classic_novel' | 'liberal_arts' | 'health_body' | 'practical' | 'other'
+export type BookGenre =
+  'classic_novel' | 'liberal_arts' | 'health_body' | 'practical' | 'it_tech' | 'other'
 export const BOOK_GENRES: readonly BookGenre[] = [
   'classic_novel',
   'liberal_arts',
   'health_body',
   'practical',
+  'it_tech',
   'other',
 ]
 export const GENRE_LABELS: Record<BookGenre, string> = {
@@ -20,6 +22,7 @@ export const GENRE_LABELS: Record<BookGenre, string> = {
   liberal_arts: '教養・人文・思想',
   health_body: '健康・身体',
   practical: '実用・暮らし',
+  it_tech: 'IT・技術',
   other: 'その他・未分類',
 }
 
