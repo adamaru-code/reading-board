@@ -376,11 +376,6 @@ async function onConfirmDelete() {
           </label>
         </div>
 
-        <label class="field">
-          <span class="field-label">メモ</span>
-          <textarea v-model="form.memo" rows="3"></textarea>
-        </label>
-
         <div class="field">
           <span class="field-label">タグ</span>
           <div v-if="tags.length" class="tag-list">
@@ -467,6 +462,11 @@ async function onConfirmDelete() {
             </ul>
           </div>
         </div>
+
+        <label class="field">
+          <span class="field-label">メモ</span>
+          <textarea v-model="form.memo" rows="1"></textarea>
+        </label>
 
         <div class="modal-actions">
           <button
