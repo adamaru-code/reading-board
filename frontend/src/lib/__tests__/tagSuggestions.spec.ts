@@ -17,10 +17,9 @@ describe('suggestTags', () => {
     expect(suggestTags('整体入門', '野口晴哉', [])).not.toContain('野口整体')
   })
 
-  it('「整体」などの言葉で「健康」を候補に出す（「健康法」ではない）', () => {
-    const tags = suggestTags('整体入門', '', [])
-    expect(tags).toContain('健康')
-    expect(tags).not.toContain('健康法')
+  it('「整体」「健康」などの言葉では辞書から候補を出さない', () => {
+    const tags = suggestTags('整体と健康', '', [])
+    expect(tags).toEqual(['名著', '再読したい', '積読'])
   })
 
   it('キーワードに当たらなくても定番タグを返す', () => {
