@@ -3,7 +3,7 @@ import { computed, useId } from 'vue'
 import { BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type { BookGenre } from '../types/book'
 
-// 絞り込み（著者名・ジャンル・タグ）。値は v-model:author / v-model:genre / v-model:tag。
+// 絞り込み（著者名・ジャンル・タグ）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。値は v-model:author / v-model:genre / v-model:tag。
 // 条件が変わったら change（著者名は入力が落ち着いてから）、「クリア」で clear を親に伝える
 const author = defineModel<string>('author', { required: true })
 const genre = defineModel<'' | BookGenre>('genre', { required: true })
@@ -38,6 +38,7 @@ function onAuthorInput() {
         v-model="author"
         type="search"
         class="filter-author"
+        :class="{ active: author.trim() !== '' }"
         placeholder="著者名"
         aria-label="著者で絞り込み"
         @input="onAuthorInput"
@@ -45,19 +46,27 @@ function onAuthorInput() {
     </label>
     <label class="filter-field">
       ジャンル
-      <select v-model="genre" @change="emit('change')">
+      <select v-model="genre" :class="{ active: genre !== '' }" @change="emit('change')">
         <option value="">すべて</option>
         <option v-for="g in BOOK_GENRES" :key="g" :value="g">{{ GENRE_LABELS[g] }}</option>
       </select>
     </label>
     <label class="filter-field">
       タグ
-      <select v-model="tag" @change="emit('change')">
+      <select v-model="tag" :class="{ active: tag !== '' }" @change="emit('change')">
         <option value="">すべて</option>
         <option v-for="t in tagOptions" :key="t" :value="t">{{ t }}</option>
       </select>
     </label>
-    <button v-if="hasFilters" type="button" class="clear-btn" @click="emit('clear')">クリア</button>
+    <button
+      v-if="hasFilters"
+      type="button"
+      class="clear-btn"
+      aria-label="絞り込みをクリア"
+      @click="emit('clear')"
+    >
+      <span aria-hidden="true">✕</span> クリア
+    </button>
   </div>
 </template>
 
@@ -93,11 +102,27 @@ function onAuthorInput() {
   font: inherit;
 }
 .clear-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--slate);
+  color: #fff;
+  border: 1px solid var(--slate);
   border-radius: 6px;
   padding: 7px 12px;
   font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+}
+/* 絞り込みに使っている欄：枠を濃紺グレーで太く、地をうっすら色付き（どの条件が効いているか分かる）。
+   枠が 1px 太くなる分 padding を 1px 減らし、大きさを変えない */
+.filter-author.active {
+  border: 2px solid var(--slate);
+  background: var(--slate-tint);
+  padding: 6px 9px;
+}
+.filter-field select.active {
+  border: 2px solid var(--slate);
+  background: var(--slate-tint);
+  font-weight: 600;
+  padding: 5px 7px;
 }
 </style>
