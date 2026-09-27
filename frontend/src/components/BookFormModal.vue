@@ -378,7 +378,7 @@ async function onConfirmDelete() {
 
         <label class="field">
           <span class="field-label">メモ</span>
-          <textarea v-model="form.memo" rows="3"></textarea>
+          <textarea v-model="form.memo" rows="1"></textarea>
         </label>
 
         <div class="field">
