@@ -19,16 +19,25 @@ describe('suggestTags', () => {
 
   it('「整体」「健康」などの言葉では辞書から候補を出さない', () => {
     const tags = suggestTags('整体と健康', '', [])
-    expect(tags).toEqual(['名著', '再読したい', '積読'])
+    expect(tags).toEqual(['名著', '再読したい', '積読', '宗教'])
   })
 
   it('「入門」などの言葉では辞書から候補を出さない', () => {
     const tags = suggestTags('はじめての やさしい 入門', '', [])
-    expect(tags).toEqual(['名著', '再読したい', '積読'])
+    expect(tags).toEqual(['名著', '再読したい', '積読', '宗教'])
+  })
+
+  it('「仏教」「聖書」などの言葉で「宗教」を先頭に出す', () => {
+    expect(suggestTags('はじめての仏教', '', [])[0]).toBe('宗教')
+    expect(suggestTags('聖書を読む', '', [])[0]).toBe('宗教')
+  })
+
+  it('「経済」「神経」では辞書の「宗教」に当たらない（定番の最後にだけ出る）', () => {
+    expect(suggestTags('経済と神経の本', '', [])).toEqual(['名著', '再読したい', '積読', '宗教'])
   })
 
   it('キーワードに当たらなくても定番タグを返す', () => {
-    expect(suggestTags('無関係な本', '', [])).toEqual(['名著', '再読したい', '積読'])
+    expect(suggestTags('無関係な本', '', [])).toEqual(['名著', '再読したい', '積読', '宗教'])
   })
 
   it('最大 8 件に制限する', () => {
@@ -61,7 +70,7 @@ describe('suggestTags', () => {
   it('limit で件数を変えられる（Infinity で全件）', () => {
     const known = Array.from({ length: 12 }, (_, n) => `タグ${n}`)
     expect(suggestTags('', '', [], { knownTags: known })).toHaveLength(8)
-    expect(suggestTags('', '', [], { knownTags: known, limit: Infinity })).toHaveLength(15) // 12＋定番 3
+    expect(suggestTags('', '', [], { knownTags: known, limit: Infinity })).toHaveLength(16) // 12＋定番 4
   })
 
   it('隠したタグは、辞書・過去のタグ・絞り込みのどれでも出さない', () => {

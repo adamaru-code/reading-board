@@ -46,14 +46,14 @@ describe('BookFormModal のタグ候補', () => {
     expect(chips(wrapper)).toHaveLength(8)
     expect(chips(wrapper)).not.toContain('歴史')
     const more = wrapper.find('.tag-suggest-more')
-    expect(more.text()).toBe('すべて表示（残り 3 件）')
+    expect(more.text()).toBe('すべて表示（残り 4 件）')
 
     await more.trigger('click')
-    expect(chips(wrapper)).toHaveLength(11)
+    expect(chips(wrapper)).toHaveLength(12)
     expect(chips(wrapper)).toContain('歴史')
 
     await wrapper.find('.tag-suggest-more').trigger('click')
-    expect(wrapper.find('.tag-suggest-more').text()).toBe('すべて表示（残り 3 件）')
+    expect(wrapper.find('.tag-suggest-more').text()).toBe('すべて表示（残り 4 件）')
     expect(chips(wrapper)).toHaveLength(8)
   })
 
