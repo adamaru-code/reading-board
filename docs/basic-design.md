@@ -91,7 +91,7 @@ erDiagram
         int status "NOT NULL default 0, enum(0:読みたい/1:読書中/2:読了)"
         int rating "NULL可, 0-5, 評価"
         text memo "NULL可, 感想"
-        int genre "NOT NULL default 4, enum(0-4 主ジャンル)"
+        int genre "NOT NULL default 4(その他), enum(0-5 主ジャンル)"
         int media_type "NOT NULL default 0, enum(0:書籍/1:雑誌)"
         int position "NULL可, カラム内並び順"
         datetime created_at "NOT NULL"
@@ -201,13 +201,16 @@ sequenceDiagram
     participant R as Rails API
     participant D as MySQL
     U->>V: カードを「読書中」へドラッグ
+    V-->>U: 落とした位置へカードを先に動かす（楽観的更新）
     V->>R: PATCH /api/books/1 { status: "reading" }
     R->>D: UPDATE books SET status=1 WHERE id=1
     R->>D: INSERT book_status_events (book_id=1, status=1, occurred_on=today)
     D-->>R: OK
     R-->>V: 200 { id:1, status:"reading", started_on:"2026-07-10", ... }
-    V-->>U: カードを移動先カラムに再描画（日付・所要日数を反映）
-    Note over V,R: 失敗時(422/404)は元のカラムに戻し、エラー表示
+    V->>R: PATCH /api/books/reorder { ids: [...] }（読みたい・読書中へ落としたとき）
+    R-->>V: 204（カラム内の並び順を保存）
+    Note over V,R: 読了へ落としたときは reorder を呼ばず、読了カラムを取り直してキー順の位置に置く
+    Note over V,R: 失敗時はエラーメッセージと「再読み込み」を出し、サーバーから取り直して元に戻す
     Note over R,D: 状態に入った日を履歴として記録（同一状態・同一日は重複記録しない）
 ```
 
@@ -229,7 +232,7 @@ sequenceDiagram
 | 再設定リンクの確認 | 再設定画面を開いた時 | GET /api/password_reset?token= | 使えれば `{ email }`、無効・期限切れ・使用済みは 422（フォームを出さない）。3 分 30 回まで |
 | パスワード再設定 | 再設定画面（`/reset?token=TOKEN`） | PATCH /api/password_reset { token, password, password_confirmation } | users UPDATE ＋ そのユーザーの sessions 全 DELETE ＋ sessions INSERT（この端末でログイン）。無効・期限切れ・使用済みは 422。3 分 10 回まで |
 | タグ候補を隠す / 戻す | S3・S4 のタグ候補（× / 「隠した候補」） | GET / POST /api/hidden_tags、DELETE /api/hidden_tags/:id | hidden_tags SELECT / INSERT / DELETE（ユーザーごと。本のタグは変えない） |
-| アカウント削除 | ヘッダ「アカウント」→ アカウント削除タブ | DELETE /api/registration { current_password } | users DELETE（books・sessions・発行した invitations も削除、使った invitations の used_by_id は NULL）＋ Cookie 削除。パスワード違い・最後の管理者は 422。3 分 10 回まで |
+| アカウント削除 | ヘッダ「アカウント」→ アカウント削除タブ | DELETE /api/registration { current_password } | users DELETE（books・sessions・hidden_tags・発行した invitations も削除、使った invitations の used_by_id は NULL）＋ Cookie 削除。パスワード違い・最後の管理者は 422。3 分 10 回まで |
 | 招待の一覧 / 発行 / 削除 | 管理 → 招待タブ（管理者のみ） | GET / POST /api/invitations、DELETE /api/invitations/:id | invitations SELECT / INSERT / DELETE（未使用のみ）。一般ユーザーは 403 |
 | パスワード変更 | ヘッダ「アカウント」→ パスワード変更タブ | PATCH /api/password { current_password, password, password_confirmation } | users UPDATE（8 文字以上）＋ 自分以外の sessions DELETE（他端末は失効・操作中は維持）。不備は 422 |
 
@@ -275,5 +278,6 @@ sequenceDiagram
 
 - ボードの書籍は composable `useKanbanColumns`（`frontend/src/composables/`）がカラム（status）ごとに保持する（§4.1）。状態管理ライブラリ（Pinia 等）は使わない。
 - カード移動は**楽観的更新**（先に画面を動かし、API 失敗時はサーバーから取り直して元に戻す）。登録・編集・削除の後は読み込み済み件数を保って取り直す。
-- ログイン中のユーザーは `App.vue` が保持し、props でボードへ渡す。API が 401 を返したらログイン画面へ戻す。
-- API クライアントは `frontend/src/api/`（`http.ts` の `request` を基点に、books / session / registration / invitations / users / password / passwordReset）。エラーは `{ errors: [...] }` を `ApiError` に変換する。
+- ログイン中のユーザーは `frontend/src/lib/auth.ts` の `currentUser` で画面をまたいで共有し（§2）、`App.vue` が props でボードへ渡す。API が 401 を返したらログイン画面へ戻す。
+- タグの選択肢・よく使うタグ（全ページを集約）と、タグ候補から隠したタグ（`GET /api/hidden_tags`）は `KanbanBoard.vue` が持ち、書籍フォームへ渡す。
+- API クライアントは `frontend/src/api/`（`http.ts` の `request` を基点に、books / hiddenTags / session / registration / invitations / users / password / passwordReset）。エラーは `{ errors: [...] }` を `ApiError` に変換する。

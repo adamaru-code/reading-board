@@ -83,6 +83,7 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 |---|---|---|---|
 | `id` | bigint | PK, auto | 主キー |
 | `name` | string | NOT NULL, UNIQUE | タグ名（例: `名著` `宗教` `再読したい`） |
+| `created_at` / `updated_at` | datetime | NOT NULL | 作成・更新日時 |
 
 `book_tags`（中間テーブル）
 
@@ -91,6 +92,7 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `id` | bigint | PK, auto | 主キー |
 | `book_id` | bigint | FK → books, NOT NULL | 書籍 |
 | `tag_id` | bigint | FK → tags, NOT NULL | タグ |
+| `created_at` / `updated_at` | datetime | NOT NULL | 作成・更新日時 |
 
 - `(book_id, tag_id)` は UNIQUE（同じ本に同じタグを重複して付けない）。
 - API では `tags: string[]`（名称配列）でやり取りし、サーバー側で前後の空白を除いて重複をまとめ、`find_or_create` して紐づける。
@@ -131,7 +133,8 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `id` | bigint | PK, auto | 主キー |
 | `email` | string | NOT NULL, UNIQUE | ログイン ID（正規化：trim + 小文字化） |
 | `password_digest` | string | NOT NULL | bcrypt ハッシュ（`has_secure_password`）。パスワードは 8 文字以上（変更時にモデルで検証） |
-| `admin` | boolean | NOT NULL, 既定 false | 管理者（招待コードを発行できる）。seed の初期ユーザーは true |
+| `admin` | boolean | NOT NULL, 既定 false | 管理者（招待コード・パスワード再設定リンクを発行できる）。seed の初期ユーザーは true |
+| `created_at` / `updated_at` | datetime | NOT NULL | 作成・更新日時 |
 
 `sessions`
 
@@ -142,6 +145,7 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `token` | string | NOT NULL, UNIQUE | セッショントークン（署名付き httpOnly Cookie `session_token` に保持） |
 | `ip_address` | string | NULL 可 | 発行時の IP |
 | `user_agent` | string | NULL 可 | 発行時の UA |
+| `created_at` / `updated_at` | datetime | NOT NULL | 作成・更新日時 |
 
 `invitations`
 
@@ -153,11 +157,13 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `used_by_id` | bigint | FK → users, NULL 可 | 登録に使ったユーザー（ユーザー削除時は NULL に） |
 | `used_at` | datetime | NULL 可 | 使用日時（NULL＝未使用） |
 | `expires_at` | datetime | NOT NULL | 有効期限（発行から 7 日） |
+| `created_at` / `updated_at` | datetime | NOT NULL | 作成・更新日時 |
 
 - 招待は **1 回限り**。登録時は行ロックを取って使用済みにする。存在しない・使用済み・期限切れはどれも「招待コードが無効です」。
 
 - ログイン時に `sessions` を 1 行作成し、その `token` を署名付き httpOnly Cookie に入れる。ログアウトで該当行を削除。
 - 全 `/api/books*` は認証必須で `current_user` にスコープ。未認証は 401。
+- **ユーザーを削除したとき**（アカウント削除）：`books`（とその `book_tags`・`book_status_events`）・`sessions`・`hidden_tags`・自分が発行した `invitations` を一緒に削除し、自分が使った招待の `used_by_id` は NULL にする。`tags` の名称マスタは残る。
 
 ---
 

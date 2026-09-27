@@ -1,7 +1,7 @@
 # 読書管理アプリ — インフラ設計（AWS デプロイ案）
 
-> **ステータス：構築中。** 決定事項は §0。アプリ側の本番設定は済（§1.1）、`infra/`（Terraform）は作成済み・未 apply。手順は [infra/README.md](../infra/README.md)。
-> AWS 上のリソース・課金はまだゼロ。`terraform apply` は実行前に必ず合意を取る。
+> **ステータス：構築済み（使うときだけ起動）。** 決定事項は §0。アプリ側の本番設定は済（§1.1）、`infra/`（Terraform）は作成済みで、2026-09-24 に初回の apply（動作確認）→ destroy を行った。手順は [infra/README.md](../infra/README.md)。
+> 普段は destroy した状態（2026-09-28 時点、手元の `terraform.tfstate` のリソースは 0）。`terraform apply`（`up.sh`）は実行前に必ず合意を取る。
 > 費用は 2026-09 時点の東京リージョン・オンデマンド料金の**概算**（1 USD ≒ 150 円）。着手時に公式の料金ページで必ず再確認する。
 
 関連：[基本設計](basic-design.md) §1（システム構成）/ [技術スタック](tech-stack.md) / [複数ユーザー対応](multi-user.md)
@@ -130,8 +130,8 @@ aws cloudfront list-distributions --query 'DistributionList.Quantity'
 
 ## 6. 着手前に決めること（→ §0 で決定済み）
 
-- [ ] 構成案（推奨：B）
-- [ ] 月額予算の上限と Budgets の通知額
-- [ ] 独自ドメインの要否（不要なら B のまま。必要なら Route 53＋ACM を追加）
-- [ ] 常時公開するか、学習時のみ apply / destroy するか
-- [ ] 複数ユーザー対応を先にやるか（公開するならサインアップ・レート制限が要る。[複数ユーザー対応](multi-user.md)）
+- [x] 構成案 → B（EC2 ＋ RDS ＋ CloudFront）
+- [x] 月額予算の上限と Budgets の通知額 → 既存の日次 $0.5・月次 $12
+- [x] 独自ドメインの要否 → 取らない（`*.cloudfront.net`）
+- [x] 常時公開するか、学習時のみ apply / destroy するか → 使うときだけ起動
+- [x] 複数ユーザー対応を先にやるか → 先に実装済み（招待制・回数制限。[複数ユーザー対応](multi-user.md)）
