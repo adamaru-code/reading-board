@@ -284,6 +284,12 @@ function onModalDone() {
   loadBooks(true)
   loadTagOptions()
 }
+
+// 削除後は、その本だけに付いていたタグの「隠した候補」もサーバーで消えるので取り直す
+function onBookDeleted() {
+  onModalDone()
+  loadHiddenTags()
+}
 </script>
 
 <template>
@@ -404,7 +410,7 @@ function onModalDone() {
       v-model:hidden-tags="hiddenTags"
       @close="closeModal"
       @saved="onModalDone"
-      @deleted="onModalDone"
+      @deleted="onBookDeleted"
     />
 
     <AccountModal

@@ -92,7 +92,12 @@ module Api
 
     # DELETE /api/books/:id
     def destroy
-      find_book.destroy
+      book = find_book
+      tag_names = book.tags.pluck(:name)
+      Book.transaction do
+        book.destroy!
+        forget_hidden_tags_no_longer_used(tag_names)
+      end
       head :no_content
     end
 
@@ -126,6 +131,15 @@ module Api
 
     def find_book
       current_user.books.find(params[:id])
+    end
+
+    # 削除した本にだけ付いていたタグは候補に出なくなるので、そのタグ名の「隠した候補」も消す
+    # （自分のほかの本にまだ付いているタグは残す。辞書・定番タグにもある名前は再び候補に出る）
+    def forget_hidden_tags_no_longer_used(tag_names)
+      return if tag_names.empty?
+
+      still_used = Tag.joins(:books).where(name: tag_names, books: { user_id: current_user.id }).distinct.pluck(:name)
+      current_user.hidden_tags.where(name: tag_names - still_used).delete_all
     end
 
     def book_params

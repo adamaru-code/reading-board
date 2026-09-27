@@ -121,7 +121,7 @@ UC9 招待して登録してもらう:
 | GET | `/api/books/:id` | 詳細 | 200 / 404 |
 | POST | `/api/books` | 新規作成（種別・タグ含む） | 201 / 400 / 422 |
 | PATCH | `/api/books/:id` | 更新（状態・評価・メモ・種別・タグなど） | 200 / 400 / 404 / 422 |
-| DELETE | `/api/books/:id` | 削除 | 204 / 404 |
+| DELETE | `/api/books/:id` | 削除（その本だけに付いていたタグの「隠した候補」も消す） | 204 / 404 |
 | PATCH | `/api/books/reorder` | カラム内の並び順を保存（`{ ids: [...] }` の順に position を振り、同じ状態の残りは既存順で後ろに詰める） | 204 |
 | GET | `/api/books/lookup?isbn=<code>` | ISBN/JAN から書誌を取得（バックエンドが openBD を照会） | 200 / 422（不正な ISBN） |
 
