@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import type { User } from '../types/auth'
 
-// ボード上部のヘッダ：タイトル・「＋ 追加」・アカウントまわりのボタン。
+// ボード上部のヘッダ：タイトル・「＋ 本を追加」・アカウントまわりのボタン。
 // 絞り込み（BoardFilters）は親がスロットに入れる。ボタンは押されたことを親に伝えるだけ
 defineProps<{ user: User }>()
 const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
 </script>
 
 <template>
+  <!-- 3 つのグループ（追加・絞り込み・アカウント）に分け、狭い画面ではグループごとに折り返す。
+       よく使う「＋ 本を追加」はタイトルの右に固定し、絞り込みの「クリア」が出ても動かないようにする -->
   <header class="app-header">
-    <h1 class="app-title">📚 読書管理ボード</h1>
-    <div class="filters">
+    <div class="header-main">
+      <h1 class="app-title">📚 読書管理ボード</h1>
+      <button type="button" class="add-btn" @click="emit('add')">＋ 本を追加</button>
+    </div>
+    <div class="header-filters">
       <slot />
-      <button type="button" class="add-btn" @click="emit('add')">＋ 追加</button>
+    </div>
+    <div class="header-account">
       <span class="user-email" :title="user.email">{{ user.email }}</span>
       <button v-if="user.admin" type="button" class="header-btn" @click="emit('admin')">
         管理
@@ -27,21 +33,30 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   padding: 14px 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.app-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-.filters {
+.header-main,
+.header-filters,
+.header-account {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+}
+.header-main {
+  gap: 16px;
+}
+/* アカウントまわりは右端に寄せる */
+.header-account {
+  margin-left: auto;
+}
+.app-title {
+  font-size: 20px;
+  font-weight: 700;
 }
 .add-btn {
   background: var(--primary);
@@ -50,7 +65,9 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
   border-radius: 6px;
   padding: 8px 16px;
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 .user-email {
   font-size: 12px;
