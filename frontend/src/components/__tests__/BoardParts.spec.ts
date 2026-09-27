@@ -73,6 +73,12 @@ describe('BoardFilters', () => {
     expect(wrapper.emitted('change')).toHaveLength(2)
   })
 
+  it('著者名の入力欄の前に見出し「検索」を出し、読み上げ名にも「検索」を含める', () => {
+    const input = mountFilters().find('input[type="search"]')
+    expect(input.element.closest('label')?.textContent).toContain('検索')
+    expect(input.attributes('aria-label')).toContain('検索')
+  })
+
   it('条件があるときだけ「クリア」を出し、押すと clear', async () => {
     expect(mountFilters().text()).not.toContain('クリア')
 

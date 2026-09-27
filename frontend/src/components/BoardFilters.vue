@@ -27,14 +27,18 @@ function onAuthorInput() {
 <template>
   <!-- display: contents：この div は並びに影響させず、中の部品をヘッダの並びに直接加える -->
   <div class="board-filters">
-    <input
-      v-model="author"
-      type="search"
-      class="filter-author"
-      placeholder="著者名で絞り込み"
-      aria-label="著者名で絞り込み"
-      @input="onAuthorInput"
-    />
+    <!-- 見出し「検索」はジャンル・タグと同じ見た目。読み上げ名は見出しの文字を含めて「検索（著者名）」にする -->
+    <label class="filter-field">
+      検索
+      <input
+        v-model="author"
+        type="search"
+        class="filter-author"
+        placeholder="著者名で絞り込み"
+        aria-label="検索（著者名）"
+        @input="onAuthorInput"
+      />
+    </label>
     <label class="filter-field">
       ジャンル
       <select v-model="genre" @change="emit('change')">
@@ -62,6 +66,9 @@ function onAuthorInput() {
   border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
+  /* 見出し（小さい灰色の文字）の中に入れても、入力する文字は今までどおりの大きさ・色にする */
+  font-size: 1rem;
+  color: var(--text);
 }
 .filter-field {
   display: flex;
