@@ -73,10 +73,16 @@ describe('BoardFilters', () => {
     expect(wrapper.emitted('change')).toHaveLength(2)
   })
 
-  it('著者名の入力欄の前に見出し「検索」を出し、読み上げ名にも「検索」を含める', () => {
-    const input = mountFilters().find('input[type="search"]')
-    expect(input.element.closest('label')?.textContent).toContain('検索')
-    expect(input.attributes('aria-label')).toContain('検索')
+  it('先頭に「絞り込み：」を出してまとまりと結び、著者欄の見出しは「著者」', () => {
+    const wrapper = mountFilters()
+    const group = wrapper.find('[role="group"]')
+    const heading = wrapper.find('.filters-heading')
+    expect(heading.text()).toBe('絞り込み：')
+    expect(group.attributes('aria-labelledby')).toBe(heading.attributes('id'))
+
+    const input = wrapper.find('input[type="search"]')
+    expect(input.element.closest('label')?.textContent).toContain('著者')
+    expect(input.attributes('aria-label')).toContain('著者')
   })
 
   it('条件があるときだけ「クリア」を出し、押すと clear', async () => {

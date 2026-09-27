@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type { BookGenre } from '../types/book'
 
@@ -17,6 +17,9 @@ const hasFilters = computed(
   () => genre.value !== '' || author.value.trim() !== '' || tag.value !== '',
 )
 
+// 先頭の見出し「絞り込み：」と、まとまり（role="group"）を結ぶ id
+const headingId = useId()
+
 let authorTimer: ReturnType<typeof setTimeout> | undefined
 function onAuthorInput() {
   clearTimeout(authorTimer)
@@ -26,16 +29,17 @@ function onAuthorInput() {
 
 <template>
   <!-- display: contents：この div は並びに影響させず、中の部品をヘッダの並びに直接加える -->
-  <div class="board-filters">
-    <!-- 見出し「検索」はジャンル・タグと同じ見た目。読み上げ名は見出しの文字を含めて「検索（著者名）」にする -->
+  <!-- 先頭に「絞り込み：」を 1 回だけ置き、各欄の見出しは何で絞るか（著者・ジャンル・タグ）にそろえる -->
+  <div class="board-filters" role="group" :aria-labelledby="headingId">
+    <span :id="headingId" class="filters-heading">絞り込み：</span>
     <label class="filter-field">
-      検索
+      著者
       <input
         v-model="author"
         type="search"
         class="filter-author"
-        placeholder="著者名で絞り込み"
-        aria-label="検索（著者名）"
+        placeholder="著者名"
+        aria-label="著者で絞り込み"
         @input="onAuthorInput"
       />
     </label>
@@ -69,6 +73,11 @@ function onAuthorInput() {
   /* 見出し（小さい灰色の文字）の中に入れても、入力する文字は今までどおりの大きさ・色にする */
   font-size: 1rem;
   color: var(--text);
+}
+.filters-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
 }
 .filter-field {
   display: flex;
