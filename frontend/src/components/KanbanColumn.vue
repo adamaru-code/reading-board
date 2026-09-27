@@ -108,12 +108,15 @@ function onDrop(event: DragEvent) {
 }
 .column[data-status='want_to_read'] {
   --col-accent: var(--col-want);
+  --col-badge: var(--col-want-strong);
 }
 .column[data-status='reading'] {
   --col-accent: var(--col-reading);
+  --col-badge: var(--col-reading-strong);
 }
 .column[data-status='read'] {
   --col-accent: var(--col-read);
+  --col-badge: var(--col-read-strong);
 }
 
 .column-header {
@@ -126,10 +129,12 @@ function onDrop(event: DragEvent) {
   font-size: 14px;
   font-weight: 700;
 }
+/* 件数バッジ：カラムの線と同じ色味の地に白い太字 */
 .column-count {
   font-size: 12px;
-  color: var(--text-sub);
-  background: #dfe1e6;
+  font-weight: 600;
+  color: #fff;
+  background: var(--col-badge, var(--text-sub));
   border-radius: 999px;
   padding: 1px 8px;
 }

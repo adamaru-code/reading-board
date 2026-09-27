@@ -14,6 +14,11 @@
      読書中は「今読んでいる」勢いが出る目立つ色。エラーの赤（--danger）・隣の紫と色味が離れたピンクにする */
   --col-want: #6554c0;
   --col-reading: #e2317a;
+  /* 件数バッジ（白い小さな文字を載せる）用。線の色のままだと白文字が読みにくい色だけ、同じ色味で少し濃くする
+     （白文字とのコントラスト 4.5:1 以上：紫 5.86 / ピンク 5.03 / 緑 4.66） */
+  --col-want-strong: #6554c0;
+  --col-reading-strong: #d1246b;
+  --col-read-strong: #1f845a;
   --col-read: #22a06b;
 
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
