@@ -10,9 +10,10 @@
   --star: #f5b301;
   --star-empty: #d5d8dd;
 
-  /* カラムごとのアクセント（読みたい / 読書中 / 読了） */
+  /* カラムごとのアクセント（読みたい＝紫 / 読書中＝ピンク / 読了＝緑）。
+     読書中は「今読んでいる」勢いが出る目立つ色。エラーの赤（--danger）・隣の紫と色味が離れたピンクにする */
   --col-want: #6554c0;
-  --col-reading: #0c66e4;
+  --col-reading: #e2317a;
   --col-read: #22a06b;
 
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
