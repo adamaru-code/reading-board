@@ -22,6 +22,11 @@ describe('suggestTags', () => {
     expect(tags).toEqual(['名著', '再読したい', '積読'])
   })
 
+  it('「入門」などの言葉では辞書から候補を出さない', () => {
+    const tags = suggestTags('はじめての やさしい 入門', '', [])
+    expect(tags).toEqual(['名著', '再読したい', '積読'])
+  })
+
   it('キーワードに当たらなくても定番タグを返す', () => {
     expect(suggestTags('無関係な本', '', [])).toEqual(['名著', '再読したい', '積読'])
   })
