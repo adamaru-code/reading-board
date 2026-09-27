@@ -70,3 +70,43 @@ describe('BookFormModal の削除', () => {
     expect(wrapper.emitted('deleted')).toBeUndefined()
   })
 })
+
+describe('BookFormModal のタグの入力忘れ', () => {
+  const tagInput = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.find('input[placeholder="タグを入力して Enter"]')
+
+  it('Enter を押さずに保存しても、タグ欄に残った文字をタグとして保存する', async () => {
+    const spy = vi.spyOn(booksApi, 'createBook').mockResolvedValue(book)
+    const wrapper = mount(BookFormModal, { props: { book: null } })
+
+    await wrapper.find('input[required]').setValue('日本史')
+    await tagInput(wrapper).setValue(' 歴史 ')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ tags: ['歴史'] }))
+    expect(wrapper.emitted('saved')).toHaveLength(1)
+  })
+
+  it('既に付いているタグと同じ文字なら重複させない', async () => {
+    const spy = vi.spyOn(booksApi, 'updateBook').mockResolvedValue(book)
+    const wrapper = mount(BookFormModal, { props: { book: { ...book, tags: ['歴史'] } } })
+
+    await tagInput(wrapper).setValue('歴史')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(spy).toHaveBeenCalledWith(7, expect.objectContaining({ tags: ['歴史'] }))
+  })
+
+  it('空白だけならタグを増やさない', async () => {
+    const spy = vi.spyOn(booksApi, 'updateBook').mockResolvedValue(book)
+    const wrapper = mountEdit()
+
+    await tagInput(wrapper).setValue('   ')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(spy).toHaveBeenCalledWith(7, expect.objectContaining({ tags: [] }))
+  })
+})

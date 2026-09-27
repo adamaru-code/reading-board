@@ -243,6 +243,7 @@ function buildInput(): BookCreateInput {
 }
 
 async function onSubmit() {
+  addTag() // Enter を押し忘れてタグ欄に残っている文字もタグにする
   errors.value = []
   submitting.value = true
   try {
