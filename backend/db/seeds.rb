@@ -19,7 +19,7 @@ books = [
     title: "リーダブルコード",
     author: "Dustin Boswell",
     status: :reading,
-    genre: :practical,
+    genre: :it_tech,
     media_type: :book,
     rating: 4,
     memo: "命名と関数分割の章が特に良い。",
@@ -30,7 +30,7 @@ books = [
     title: "達人プログラマー",
     author: "Andrew Hunt",
     status: :want_to_read,
-    genre: :practical,
+    genre: :it_tech,
     media_type: :book,
     tags: %w[積読]
   },

@@ -27,8 +27,8 @@ class BookTest < ActiveSupport::TestCase
     assert_equal "want_to_read", Book.new.status
   end
 
-  test "genre は 5 種を扱え、デフォルトは other" do
-    assert_equal %w[classic_novel liberal_arts health_body practical other], Book.genres.keys
+  test "genre は 6 種を扱え、デフォルトは other" do
+    assert_equal %w[classic_novel liberal_arts health_body practical other it_tech], Book.genres.keys
     assert_equal "other", Book.new.genre
     assert Book.new(title: "x", genre: :liberal_arts).liberal_arts?
   end

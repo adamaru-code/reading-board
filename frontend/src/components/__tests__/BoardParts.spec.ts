@@ -96,6 +96,14 @@ describe('BoardFilters', () => {
     expect(wrapper.emitted('clear')).toHaveLength(1)
   })
 
+  it('ジャンルの選択肢に「IT・技術」を「実用・暮らし」と「その他・未分類」の間に出す', () => {
+    const options = mountFilters()
+      .findAll('select')[0]
+      .findAll('option')
+      .map((o) => o.text())
+    expect(options.slice(-3)).toEqual(['実用・暮らし', 'IT・技術', 'その他・未分類'])
+  })
+
   it('絞り込みに使っている欄だけ強調する（active）', () => {
     const wrapper = mountFilters('漱石', '', '歴史')
     const [genreSelect, tagSelect] = wrapper.findAll('select')

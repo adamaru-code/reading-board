@@ -49,6 +49,16 @@ module Api
       assert_not_includes ids, @book.id # fixture は既定 other
     end
 
+    test "it_tech（IT・技術）で作成・絞り込みできる" do
+      post api_books_url, params: { book: { title: "リーダブルコード", genre: "it_tech" } }
+      assert_response :created
+      created = JSON.parse(response.body)
+      assert_equal "it_tech", created["genre"]
+
+      get api_books_url, params: { genre: "it_tech" }
+      assert_equal [ created["id"] ], JSON.parse(response.body)["items"].map { |b| b["id"] }
+    end
+
     test "index は不正な genre を無視して全件返す" do
       get api_books_url, params: { genre: "sci_fi" }
       assert_response :success
