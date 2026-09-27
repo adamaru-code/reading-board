@@ -27,19 +27,34 @@ describe('BaseModal', () => {
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
-  it('Esc で close。closeOnEsc=false なら close しない', async () => {
+  it('フォーカスが外（ヘッダーのボタンなど）にあっても Esc で close。closeOnEsc=false なら close しない', () => {
     const wrapper = mount(BaseModal, { props: { title: 't' } })
-    await wrapper.find('[role="dialog"]').trigger('keydown', { key: 'Escape' })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(wrapper.emitted('close')).toHaveLength(1)
+    wrapper.unmount()
 
     const noEsc = mount(BaseModal, { props: { title: 't', closeOnEsc: false } })
-    await noEsc.find('[role="dialog"]').trigger('keydown', { key: 'Escape' })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(noEsc.emitted('close')).toBeUndefined()
+    noEsc.unmount()
   })
 
-  it('書籍フォームは Esc では閉じない（入力中の内容を守る）', async () => {
+  it('開くとフォーカスを枠へ移し、閉じると開く前のボタンへ戻す', () => {
+    const opener = document.createElement('button')
+    document.body.appendChild(opener)
+    opener.focus()
+
+    const wrapper = mount(BaseModal, { props: { title: 't' }, attachTo: document.body })
+    expect(document.activeElement).toBe(wrapper.find('[role="dialog"]').element)
+
+    wrapper.unmount()
+    expect(document.activeElement).toBe(opener)
+    opener.remove()
+  })
+
+  it('書籍フォームは Esc では閉じない（入力中の内容を守る）', () => {
     const wrapper = mount(BookFormModal, { props: { book: null } })
-    await wrapper.find('[role="dialog"]').trigger('keydown', { key: 'Escape' })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(wrapper.emitted('close')).toBeUndefined()
     expect(wrapper.find('h2').text()).toBe('書籍を追加')
   })
