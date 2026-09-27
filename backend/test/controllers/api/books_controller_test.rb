@@ -218,6 +218,33 @@ module Api
       assert_response :no_content
     end
 
+    test "destroy はその本だけに付いていたタグの隠した候補を消し、ほかの本にも付いているタグは残す" do
+      only_here = Tag.create!(name: "この本だけ")
+      shared = Tag.create!(name: "ほかの本にも")
+      @book.tags << [ only_here, shared ]
+      books(:want_to_read_sample).tags << shared
+      @owner.hidden_tags.create!(name: "この本だけ")
+      @owner.hidden_tags.create!(name: "ほかの本にも")
+      @owner.hidden_tags.create!(name: "本に付いていない")
+
+      delete api_book_url(@book)
+
+      assert_response :no_content
+      assert_equal %w[ほかの本にも 本に付いていない], @owner.hidden_tags.pluck(:name).sort
+    end
+
+    test "destroy はほかのユーザーの隠した候補に影響しない" do
+      tag = Tag.create!(name: "共有タグ")
+      @book.tags << tag
+      other = users(:other)
+      other.hidden_tags.create!(name: "共有タグ")
+
+      delete api_book_url(@book)
+
+      assert_response :no_content
+      assert other.hidden_tags.exists?(name: "共有タグ")
+    end
+
     # 外部 API（openBD）の呼び出しをブロック内だけ固定値に差し替える
     def stub_openbd_fetch(result)
       original = OpenbdClient.method(:fetch)
