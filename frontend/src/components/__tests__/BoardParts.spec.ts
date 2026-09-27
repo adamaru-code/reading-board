@@ -73,15 +73,37 @@ describe('BoardFilters', () => {
     expect(wrapper.emitted('change')).toHaveLength(2)
   })
 
+  it('先頭に「絞り込み：」を出してまとまりと結び、著者欄の見出しは「著者」', () => {
+    const wrapper = mountFilters()
+    const group = wrapper.find('[role="group"]')
+    const heading = wrapper.find('.filters-heading')
+    expect(heading.text()).toBe('絞り込み：')
+    expect(group.attributes('aria-labelledby')).toBe(heading.attributes('id'))
+
+    const input = wrapper.find('input[type="search"]')
+    expect(input.element.closest('label')?.textContent).toContain('著者')
+    expect(input.attributes('aria-label')).toContain('著者')
+  })
+
   it('条件があるときだけ「クリア」を出し、押すと clear', async () => {
     expect(mountFilters().text()).not.toContain('クリア')
 
     const wrapper = mountFilters('', '', '歴史')
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text() === 'クリア')!
-      .trigger('click')
+    const clear = wrapper.find('.clear-btn')
+    expect(clear.text()).toContain('クリア')
+    expect(clear.attributes('aria-label')).toBe('絞り込みをクリア')
+    await clear.trigger('click')
     expect(wrapper.emitted('clear')).toHaveLength(1)
+  })
+
+  it('絞り込みに使っている欄だけ強調する（active）', () => {
+    const wrapper = mountFilters('漱石', '', '歴史')
+    const [genreSelect, tagSelect] = wrapper.findAll('select')
+    expect(wrapper.find('input[type="search"]').classes()).toContain('active')
+    expect(genreSelect.classes()).not.toContain('active')
+    expect(tagSelect.classes()).toContain('active')
+
+    expect(mountFilters().findAll('.active')).toHaveLength(0)
   })
 })
 

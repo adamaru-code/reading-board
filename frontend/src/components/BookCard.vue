@@ -103,8 +103,8 @@ const columnDate = () => {
    紫（読みたい・＋ 本を追加）やジャンルの色と重ならない中立の色（コントラスト 7.65:1） */
 .media-badge {
   background: var(--surface);
-  color: #44546f;
-  box-shadow: inset 0 0 0 1px #44546f; /* 枠線（幅を増やさないよう内側に引く） */
+  color: var(--slate);
+  box-shadow: inset 0 0 0 1px var(--slate); /* 枠線（幅を増やさないよう内側に引く） */
 }
 
 .card-title {
