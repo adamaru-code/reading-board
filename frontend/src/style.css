@@ -35,3 +35,29 @@ h1,
 h2 {
   margin: 0;
 }
+
+/* フォームの入力欄（書籍フォーム・ログイン・登録・パスワード再設定・アカウントで共通）。
+   部品に分けた入力欄（IsbnLookup・TagInput など）にも同じ見た目が効くよう、全体に置く */
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  box-sizing: border-box;
+}
+.field textarea {
+  resize: vertical;
+}
