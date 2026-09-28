@@ -23,6 +23,7 @@ Trello 風カンバンで書籍を「読みたい / 読書中 / 読了」の 3 �
 | [基本設計（図）](basic-design.md) | システム構成・画面遷移図・ER 図・データフロー（Mermaid） |
 | [複数ユーザー対応](multi-user.md) | 招待制の登録・管理者・パスワード再設定の設計 |
 | [インフラ設計](infrastructure.md) | AWS デプロイ（構成 B：EC2＋RDS＋CloudFront・使うときだけ起動） |
+| [AWS デプロイの手順書](aws-deploy-guide.md) | はじめての人向け：AWS・IAM・Terraform・IaC の解説、認証設定、AI と進める起動・停止の手順 |
 
 ---
 

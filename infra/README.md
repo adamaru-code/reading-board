@@ -2,6 +2,8 @@
 
 読書管理ボードを AWS 上で動かす Terraform。設計・費用・決定事項は [docs/infrastructure.md](../docs/infrastructure.md) を正とする。
 
+> **初めての人は、先に [docs/aws-deploy-guide.md](../docs/aws-deploy-guide.md)（用語の解説・認証設定・AI と進める手順）を読む。** このファイルはコマンドの早見表。
+
 > **運用は「使うときだけ起動」。** 確認が終わったら必ず `terraform destroy` する。
 > 起動中は EC2・RDS・パブリック IPv4 で **1 時間あたり約 $0.06（約 9 円）** かかる（2026-09 時点の概算）。停止中も DB のスナップショット 1 つ分の保管料（月数円〜数十円程度）がかかる。
 > AWS Budgets の日次 $0.5・月次 $12 アラートは既存のものを使う（Terraform では作らない）。
