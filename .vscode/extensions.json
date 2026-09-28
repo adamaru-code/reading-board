@@ -2,8 +2,8 @@
   // VS Code でこのリポジトリを開くと、右下に下の拡張機能のインストールが案内される（入れるかは各自で選べる）。
   // 選び方：日本語の記事で定番として挙がる × その道具の公式・利用者の多いもの
   "recommendations": [
-    // .tf（Terraform）の色分け・整形（HashiCorp 公式）
-    "hashicorp.terraform",
+    // .tf / .tfvars / .hcl（Terraform）の色分け（色分け専用で軽い。補完・自動整形が欲しくなったら公式の hashicorp.terraform を追加できる）
+    "pjmiravalle.terraform-advanced-syntax-highlighting",
     // .vue の色分け・型チェック（Vue 公式。旧 Vetur の後継）
     "Vue.volar",
     // .rb（Ruby / Rails）の色分け・補完
