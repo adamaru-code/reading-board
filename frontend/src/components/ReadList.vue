@@ -16,12 +16,12 @@ const emit = defineEmits<{
   'load-more': []
 }>()
 
-// 列の見出しと、見出し・値のそろえ方（タイトルは左、著者〜読了日は列の中央、日数は数字の桁をそろえて右）。
+// 列の見出しと、見出し・値のそろえ方（タイトル・著者・ジャンルは左、形態・評価・読了日は列の中央、日数は数字の桁をそろえて右）。
 // 形態の列（雑誌バッジ）は見出しの文字を出さない
 const COLUMN_HEADINGS: readonly { label: string; align: 'left' | 'center' | 'right' }[] = [
   { label: 'タイトル', align: 'left' },
-  { label: '著者', align: 'center' },
-  { label: 'ジャンル', align: 'center' },
+  { label: '著者', align: 'left' },
+  { label: 'ジャンル', align: 'left' },
   { label: '', align: 'center' },
   { label: '評価', align: 'center' },
   { label: '読了日', align: 'center' },
@@ -219,9 +219,7 @@ function stars(rating: number | null): boolean[] {
   color: var(--text-sub);
   font-size: 12px;
 }
-/* 著者・ジャンル・形態・評価・読了日は列の中央（見出しと同じ位置） */
-.row-author,
-.row-genre,
+/* 形態・評価・読了日は列の中央（見出しと同じ位置）。著者・ジャンルは左 */
 .row-media,
 .row-stars,
 .row-date {
@@ -302,8 +300,6 @@ function stars(rating: number | null): boolean[] {
       'author genre media stars date days';
     row-gap: 2px;
   }
-  .row-author,
-  .row-genre,
   .row-media,
   .row-stars,
   .row-date {
