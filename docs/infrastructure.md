@@ -4,7 +4,7 @@
 > 普段は destroy した状態（2026-09-28 時点、手元の `terraform.tfstate` のリソースは 0）。`terraform apply`（`up.sh`）は実行前に必ず合意を取る。
 > 費用は 2026-09 時点の東京リージョン・オンデマンド料金の**概算**（1 USD ≒ 150 円）。着手時に公式の料金ページで必ず再確認する。
 
-関連：[基本設計](basic-design.md) §1（システム構成）/ [技術スタック](tech-stack.md) / [複数ユーザー対応](multi-user.md)
+関連：[AWS デプロイの手順書（はじめての人向け）](aws-deploy-guide.md) / [基本設計](basic-design.md) §1（システム構成）/ [技術スタック](tech-stack.md) / [複数ユーザー対応](multi-user.md)
 
 ---
 
