@@ -151,6 +151,11 @@ function stars(rating: number | null): boolean[] {
 
 /* 左右 2 段 */
 .panes {
+  /* 列の幅（タイトル｜著者｜ジャンル｜形態｜評価｜読了日｜日数）。見出しと行で共通にする。
+     見出し（11px）と行（13px）で文字の大きさが違うので、文字の大きさで変わる em ではなく、
+     どこでも同じ長さになる rem で書く（em だと見出しの列が狭くなり、見出しが値より右にずれる） */
+  --read-columns: minmax(0, 1fr) minmax(0, 5.75rem) minmax(0, 6.25rem) 2.25rem 3.75rem 4.75rem
+    2.5rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -161,11 +166,11 @@ function stars(rating: number | null): boolean[] {
   margin: 0;
   padding: 0;
 }
-/* タイトル｜著者｜ジャンル｜形態（雑誌だけバッジ）｜評価｜読了日｜日数。見出しと行で同じ列幅にしてそろえる */
+/* 見出しと行で同じ列幅（--read-columns）にして、見出しの真下に値をそろえる */
 .row,
 .row-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 7em) minmax(0, 7.5em) 2.8em 4.6em 5.6em 3em;
+  grid-template-columns: var(--read-columns);
   align-items: center;
   gap: 10px;
 }
