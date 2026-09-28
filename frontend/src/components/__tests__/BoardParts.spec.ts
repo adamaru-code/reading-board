@@ -4,6 +4,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import BoardHeader from '../BoardHeader.vue'
 import BoardFilters from '../BoardFilters.vue'
 import KanbanColumn from '../KanbanColumn.vue'
+import BookCard from '../BookCard.vue'
 import type { Book } from '../../types/book'
 import type { User } from '../../types/auth'
 import type { BoardView } from '../../types/view'
@@ -192,5 +193,28 @@ describe('KanbanColumn', () => {
 
     await wrapper.find('.column').trigger('drop', { clientY: 120 }) // 1 枚目の下・2 枚目の中央より上
     expect(wrapper.emitted('drop')).toEqual([[1]])
+  })
+})
+
+describe('BookCard', () => {
+  const readBook = (duration: number): Book => ({
+    ...makeBook(1, '読了した本'),
+    status: 'read',
+    started_on: '2026-09-20',
+    finished_on: '2026-09-20',
+    duration_days: duration,
+  })
+
+  it('読了までの日数を「N日で読了」、開始日と読了日が同じなら「当日に読了」と出す', () => {
+    expect(
+      mount(BookCard, { props: { book: readBook(10) } })
+        .find('.duration')
+        .text(),
+    ).toBe('10日で読了')
+    expect(
+      mount(BookCard, { props: { book: readBook(0) } })
+        .find('.duration')
+        .text(),
+    ).toBe('当日に読了')
   })
 })

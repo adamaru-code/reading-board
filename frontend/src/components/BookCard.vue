@@ -44,7 +44,7 @@ const columnDate = () => {
     <div v-if="columnDate() || book.duration_days !== null" class="card-meta">
       <span v-if="columnDate()">{{ columnDate()!.label }} {{ columnDate()!.on }}</span>
       <span v-if="book.status === 'read' && book.duration_days !== null" class="duration">
-        {{ book.duration_days }}日で読了
+        {{ book.duration_days === 0 ? '当日に読了' : `${book.duration_days}日で読了` }}
       </span>
     </div>
   </article>

@@ -56,6 +56,14 @@ describe('ReadList（読了一覧）', () => {
     expect(row.find('.row-days').text()).toBe('10日')
   })
 
+  it('開始日と読了日が同じ本の日数は「当日」、未評価の本の評価は「—」', () => {
+    const wrapper = mountList([makeBook(1, { duration_days: 0, rating: null })])
+    const row = wrapper.find('.row')
+    expect(row.find('.row-days').text()).toBe('当日')
+    expect(row.find('.row-stars').text()).toBe('—')
+    expect(row.find('.row-stars').attributes('aria-label')).toBe('未評価')
+  })
+
   it('「雑誌」バッジは雑誌だけに出し、書籍には出さない', () => {
     const wrapper = mountList([makeBook(1), makeBook(2, { media_type: 'magazine' })])
     const rows = wrapper.findAll('.row')

@@ -34,10 +34,16 @@ const panes = computed(() => {
   return [props.items.slice(0, half), props.items.slice(half)].filter((pane) => pane.length > 0)
 })
 
-// 評価（1〜5）を ★ の on/off 配列に変換（BookCard.vue と同じ）。未評価は空
+// 評価（1〜5）を ★ の on/off 配列に変換（BookCard.vue と同じ）。未評価は空（画面には「—」を出す）
 function stars(rating: number | null): boolean[] {
   if (!rating) return []
   return [1, 2, 3, 4, 5].map((n) => n <= rating)
+}
+
+// 所要日数の表示。開始日と読了日が同じ本は「0日」だと読んでいないように見えるので「当日」
+function durationText(days: number | null): string {
+  if (days === null) return ''
+  return days === 0 ? '当日' : `${days}日`
 }
 </script>
 
@@ -92,11 +98,10 @@ function stars(rating: number | null): boolean[] {
               <span v-for="(on, n) in stars(book.rating)" :key="n" :class="on ? 'on' : 'off'"
                 >★</span
               >
+              <span v-if="!book.rating" class="no-rating" aria-hidden="true">—</span>
             </span>
             <span class="row-date">{{ book.finished_on }}</span>
-            <span class="row-days">
-              {{ book.duration_days !== null ? `${book.duration_days}日` : '' }}
-            </span>
+            <span class="row-days">{{ durationText(book.duration_days) }}</span>
           </li>
         </ul>
       </div>
@@ -245,6 +250,10 @@ function stars(rating: number | null): boolean[] {
   color: var(--star);
 }
 .row-stars .off {
+  color: var(--star-empty);
+}
+/* 未評価：評価を付けていないことが分かるよう、薄い灰色の「—」 */
+.row-stars .no-rating {
   color: var(--star-empty);
 }
 .row-date,
