@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import BoardHeader from '../BoardHeader.vue'
 import BoardFilters from '../BoardFilters.vue'
 import KanbanColumn from '../KanbanColumn.vue'
+import BookCard from '../BookCard.vue'
 import type { Book } from '../../types/book'
+import type { User } from '../../types/auth'
+import type { BoardView } from '../../types/view'
 
 const owner = { id: 1, email: 'owner@example.com', admin: true }
 
@@ -28,9 +32,24 @@ function makeBook(id: number, title: string): Book {
   }
 }
 
+// ヘッダは「ボード｜読了一覧」の切り替えに RouterLink を使うので、ルーターを付けて描く
+async function mountHeader(user: User = owner, view: BoardView = 'board') {
+  const Empty = { template: '<div />' }
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', name: 'board', component: Empty },
+      { path: '/read', name: 'read', component: Empty },
+    ],
+  })
+  await router.push(view === 'read' ? '/read' : '/')
+  const wrapper = mount(BoardHeader, { props: { user, view }, global: { plugins: [router] } })
+  return { wrapper, router }
+}
+
 describe('BoardHeader', () => {
   it('ボタンを押すと add / admin / account / logout を伝える', async () => {
-    const wrapper = mount(BoardHeader, { props: { user: owner } })
+    const { wrapper } = await mountHeader()
     const byText = (text: string) => wrapper.findAll('button').find((b) => b.text().includes(text))!
 
     await byText('追加').trigger('click')
@@ -43,11 +62,28 @@ describe('BoardHeader', () => {
     )
   })
 
-  it('管理者でなければ「管理」ボタンを出さない', () => {
-    const wrapper = mount(BoardHeader, { props: { user: { ...owner, admin: false } } })
+  it('管理者でなければ「管理」ボタンを出さない', async () => {
+    const { wrapper } = await mountHeader({ ...owner, admin: false })
     const labels = wrapper.findAll('button').map((b) => b.text())
     expect(labels).not.toContain('管理')
     expect(labels).toContain('アカウント')
+  })
+
+  it('「ボード」「読了一覧」のリンクで / と /read を行き来し、今の画面を強調する', async () => {
+    const { wrapper, router } = await mountHeader(owner, 'board')
+    const link = (text: string) => wrapper.findAll('.view-switch a').find((a) => a.text() === text)!
+
+    expect(link('ボード').attributes('aria-current')).toBe('page')
+    expect(link('ボード').classes()).toContain('current')
+    expect(link('読了一覧').classes()).not.toContain('current')
+
+    await link('読了一覧').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('read')
+
+    await wrapper.setProps({ view: 'read' })
+    expect(link('読了一覧').attributes('aria-current')).toBe('page')
+    expect(link('読了一覧').classes()).toContain('current')
   })
 })
 
@@ -157,5 +193,28 @@ describe('KanbanColumn', () => {
 
     await wrapper.find('.column').trigger('drop', { clientY: 120 }) // 1 枚目の下・2 枚目の中央より上
     expect(wrapper.emitted('drop')).toEqual([[1]])
+  })
+})
+
+describe('BookCard', () => {
+  const readBook = (duration: number): Book => ({
+    ...makeBook(1, '読了した本'),
+    status: 'read',
+    started_on: '2026-09-20',
+    finished_on: '2026-09-20',
+    duration_days: duration,
+  })
+
+  it('読了までの日数を「N日で読了」、開始日と読了日が同じなら「当日に読了」と出す', () => {
+    expect(
+      mount(BookCard, { props: { book: readBook(10) } })
+        .find('.duration')
+        .text(),
+    ).toBe('10日で読了')
+    expect(
+      mount(BookCard, { props: { book: readBook(0) } })
+        .find('.duration')
+        .text(),
+    ).toBe('当日に読了')
   })
 })

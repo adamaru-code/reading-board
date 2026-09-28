@@ -70,3 +70,46 @@ h2 {
 .field textarea {
   resize: vertical;
 }
+
+/* ジャンル・雑誌のバッジ（ボードのカード BookCard.vue と読了一覧 ReadList.vue で共通） */
+.genre-badge,
+.media-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+/* ジャンル別（明るいパステル地＋同系の濃文字、prototype 準拠） */
+.genre-classic_novel {
+  background: #ffe1ef;
+  color: #b01b62;
+}
+.genre-liberal_arts {
+  background: #dfe9f6;
+  color: #2b5a8c;
+}
+.genre-health_body {
+  background: #d6f1ea;
+  color: #0d6b62;
+}
+.genre-practical {
+  background: #fce4d5;
+  color: #9c3d0f;
+}
+/* IT・技術：ほかのジャンル・カラムに無い黄（文字と地のコントラスト 5.33:1） */
+.genre-it_tech {
+  background: #fff3c4;
+  color: #7f5f01;
+}
+.genre-other {
+  background: #e7e9ec;
+  color: #4b5563;
+}
+/* 形態（雑誌のみ表示）。ジャンル（淡い色の地）とは別の種類の印なので、白地に濃紺グレーの枠と文字にする。
+   紫（読みたい・＋ 本を追加）やジャンルの色と重ならない中立の色（コントラスト 7.65:1） */
+.media-badge {
+  background: var(--surface);
+  color: var(--slate);
+  box-shadow: inset 0 0 0 1px var(--slate); /* 枠線（幅を増やさないよう内側に引く） */
+}

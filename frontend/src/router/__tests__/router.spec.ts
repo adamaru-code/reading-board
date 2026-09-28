@@ -34,6 +34,16 @@ describe('router（画面の切り替え）', () => {
     expect((await open('/')).name).toBe('login')
   })
 
+  it('読了一覧（/read）はログイン必須で、ボードと同じ部品に view=read を渡す', async () => {
+    loggedOut()
+    expect((await open('/read')).name).toBe('login')
+    resetAuthForTest()
+    loggedIn()
+    const read = await open('/read')
+    expect(read.name).toBe('read')
+    expect(read.matched[0].props).toEqual({ default: { view: 'read' } })
+  })
+
   it('ログイン済みでログイン・登録画面を開くとボードへ', async () => {
     loggedIn()
     expect((await open('/login')).name).toBe('board')
