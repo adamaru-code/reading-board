@@ -1,9 +1,12 @@
 {
-  // VS Code でこのリポジトリを開くと、右下に下の拡張機能のインストールが案内される（入れるかは各自で選べる）。
-  // 選び方：日本語の記事で定番として挙がる × その道具の公式・利用者の多いもの
+  // VS Code / Cursor でこのリポジトリを開くと、右下に下の拡張機能のインストールが案内される（入れるかは各自で選べる）。
+  // 選び方：日本語の記事で定番として挙がる × その道具の公式・利用者の多いもの。
+  // Cursor は Open VSX（Microsoft とは別のストア）から探すので、どちらのストアにもあるものだけを挙げる
   "recommendations": [
-    // .tf / .tfvars / .hcl（Terraform）の色分け（色分け専用で軽い。補完・自動整形が欲しくなったら公式の hashicorp.terraform を追加できる）
-    "pjmiravalle.terraform-advanced-syntax-highlighting",
+    // .tf（Terraform）の色分け・補完（HashiCorp 公式）。保存時の自動整形（formatOnSave）で止まる不具合報告があるので、
+    // 自動整形は有効にせず、整形は terraform fmt のコマンドと CI で行う。
+    // 色分け専用の pjmiravalle.terraform-advanced-syntax-highlighting は Open VSX に無く Cursor では使えない
+    "hashicorp.terraform",
     // .vue の色分け・型チェック（Vue 公式。旧 Vetur の後継）
     "Vue.volar",
     // .rb（Ruby / Rails）の色分け・補完
