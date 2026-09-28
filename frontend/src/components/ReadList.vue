@@ -16,7 +16,17 @@ const emit = defineEmits<{
   'load-more': []
 }>()
 
-const COLUMN_HEADINGS = ['タイトル', '著者', 'ジャンル', '形態', '評価', '読了日', '日数']
+// 列の見出しと、見出し・値のそろえ方（タイトルは左、著者〜読了日は列の中央、日数は数字の桁をそろえて右）。
+// 形態の列（雑誌バッジ）は見出しの文字を出さない
+const COLUMN_HEADINGS: readonly { label: string; align: 'left' | 'center' | 'right' }[] = [
+  { label: 'タイトル', align: 'left' },
+  { label: '著者', align: 'center' },
+  { label: 'ジャンル', align: 'center' },
+  { label: '', align: 'center' },
+  { label: '評価', align: 'center' },
+  { label: '読了日', align: 'center' },
+  { label: '日数', align: 'right' },
+]
 
 // 前半を左の段、後半を右の段へ（「もっと見る」で増えると境目は移る）
 const panes = computed(() => {
@@ -43,12 +53,8 @@ function stars(rating: number | null): boolean[] {
     <div v-else class="panes">
       <div v-for="(pane, i) in panes" :key="i" class="pane">
         <div class="row-head" aria-hidden="true">
-          <span
-            v-for="heading in COLUMN_HEADINGS"
-            :key="heading"
-            :class="{ num: heading === '読了日' || heading === '日数' }"
-          >
-            {{ heading }}
+          <span v-for="(heading, n) in COLUMN_HEADINGS" :key="n" :class="`align-${heading.align}`">
+            {{ heading.label }}
           </span>
         </div>
         <ul class="rows">
@@ -172,7 +178,10 @@ function stars(rating: number | null): boolean[] {
   white-space: nowrap;
   border-bottom: 1px solid #c1c7d0;
 }
-.row-head .num {
+.row-head .align-center {
+  text-align: center;
+}
+.row-head .align-right {
   text-align: right;
 }
 .row {
@@ -205,6 +214,14 @@ function stars(rating: number | null): boolean[] {
   color: var(--text-sub);
   font-size: 12px;
 }
+/* 著者・ジャンル・形態・評価・読了日は列の中央（見出しと同じ位置） */
+.row-author,
+.row-genre,
+.row-media,
+.row-stars,
+.row-date {
+  text-align: center;
+}
 .row-genre {
   min-width: 0;
 }
@@ -231,8 +248,10 @@ function stars(rating: number | null): boolean[] {
 .row-days {
   font-size: 12px;
   color: var(--text-sub);
-  text-align: right;
   white-space: nowrap;
+}
+.row-days {
+  text-align: right;
 }
 .row-days {
   color: var(--col-read-strong);
@@ -277,6 +296,13 @@ function stars(rating: number | null): boolean[] {
       'title title title title title title'
       'author genre media stars date days';
     row-gap: 2px;
+  }
+  .row-author,
+  .row-genre,
+  .row-media,
+  .row-stars,
+  .row-date {
+    text-align: left;
   }
   .row-title {
     grid-area: title;

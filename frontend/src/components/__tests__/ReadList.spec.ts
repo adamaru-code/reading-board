@@ -30,7 +30,7 @@ function mountList(items: Book[], total = items.length, hasMore = false) {
 }
 
 describe('ReadList（読了一覧）', () => {
-  it('各段の上に列の見出しを出す', () => {
+  it('各段の上に列の見出しを出す（形態の列は文字なし）', () => {
     const wrapper = mountList([makeBook(1), makeBook(2)])
     const heads = wrapper.findAll('.row-head')
     expect(heads).toHaveLength(2)
@@ -38,7 +38,7 @@ describe('ReadList（読了一覧）', () => {
       'タイトル',
       '著者',
       'ジャンル',
-      '形態',
+      '',
       '評価',
       '読了日',
       '日数',
