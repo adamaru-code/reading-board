@@ -67,6 +67,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] 秘密情報（DB パスワード・APIキー）を**コードに直書きしない**（`Rails.application.credentials` または環境変数）
 - [ ] **CORS**：開発は Vite プロキシで同一オリジンのため未構成でよい。もし有効化するなら**許可オリジンを限定**（ワイルドカード `*` 禁止。本番で別オリジンにする場合は本番ドメインのみ）
 - [ ] `config/database.yml` の接続情報は環境変数化されている
+- [ ] 本番の **`config.hosts`** を空にしない（空だと確認されず全部許可）。許可する名前は `APP_HOSTS`（本番に届く Host は EC2 のパブリック DNS 名。`docs/infrastructure.md` §1.1）
 - [ ] **SQL を文字列の組み立て（`"... #{値} ..."`）で作らない**。`where(id: ...)`・プレースホルダ・Arel（例：`Arel::Nodes::Case`）を使う（値を整数化していても Brakeman は安全を判定できない）
 - [ ] **外部 API 呼び出しにはタイムアウトを付ける**（`Net::HTTP.start(..., open_timeout:, read_timeout:)`。既定 60 秒のままだと Puma のスレッドを塞ぐ）。失敗時の扱い（nil を返して手入力にフォールバック等）も決めておく
 

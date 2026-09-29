@@ -33,6 +33,12 @@ mkdir -p /usr/share/nginx/reading-board
 cp -r /opt/reading-board/frontend/dist/. /usr/share/nginx/reading-board/
 
 echo "[bootstrap] start api container"
+# このサーバーの公開ドメイン名（ec2-…compute.amazonaws.com）。CloudFront はこの名前を Host にして届けるので、
+# Rails の config.hosts で許可する（APP_HOSTS）。IMDSv2（メタデータの取得にトークンが必要な方式）で取得する
+IMDS_TOKEN=$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+APP_HOST=$(curl -sS -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-hostname)
+echo "[bootstrap] APP_HOSTS=$APP_HOST"
+
 # シークレットは SSM Parameter Store から取得し、root だけが読めるファイルに置く
 umask 077
 cat > /etc/reading-board.env <<ENV
@@ -45,6 +51,7 @@ DB_PASSWORD=$(param db_password)
 DB_NAME=${db_name}
 SEED_USER_EMAIL=${admin_email}
 SEED_USER_PASSWORD=$(param admin_password)
+APP_HOSTS=$APP_HOST
 ENV
 umask 022
 
