@@ -79,6 +79,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
   - `bin/brakeman` は `--ensure-latest` 付き（Rails 8 標準）。Brakeman 自体が古いだけでも失敗するので、そのときは brakeman を patch 更新する
   - 脆弱性の情報は日々更新される。CI で毎回実行し、見つかったら小さな PR で直す
 - [ ] テストが通る（`bin/rails test` または RSpec）
+- [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 
 ---
@@ -188,6 +189,7 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] SSH(22) や管理系ポートは**自 IP 等に限定**
 - [ ] DB(RDS/MySQL) は **`publicly_accessible = false`**・**プライベートサブネット**・許可元は **SG 参照**
 - [ ] アプリ内部ポート（例: Rails/Puma 3000）を不要に外部公開していない
+- [ ] 安全のための設定（`config.hosts`・セキュリティグループなど）を変えたら、**通るべきものが通ること**と、**断るべきものが断られること**の両方を本番（AWS）で確かめる。確認の対象外にしたページ（`/up`）が 200 でも効き目は分からないので、本体のページ（例：`/api/session` が 401＝通過）と、わざと違う条件（例：EC2 内から `curl -H "Host: evil.example.com"` → 403）で見る（#161）
 
 ### 4.4 変数・出力・可読性
 
