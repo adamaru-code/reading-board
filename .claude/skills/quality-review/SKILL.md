@@ -19,7 +19,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 > cd infra && terraform fmt -check -recursive && terraform validate
 > ```
 >
-> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n（以上 2026-09-27 対応済み）・#161 本番の config.hosts）。
+> 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n（以上 2026-09-27 対応済み）・#161 本番の config.hosts（2026-09-30 対応済み））。
 
 ---
 
