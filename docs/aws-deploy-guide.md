@@ -513,6 +513,7 @@ git_ref = "feature/xx-branch-name"
 | `AccessDenied` / `UnauthorizedOperation` | その操作の許可（ポリシー）が無い | `aws sts get-caller-identity` で `user/administrator` か確認。別の利用者になっていれば設定を直す |
 | `ExpiredToken` | 期限付きの鍵（一時的な認証情報）が切れた | このプロジェクトの設定では通常出ない。出たら、環境変数 `AWS_SESSION_TOKEN` などが残っていないか AI に調べてもらう |
 | `/up` が 10 分以上 `502` / `504` のまま | EC2 の中でアプリの組み立てに失敗している | AI に「EC2 の構築ログを見て」と頼む（[infra/README.md](../infra/README.md) の「構築ログの確認」のコマンドを使う） |
+| アプリを開くと `Blocked hosts` / `403` と出る、または `/up` だけ `200` でログインできない | 本番の Rails が「知らない宛先名」として断っている（`config.hosts`）。`APP_HOSTS` に EC2 の名前が入っていない | AI に「EC2 の APP_HOSTS と構築ログを見て」と頼む（構築ログに `APP_HOSTS=ec2-…` が出ているか確認する。[infrastructure.md](infrastructure.md) §1.1） |
 | `Error acquiring the state lock` | 前の Terraform が途中で止まり、「実行中」の印が残った | 他のターミナルで Terraform が動いていないか確認し、AI に相談する（印を無理に外すと state が壊れることがある） |
 | `up.sh` / `down.sh` が途中でエラーになった | 通信の途切れ・AWS 側の一時的な問題 | **もう一度同じコマンドを実行する**。Terraform は state を見て、残りの分だけ作る（消す） |
 | 予算アラートのメールが来た・停止を忘れた | 起動したままになっている | すぐに `down.sh`（6.1）→ 消し忘れ確認（6.2） |

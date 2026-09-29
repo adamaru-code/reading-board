@@ -36,6 +36,9 @@
 
 - `database.yml` の production は単一 DB。接続先は環境変数 `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME` で渡す（Rails 既定の cache / queue / cable DB は未使用のため削除）。
 - `production.rb`：`assume_ssl` ＋ `force_ssl`（Cookie は secure・HSTS 付き。CloudFront→EC2 は HTTP でもリダイレクトはループしない）。`/up` はリダイレクト対象外。
+- `production.rb`：**`config.hosts`**（知らない宛先名＝Host ヘッダのアクセスを 403 で断る。DNS リバインディングなどの対策）。許可する名前は環境変数 **`APP_HOSTS`**（カンマ区切り、`config/app_hosts.rb` で読む。**空なら起動時にエラー**＝空のままだと Rails は確認せず全部許可になるため）。`/up` は対象外（#161。2026-09-30 に AWS 上で、正しい宛先名は 401＝通過、`Host: evil.example.com` は 403、`/up` は 200 を確認）。
+  - **Rails に届く Host は `*.cloudfront.net` ではなく EC2 のパブリック DNS 名**（`ec2-…compute.amazonaws.com`）：CloudFront は origin request policy `Managed-AllViewerExceptHostHeader` で Host をオリジン名（`aws_instance.app.public_dns`）に差し替え、nginx は `proxy_set_header Host $host` でそのまま渡す。
+  - EC2 の起動スクリプト（`infra/templates/user_data.sh.tftpl`）が、IMDSv2 で自分の `public-hostname` を取得して `APP_HOSTS` に入れる（EC2 を作り終わるまで名前が決まらないので、Terraform には書けない）。
 - 秘密鍵は **`SECRET_KEY_BASE` 環境変数**で渡す（`master.key` はサーバーに置かない）。
 - `backend/Dockerfile`（Rails 8 標準）のコンテナは起動時に `db:prepare`（DB 作成・マイグレーション・新規 DB なら seed）。**本番の seed は `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` が必須**（未指定なら停止し、開発用の既定パスワードで管理者を作らない）。
 - 手元の Docker で本番モードの起動・ログイン（secure Cookie・HSTS）・seed のガードを確認済み。

@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require_relative "../app_hosts"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -78,12 +79,12 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # 知らない宛先名（Host ヘッダ）のアクセスを断る（DNS リバインディングなどの対策）。
+  # 本番の Rails に届く Host は CloudFront のドメインではなく EC2 のパブリック DNS 名（CloudFront が Host を
+  # オリジン名に差し替え、nginx がそのまま渡す）。EC2 の起動時に自分の名前を APP_HOSTS に入れる
+  # （infra/templates/user_data.sh.tftpl）。空なら起動時にエラー（config/app_hosts.rb）
+  config.hosts = AppHosts.parse(ENV["APP_HOSTS"])
+
+  # 死活確認（/up）は宛先名を問わない
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end
