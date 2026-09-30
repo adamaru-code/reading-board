@@ -112,7 +112,7 @@ aws cloudfront list-distributions --query 'DistributionList.Quantity'
 - state：最初はローカル（1 人運用）。複数環境・CI 連携が必要になったら S3 backend に移す。
 - ファイル分割：`versions.tf` / `providers.tf` / `variables.tf` / `network.tf`（VPC・サブネット）/ `security.tf`（SG）/ `iam.tf` / `secrets.tf`（random_password → SSM）/ `ec2.tf` / `rds.tf` / `cloudfront.tf` / `outputs.tf`、起動スクリプトと nginx 設定は `templates/`。
 - シークレット（DB パスワード・SECRET_KEY_BASE・管理者パスワード）は `random_password` で生成し SSM Parameter Store（SecureString）へ。`.tf` や出力には値を出さない（管理者パスワードは取得コマンドだけ出力）。
-- **Google Books の API キー**（書影用）だけは Terraform の管理外：ユーザーが 1 回だけ `aws ssm put-parameter --name /reading-board/google_books_api_key --type SecureString` で登録し、`down.sh` でも消えない（標準パラメータは無料）。EC2 の起動スクリプトが読み、無ければ空（表紙なしで動く）。構築ログに `GOOGLE_BOOKS_API_KEY: あり / なし` が出る。開発では `backend/mise.local.toml`（Git 除外）の `[env]` に置く。
+- **Google Books の API キー**（書影用）だけは Terraform の管理外：ユーザーが 1 回だけ `aws ssm put-parameter --name /reading-board/google_books_api_key --type SecureString` で登録し、`down.sh` でも消えない（標準パラメータは無料）。EC2 の起動スクリプトが読み、無ければ空（表紙なしで動く）。構築ログに `GOOGLE_BOOKS_API_KEY: あり / なし` が出る。開発では `backend/mise.local.toml`（Git 除外）の `[env]` に置く（mise の決まりで、初めて使う設定ファイルは `mise trust` で信頼する必要がある。手順は README）。
 - `.terraform.lock.hcl` はコミットする（プロバイダのバージョン固定）。
 - CI：PR で `terraform fmt -check` と `terraform validate` のみ（`plan` / `apply` は手元で実行し、CI に AWS 認証情報は置かない）。
 - 点検項目は quality-review スキルの「4. Terraform / インフラ」を正とする。
