@@ -58,6 +58,7 @@ http://localhost:5173/register?invite=1s7BacCvP4ZX
   cd backend && bin/rails runner 'Invitation.find_by(code: "1s7BacCvP4ZX")&.destroy'
   ```
 - 見本ページ（色・配置の候補）は scratchpad に HTML を作って `open` で開く。アプリのコードは変えない
+- 見た目の案は、見た目だけでなく**「1 画面に見える量」などの数字も添えて比べる**（本物と同じ余白・文字の大きさから計算する）。例：表紙 44px / 60px は「カードが縦に伸びる」と思い込んで 44px をすすめたが、計算すると多くのカードは高さが同じで、60px に結論が変わった（2026-09-30）
 
 ## 関連
 
