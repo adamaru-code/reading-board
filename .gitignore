@@ -9,6 +9,9 @@
 !.vscode/extensions.json
 
 # 環境変数・秘密情報
+# mise の個人用設定（GOOGLE_BOOKS_API_KEY などの鍵を置く。backend/mise.local.toml）
+mise.local.toml
+.mise.local.toml
 .env
 .env.*
 !.env.example

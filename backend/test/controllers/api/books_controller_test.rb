@@ -264,9 +264,20 @@ module Api
       OpenbdClient.define_singleton_method(:fetch, original)
     end
 
+    # 表紙の取得（Google Books）もブロック内だけ固定値に。本物の Google には問い合わせない
+    # （開発で GOOGLE_BOOKS_API_KEY を設定していても、テストが外に出ないように）
+    def stub_google_cover(url)
+      original = GoogleBooksClient.method(:cover_url)
+      GoogleBooksClient.define_singleton_method(:cover_url) { |*, **| url }
+      yield
+    ensure
+      GoogleBooksClient.define_singleton_method(:cover_url, original)
+    end
+
     test "lookup は openBD の結果と形態判定を返す" do
+      cover = "https://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1"
       stub_openbd_fetch({ title: "リーダブルコード", author: "Dustin Boswell" }) do
-        get lookup_api_books_url, params: { isbn: "978-4-87311-565-8" }
+        stub_google_cover(cover) { get lookup_api_books_url, params: { isbn: "978-4-87311-565-8" } }
       end
       assert_response :success
       body = JSON.parse(response.body)
@@ -274,17 +285,40 @@ module Api
       assert_equal true, body["found"]
       assert_equal "リーダブルコード", body["title"]
       assert_equal "book", body["media_type"]
+      assert_equal cover, body["cover_url"]
     end
 
     test "lookup は該当なしでも found:false と形態判定を返す（雑誌）" do
       stub_openbd_fetch(nil) do
-        get lookup_api_books_url, params: { isbn: "4910000000000" }
+        stub_google_cover(nil) { get lookup_api_books_url, params: { isbn: "4910000000000" } }
       end
       assert_response :success
       body = JSON.parse(response.body)
       assert_equal false, body["found"]
       assert_nil body["title"]
       assert_equal "magazine", body["media_type"]
+      assert_nil body["cover_url"]
+    end
+
+    test "create / update で ISBN と表紙の URL を保存し、JSON に含む（空にすると消える）" do
+      cover = "https://books.google.com/books/content?id=abc&img=1&zoom=1"
+      post api_books_url, params: { book: { title: "リーダブルコード", isbn: "978-4-87311-565-8", cover_url: cover } }
+      assert_response :created
+      created = JSON.parse(response.body)
+      assert_equal "9784873115658", created["isbn"]
+      assert_equal cover, created["cover_url"]
+
+      patch api_book_url(created["id"]), params: { book: { isbn: "", cover_url: "" } }
+      assert_response :success
+      updated = JSON.parse(response.body)
+      assert_nil updated["isbn"]
+      assert_nil updated["cover_url"]
+    end
+
+    test "Google 以外の表紙の URL は 422" do
+      post api_books_url, params: { book: { title: "x", cover_url: "https://evil.example.com/a.jpg" } }
+      assert_response :unprocessable_content
+      assert_includes JSON.parse(response.body)["errors"], "表紙の画像は不正な値です"
     end
 
     test "lookup は不正な ISBN で 422" do

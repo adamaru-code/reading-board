@@ -93,6 +93,24 @@ class BookTest < ActiveSupport::TestCase
     assert_nil book.duration_days
   end
 
+  test "ISBN はハイフンを除いて保存し、不正な形は無効。空は nil" do
+    book = Book.new(title: "x", isbn: "978-4-87311-565-8")
+    assert_equal "9784873115658", book.isbn
+    assert_nil Book.new(title: "x", isbn: "").isbn
+    invalid = Book.new(user: users(:owner), title: "x", isbn: "123")
+    assert_not invalid.valid?
+    assert_includes invalid.errors[:isbn], "は不正な値です"
+  end
+
+  test "表紙の URL は Google の画像（https）だけ有効。空は nil" do
+    user = users(:owner)
+    ok = %w[https://books.google.com/books/content?id=a https://books.googleusercontent.com/books/content?id=a]
+    ok.each { |url| assert Book.new(user: user, title: "x", cover_url: url).valid?, url }
+    ng = %w[http://books.google.com/books/content?id=a https://evil.example.com/a.jpg javascript:alert(1)]
+    ng.each { |url| assert_not Book.new(user: user, title: "x", cover_url: url).valid?, url }
+    assert_nil Book.new(title: "x", cover_url: "").cover_url
+  end
+
   test "title が無いと無効" do
     book = Book.new(title: nil)
     assert_not book.valid?

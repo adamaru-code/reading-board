@@ -13,6 +13,7 @@ describe('IsbnLookup', () => {
       title: '論語',
       author: '孔子',
       media_type: 'book' as const,
+      cover_url: null,
     }
     const spy = vi.spyOn(booksApi, 'lookupBook').mockResolvedValue(result)
     const wrapper = mount(IsbnLookup)
@@ -36,6 +37,7 @@ describe('IsbnLookup', () => {
       title: null,
       author: null,
       media_type: 'book',
+      cover_url: null,
     })
     const wrapper = mount(IsbnLookup)
 
@@ -69,6 +71,7 @@ describe('BookFormModal の ISBN 照会', () => {
       title: '表現者クライテリオン',
       author: null,
       media_type: 'magazine',
+      cover_url: null,
     })
     const wrapper = mount(BookFormModal, { props: { book: null } })
 

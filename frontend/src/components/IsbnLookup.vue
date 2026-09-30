@@ -4,15 +4,19 @@ import { lookupBook } from '../api/books'
 import { ApiError } from '../api/http'
 import type { BookLookupResult } from '../types/book'
 
-// 書籍フォームの「ISBN / バーコードで登録」欄（追加時のみ使う）。
-// 照会・カメラ読取はこの部品の中で完結し、結果だけを親に渡す（タイトル等への反映は親が行う）
+// 書籍フォームの ISBN 欄。照会・カメラ読取はこの部品の中で完結し、結果だけを親に渡す（反映は親が行う）。
+// mode：register＝追加時の「ISBN / バーコードで登録」（書誌を取る）／cover＝編集時の「表紙」欄（表紙だけ取る）
+const props = withDefaults(defineProps<{ mode?: 'register' | 'cover'; initialIsbn?: string }>(), {
+  mode: 'register',
+  initialIsbn: '',
+})
 const emit = defineEmits<{
   start: [] // 照会を始めた（親は前のエラー表示を消す）
   result: [result: BookLookupResult] // 照会できた（該当なしも含む）
   error: [messages: string[]] // 照会に失敗した
 }>()
 
-const isbnInput = ref('')
+const isbnInput = ref(props.initialIsbn)
 const lookingUp = ref(false)
 // 照会結果の表示：found＝取得できた（緑の帯）／not_found＝該当なし（黄色の帯）／null＝表示なし
 const lookupStatus = ref<'found' | 'not_found' | null>(null)
@@ -25,7 +29,9 @@ async function onLookup() {
   emit('start')
   try {
     const result = await lookupBook(isbn)
-    lookupStatus.value = result.found ? 'found' : 'not_found'
+    // 登録では書誌（タイトル）が取れたか、表紙では表紙が取れたかで帯を出し分ける
+    const found = props.mode === 'cover' ? !!result.cover_url : result.found
+    lookupStatus.value = found ? 'found' : 'not_found'
     emit('result', result)
   } catch (e) {
     emit(
@@ -106,11 +112,14 @@ onBeforeUnmount(stopScan)
 </script>
 
 <template>
-  <div class="field isbn-lookup">
-    <label for="isbn-input" class="field-label">ISBN / バーコードで登録</label>
+  <div class="isbn-lookup" :class="mode === 'cover' ? 'is-cover' : 'field'">
+    <label v-if="mode === 'register'" for="isbn-input" class="field-label">
+      ISBN / バーコードで登録
+    </label>
     <div class="isbn-row">
       <input
-        id="isbn-input"
+        :id="mode === 'cover' ? 'cover-isbn-input' : 'isbn-input'"
+        :aria-label="mode === 'cover' ? '表紙を取得する ISBN' : undefined"
         v-model="isbnInput"
         type="text"
         inputmode="numeric"
@@ -118,7 +127,7 @@ onBeforeUnmount(stopScan)
         @keydown.enter.prevent="onLookup"
       />
       <button type="button" class="btn-ghost" :disabled="lookingUp" @click="onLookup">
-        {{ lookingUp ? '照会中…' : '検索' }}
+        {{ lookingUp ? '照会中…' : mode === 'cover' ? '表紙を取得' : '検索' }}
       </button>
       <button v-if="scanSupported && !scanning" type="button" class="btn-ghost" @click="startScan">
         📷 カメラ
@@ -131,14 +140,23 @@ onBeforeUnmount(stopScan)
     </div>
     <!-- role="status"：読み上げソフトにも結果を伝える -->
     <p v-if="lookupStatus === 'found'" class="lookup-result lookup-found" role="status">
-      <span aria-hidden="true">✓</span> 書誌情報を取得しました。
+      <span aria-hidden="true">✓</span>
+      {{ mode === 'cover' ? '表紙を取得しました。' : '書誌情報を取得しました。' }}
     </p>
     <p
       v-else-if="lookupStatus === 'not_found'"
       class="lookup-result lookup-not-found"
       role="status"
     >
-      <span aria-hidden="true">ℹ</span> 該当が見つかりませんでした。タイトルを手入力してください。
+      <span aria-hidden="true">ℹ</span>
+      {{
+        mode === 'cover'
+          ? 'この ISBN の表紙は見つかりませんでした。'
+          : '該当が見つかりませんでした。タイトルを手入力してください。'
+      }}
+    </p>
+    <p v-if="mode === 'cover' && !lookupStatus" class="isbn-message">
+      ISBN で表紙だけを取得します（タイトルなどは変わりません）
     </p>
     <p v-if="scanError" class="isbn-message scan-error">{{ scanError }}</p>
   </div>
@@ -149,6 +167,20 @@ onBeforeUnmount(stopScan)
   padding: 10px;
   background: var(--bg);
   border-radius: 8px;
+}
+/* 表紙欄の中に置くときは、枠と余白は親（書籍フォームの表紙欄）が持つ */
+.isbn-lookup.is-cover {
+  padding: 0;
+  background: none;
+  flex: 1;
+  min-width: 0;
+}
+.is-cover .isbn-row input {
+  min-width: 0;
+}
+.is-cover .btn-ghost {
+  padding: 8px 12px;
+  white-space: nowrap;
 }
 .isbn-row {
   display: flex;

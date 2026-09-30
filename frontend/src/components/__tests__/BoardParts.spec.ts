@@ -22,6 +22,8 @@ function makeBook(id: number, title: string): Book {
     rating: null,
     memo: null,
     position: null,
+    isbn: null,
+    cover_url: null,
     tags: [],
     registered_on: null,
     started_on: null,

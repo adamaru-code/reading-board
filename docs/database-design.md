@@ -25,12 +25,14 @@
 | `genre` | integer(enum) | NOT NULL, default: `other` | 主ジャンル（単一。§3 enum） |
 | `media_type` | integer(enum) | NOT NULL, default: `book` | 形態（書籍/雑誌。§4 enum） |
 | `position` | integer | NULL 可 | カラム内の並び順（ドラッグでの並び替えで保存。未設定は後ろ。読了カラムはキーで並ぶため使わない） |
+| `isbn` | string | NULL 可 | ISBN（ハイフンなし。13 桁 / 10 桁）。書影の取得に使った ISBN |
+| `cover_url` | string(500) | NULL 可 | 書影（表紙画像）の URL。**Google Books の画像（https・`books.google.com` / `books.googleusercontent.com`）だけ**保存できる |
 | `created_at` | datetime | NOT NULL | 作成日時 |
 | `updated_at` | datetime | NOT NULL | 更新日時 |
 
 - タグは多対多（§5）、状態に入った日付の履歴は別テーブル（§6）で表現する。
 - 所要日数（開始→読了）は §6 のイベントから**算出**し、保存しない。
-- ISBN/JAN は `GET /api/books/lookup` の書誌照会（openBD）でのみ一時利用し、`books` には**保存しない**（タイトル・著者・形態の自動入力に使うだけ）。
+- ISBN/JAN は `GET /api/books/lookup` で書誌（openBD）と表紙（Google Books）の照会に使う。書誌はタイトル・著者・形態の自動入力に使うだけで保存しないが、**ISBN と表紙の URL は `books` に保存する**（2026-09-30 追加。画像そのものは保存せず Google の画像を表示する）。
 
 ---
 

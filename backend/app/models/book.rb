@@ -28,6 +28,8 @@ class Book < ApplicationRecord
 
   validates :title, presence: true, length: { maximum: 255 }
   validates :rating, inclusion: { in: 0..5 }, allow_nil: true
+  validate :isbn_must_be_valid
+  validate :cover_url_must_be_google_image
 
   # tags: string[] を受け取り、正規化して find_or_create で紐づける
   def tag_names=(names)
@@ -51,7 +53,31 @@ class Book < ApplicationRecord
     (finished_on - started_on).to_i
   end
 
+  # 空文字は「無し」として保存する
+  def isbn=(value)
+    super(value.present? ? OpenbdClient.normalize(value) : nil)
+  end
+
+  def cover_url=(value)
+    super(value.presence)
+  end
+
   private
+
+  def isbn_must_be_valid
+    errors.add(:isbn, :invalid) if isbn.present? && !OpenbdClient.valid?(isbn)
+  end
+
+  # 表紙は Google Books の画像（https）だけを許す（勝手な URL を保存・表示させない）
+  def cover_url_must_be_google_image
+    return if cover_url.blank?
+
+    uri = URI.parse(cover_url)
+    valid = uri.is_a?(URI::HTTPS) && GoogleBooksClient::COVER_HOSTS.include?(uri.host) && cover_url.length <= 500
+    errors.add(:cover_url, :invalid) unless valid
+  rescue URI::InvalidURIError
+    errors.add(:cover_url, :invalid)
+  end
 
   def first_occurred_on(status_name)
     status_events.select { |e| e.status == status_name }.map(&:occurred_on).min

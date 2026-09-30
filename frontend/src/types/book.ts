@@ -45,6 +45,9 @@ export interface Book {
   rating: number | null
   memo: string | null
   position: number | null
+  // 書影：ISBN（ハイフンなし）と、Google Books の表紙画像の URL。無ければ null
+  isbn: string | null
+  cover_url: string | null
   tags: string[]
   // 各状態に最初に入った日（YYYY-MM-DD）。未到達は null
   registered_on: string | null
@@ -65,6 +68,8 @@ export interface BookCreateInput {
   rating?: number | null
   memo?: string | null
   position?: number | null
+  isbn?: string | null
+  cover_url?: string | null
   tags?: string[]
 }
 
@@ -78,6 +83,8 @@ export interface BookLookupResult {
   title: string | null
   author: string | null
   media_type: BookMediaType
+  // 表紙画像の URL（Google Books）。鍵が無い・画像が無いときは null
+  cover_url: string | null
 }
 
 // 一覧の絞り込み条件（互いに AND。author は部分一致、genre/tag は完全一致）

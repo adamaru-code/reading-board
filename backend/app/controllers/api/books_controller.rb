@@ -66,7 +66,9 @@ module Api
         found: info.present?,
         title: info && info[:title],
         author: info && info[:author],
-        media_type: OpenbdClient.media_type_for(isbn)
+        media_type: OpenbdClient.media_type_for(isbn),
+        # 表紙は Google Books から（鍵が無い・画像が無いときは nil）
+        cover_url: GoogleBooksClient.cover_url(isbn)
       }
     end
 
@@ -145,7 +147,7 @@ module Api
     def book_params
       # Rails 8 の params.expect：book キーが無い・形が違う場合は 400（ParameterMissing）
       permitted = params.expect(
-        book: [ :title, :author, :status, :rating, :memo, :position, :genre, :media_type, tags: [] ]
+        book: [ :title, :author, :status, :rating, :memo, :position, :genre, :media_type, :isbn, :cover_url, tags: [] ]
       )
       # API の tags(名称配列) はモデルの tag_names= で受ける
       permitted[:tag_names] = permitted.delete(:tags) if permitted.key?(:tags)
@@ -196,6 +198,8 @@ module Api
         rating: book.rating,
         memo: book.memo,
         position: book.position,
+        isbn: book.isbn,
+        cover_url: book.cover_url,
         tags: book.tags.map(&:name),
         registered_on: book.registered_on,
         started_on: book.started_on,
