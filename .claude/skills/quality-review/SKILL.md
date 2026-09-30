@@ -20,6 +20,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 > ```
 >
 > 作業の大きい改善（例：vue-router 導入・大きい部品の分割・I18n 化）は、その場で直さず GitHub Issue にして 1 つずつ進める（2026-09-26 の監査で登録済み：#158 vue-router・#159 部品分割と BaseModal・#160 I18n（以上 2026-09-27 対応済み）・#161 本番の config.hosts（2026-09-30 対応済み））。
+>
+> **同じ現象が続いたら「たまたま」で流さず、うまくいったときの記録と比べて原因を探す**（例：`Closes #…` で Issue が閉じないことが 3 回続いた → うまく閉じた PR と `closingIssuesReferences`・本文のバイト列・閉じた時刻を比べて、GitHub 全体の不具合と分かった。2026-09-30）。
 
 ---
 
@@ -70,6 +72,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] 本番の **`config.hosts`** を空にしない（空だと確認されず全部許可）。許可する名前は `APP_HOSTS`（本番に届く Host は EC2 のパブリック DNS 名。`docs/infrastructure.md` §1.1）
 - [ ] **SQL を文字列の組み立て（`"... #{値} ..."`）で作らない**。`where(id: ...)`・プレースホルダ・Arel（例：`Arel::Nodes::Case`）を使う（値を整数化していても Brakeman は安全を判定できない）
 - [ ] **外部 API 呼び出しにはタイムアウトを付ける**（`Net::HTTP.start(..., open_timeout:, read_timeout:)`。既定 60 秒のままだと Puma のスレッドを塞ぐ）。失敗時の扱い（nil を返して手入力にフォールバック等）も決めておく
+- [ ] **外部サービスは、記事の紹介だけで選ばず、実際に問い合わせて確かめてから選ぶ**（終わったサービスや、中身が空のサービスがある。例：国立国会図書館の書影 API は 2026-03-31 に終了、openBD は表紙がほぼ無い。同じ ISBN 5 冊などで取れる割合を見て決める。2026-09-30）
 
 ### 1.7 Lint / テスト
 
@@ -80,6 +83,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
   - 脆弱性の情報は日々更新される。CI で毎回実行し、見つかったら小さな PR で直す
 - [ ] テストが通る（`bin/rails test` または RSpec）
 - [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
+- [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 
 ---
