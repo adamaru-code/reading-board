@@ -216,6 +216,7 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] ブランチ命名が `<type>/<issue#>-<short-desc>` に従っている
 - [ ] コミットメッセージが Conventional Commits（`feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`）+ 日本語本文。**`style:` など他の type は使わない**（整形だけのコミットも `chore:`）
 - [ ] PR 本文に `Closes #<issue#>` が含まれる
+- [ ] **マージ前に GitHub が `Closes` を認識しているか確かめる**（`gh pr view <PR番号> --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'` が `[]` なら、マージ後に手動で閉じる前提）。マージ後は Issue が閉じたかも確かめ、`OPEN` のままなら手動で閉じる（CLAUDE.md §6。2026-09-30 から GitHub 全体の不具合で Closes のつながりが作られず、PR #222・#224・#226 で自動で閉じなかった）
 - [ ] PR テンプレ（`.github/pull_request_template.md`）に沿っている
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
 - [ ] 1 PR = 1 トピック。複数トピックを混ぜていない
