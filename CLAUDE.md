@@ -130,6 +130,26 @@ git pull origin main
 - マージ後は **必ずブランチを削除**（`--delete-branch`）
 - ローカル main を最新化して次の作業に入る
 
+### PR と Issue のつながりを確かめる
+
+PR 本文の `Closes #<issue#>` を GitHub が認識できていないことがある（2026-09-30 の PR #222・#224。書き方はうまく閉じた PR と同じだったので、GitHub 側の都合と考えられる）。
+そのままマージすると Issue が開いたまま残るので、**マージの前後で確かめる**。
+
+1. **マージ前**：「閉じる対象の Issue」に番号が入っているか確かめる
+
+   ```bash
+   gh pr view <PR番号> --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'
+   ```
+
+   `[<issue#>]` と出れば OK。`[]`（空）なら、本文を保存し直して GitHub につながりを作り直してもらう（`gh pr edit <PR番号> --body-file <本文のファイル>`）。それでも空なら、マージ後に手動で閉じる前提で進める
+2. **マージ後**：Issue が閉じたか確かめる（うまくいくときは数秒で閉じる。数秒待ってから見る）
+
+   ```bash
+   gh issue view <issue#> --json state -q .state
+   ```
+
+   `OPEN` のままなら手動で閉じる（`gh issue close <issue#> --comment "#<PR番号> でマージ済み（自動で閉じなかったため手動で閉じる）"`）
+
 ---
 
 ## 7. 自動的に守るために
