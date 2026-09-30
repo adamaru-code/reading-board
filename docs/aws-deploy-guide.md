@@ -452,6 +452,24 @@ terraform -chdir=/Users/ada/RaiseTech/reading-board/infra output -raw admin_pass
 - 管理者のパスワードは**起動のたびに新しくなります**。毎回この手順で確認してください。
 - 管理者以外のユーザー（招待で登録した人）のパスワードは、前回のまま引き継がれます。
 
+### 5.6 書影（表紙画像）の鍵を登録する（最初の 1 回だけ）
+
+本番でも表紙を出すには、Google Books の API キーを **SSM Parameter Store**（秘密の値の保管庫）に 1 回だけ登録します。登録しなくてもアプリは動きます（表紙が出ないだけ）。**AWS を止めても消えない**ので、2 回目からは不要です。
+
+1. 鍵を画面に出さずに読み込みます（`鍵を貼り付けて Enter` と出たら、Google Cloud の「認証情報」でコピーした鍵を貼り付けて Enter）。
+
+```bash
+read -s "GOOGLE_BOOKS_API_KEY?鍵を貼り付けて Enter（画面には表示されません）: " && export GOOGLE_BOOKS_API_KEY && echo "" && echo "読み込みました（${#GOOGLE_BOOKS_API_KEY} 文字）"
+```
+
+2. 登録します（`Version: 1` のように出れば OK）。
+
+```bash
+aws ssm put-parameter --region ap-northeast-1 --name /reading-board/google_books_api_key --type SecureString --value "$GOOGLE_BOOKS_API_KEY"
+```
+
+3. 次に起動（5.3）したときから使われます。起動済みなら、いったん止めて起動し直します。
+
 ---
 
 ## 6. 停止（片付け）の手順
@@ -487,7 +505,7 @@ aws ec2 describe-addresses --query 'length(Addresses)'
 aws cloudfront list-distributions --query 'DistributionList.Quantity'
 ```
 
-→ 4 つとも `0`（CloudFront は `null` と出ることがあり、これも「1 つも無い」の意味）なら OK です。DB のスナップショットが 1 つ残るのは正常です（次回の起動で使います）。
+→ 4 つとも `0`（CloudFront は `null` と出ることがあり、これも「1 つも無い」の意味）なら OK です。DB のスナップショットが 1 つ残るのは正常です（次回の起動で使います）。SSM Parameter Store に `/reading-board/google_books_api_key`（書影の鍵。自分で登録したもの）が 1 つ残るのも正常です（無料。消さない）。
 
 ---
 

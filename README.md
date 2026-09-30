@@ -50,6 +50,24 @@ npm run dev
 
 ブラウザで `http://localhost:5173` を開き、seed の初期ユーザー `owner@example.com` / `ReadingBoard-dev-2026!` でログインする（`SEED_USER_EMAIL` / `SEED_USER_PASSWORD` で変更可）。`/api/*` は Vite プロキシ経由で Rails(3000) に転送される。
 
+### 書影（表紙画像）を開発で出すとき（任意）
+
+表紙は Google Books から取得する。API キー（`GOOGLE_BOOKS_API_KEY`）が無くてもアプリは動く（表紙が出ないだけ）。
+毎回鍵を入れなくて済むよう、Git に入らない mise の個人用設定（`backend/mise.local.toml`）に置く。
+
+```bash
+# 1. 鍵を画面に出さずに読み込む（Google Cloud の「認証情報」でコピーした鍵を貼り付けて Enter）
+read -s "GOOGLE_BOOKS_API_KEY?鍵を貼り付けて Enter（画面には表示されません）: " && export GOOGLE_BOOKS_API_KEY && echo ""
+# 2. mise の個人用設定に書く（.gitignore 済み）
+printf '[env]\nGOOGLE_BOOKS_API_KEY = "%s"\n' "$GOOGLE_BOOKS_API_KEY" > backend/mise.local.toml
+# 3. 初回だけ、この設定ファイルを信頼する（mise の決まり）
+cd backend && mise trust mise.local.toml
+# 4. Rails を起動し直す（起動中なら Ctrl+C で止めてから）
+bin/rails server
+```
+
+本番（AWS）の鍵の置き方は [AWS 手順書](docs/aws-deploy-guide.md) の 5.6。
+
 ## テスト・チェック
 
 ```bash

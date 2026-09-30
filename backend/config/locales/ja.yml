@@ -18,6 +18,8 @@ ja:
         media_type: 形態
         rating: 評価
         memo: メモ
+        isbn: ISBN
+        cover_url: 表紙の画像
         user: ユーザー
       user:
         email: メールアドレス

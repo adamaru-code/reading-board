@@ -75,6 +75,8 @@ describe('App（画面の切り替え）', () => {
       rating: null,
       memo: null,
       position: null,
+      isbn: null,
+      cover_url: null,
       tags: [],
       registered_on: null,
       started_on: null,

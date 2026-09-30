@@ -125,12 +125,13 @@ UC9 招待して登録してもらう:
 | PATCH | `/api/books/:id` | 更新（状態・評価・メモ・種別・タグなど） | 200 / 400 / 404 / 422 |
 | DELETE | `/api/books/:id` | 削除（その本だけに付いていたタグの「隠した候補」も消す） | 204 / 404 |
 | PATCH | `/api/books/reorder` | カラム内の並び順を保存（`{ ids: [...] }` の順に position を振り、同じ状態の残りは既存順で後ろに詰める） | 204 |
-| GET | `/api/books/lookup?isbn=<code>` | ISBN/JAN から書誌を取得（バックエンドが openBD を照会） | 200 / 422（不正な ISBN） |
+| GET | `/api/books/lookup?isbn=<code>` | ISBN/JAN から書誌（openBD）と表紙の URL（Google Books）を取得。返り値は `isbn` / `found` / `title` / `author` / `media_type` / `cover_url` | 200 / 422（不正な ISBN） |
 
 - 不正な enum 値（例：`status: "flying"`）は検証エラーの 422。`book` キーが無いなどリクエストの形が違う場合は 400。
 - 状態変更（作成・`status` 更新）時にサーバー側で**状態イベント**（入った日）を記録する（[データベース設計](database-design.md) §6）。登録日・開始日・読了日・所要日数はイベントから算出して返す（保存しない）。
 - **タグ提案**の計算はクライアント側で行う（`frontend/src/lib/tagSuggestions.ts`。提案用の API は無い）。辞書の候補に加え、自分の本に付いているタグ（一覧 API から集計）を候補にし、入力中の文字で絞り込む。隠したタグ（§3.2）は除く。
 - `lookup` は該当なしでも 200 で `found: false` を返す（手入力にフォールバック）。openBD の通信失敗・タイムアウト（接続 3 秒・読み取り 5 秒）も `found: false`。
+- `cover_url`：Google Books（Books API）の表紙画像（https）。API キー（環境変数 `GOOGLE_BOOKS_API_KEY`）が無い・画像が無い・失敗（タイムアウトは同じく 3 秒 / 5 秒）のときは `null`（表紙なしで動く）。openBD は表紙を持たない本が多く、国立国会図書館の書影 API は 2026-03-31 に終了したため Google Books を使う。
 
 ### 3.2 タグ候補の設定
 
@@ -195,6 +196,8 @@ UC9 招待して登録してもらう:
   "rating": null,
   "memo": null,
   "position": null,
+  "isbn": "9784101010137",
+  "cover_url": "https://books.google.com/books/content?id=…&printsec=frontcover&img=1&zoom=1",
   "tags": ["名著", "再読したい"],
   "registered_on": "2026-07-10",
   "started_on": null,
@@ -206,7 +209,7 @@ UC9 招待して登録してもらう:
 ```
 
 - `tags` は文字列配列でやり取り（内部は多対多）。`registered_on` / `started_on` / `finished_on` は各状態に**最初に入った日**、`duration_days` は開始→読了の日数（両方あるときのみ）。
-- ISBN は照会（`lookup`）にだけ使い、書籍には保存しない。
+- `isbn` / `cover_url` は書影用（無ければ `null`）。作成・更新で送れる（空文字は `null`）。`cover_url` は Google Books の画像以外は 422。
 
 一覧レスポンス（GET /api/books）:
 

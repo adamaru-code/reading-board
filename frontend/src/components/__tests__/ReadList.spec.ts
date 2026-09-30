@@ -14,6 +14,8 @@ function makeBook(id: number, overrides: Partial<Book> = {}): Book {
     rating: null,
     memo: null,
     position: null,
+    isbn: null,
+    cover_url: null,
     tags: [],
     registered_on: '2026-09-01',
     started_on: '2026-09-10',

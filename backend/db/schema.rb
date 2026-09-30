@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_120000) do
   create_table "book_status_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "book_id", null: false
     t.integer "status", null: false
@@ -42,6 +42,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
     t.integer "genre", default: 4, null: false
     t.integer "media_type", default: 0, null: false
     t.bigint "user_id", null: false
+    t.string "isbn"
+    t.string "cover_url", limit: 500
     t.index ["user_id"], name: "index_books_on_user_id"
   end
 

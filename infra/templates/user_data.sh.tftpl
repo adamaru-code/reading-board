@@ -39,6 +39,11 @@ IMDS_TOKEN=$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-e
 APP_HOST=$(curl -sS -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-hostname)
 echo "[bootstrap] APP_HOSTS=$APP_HOST"
 
+# 表紙（Google Books）の API キー。SSM に登録していなければ空（表紙なしで動く）。
+# Terraform の管理外（ユーザーが 1 回だけ登録）なので、down.sh で消えない
+GOOGLE_BOOKS_API_KEY=$(param google_books_api_key 2>/dev/null || true)
+echo "[bootstrap] GOOGLE_BOOKS_API_KEY: $([ -n "$GOOGLE_BOOKS_API_KEY" ] && echo あり || echo なし)"
+
 # シークレットは SSM Parameter Store から取得し、root だけが読めるファイルに置く
 umask 077
 cat > /etc/reading-board.env <<ENV
@@ -52,6 +57,7 @@ DB_NAME=${db_name}
 SEED_USER_EMAIL=${admin_email}
 SEED_USER_PASSWORD=$(param admin_password)
 APP_HOSTS=$APP_HOST
+GOOGLE_BOOKS_API_KEY=$GOOGLE_BOOKS_API_KEY
 ENV
 umask 022
 
