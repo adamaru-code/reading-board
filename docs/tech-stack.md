@@ -17,6 +17,7 @@
 | データベース | MySQL 8 | 広く使われる RDB で情報が豊富。Docker でローカル環境を容易に再現できる |
 | API 通信 | REST / JSON | シンプルで学習向き。今回の規模では GraphQL 等はオーバースペック |
 | 開発環境 | Docker（MySQL）/ mise（Ruby 3.3）/ 固定ポート | ローカル再現性を確保。ポートは Backend 3000 / Frontend 5173 / MySQL 3306 に固定（[CLAUDE.md](../CLAUDE.md) §8） |
+| 外部サービス | openBD（書誌：タイトル・著者）／Google Books の Books API（書影：表紙画像の URL） | どちらも無料。openBD は鍵なし。Google Books は無料の API キー（開発は `backend/mise.local.toml`、本番は SSM）。表紙は openBD に無い本が多く、国立国会図書館の書影 API は 2026-03-31 に終了したため Google Books にした。どちらもバックエンドから呼び、鍵を画面側に出さない |
 | 認証 | Rails 8 標準の `has_secure_password`（bcrypt）＋セッション Cookie | 追加 gem なしで実装でき、パスワード再設定トークン・回数制限（`rate_limit`）も標準機能で賄える |
 | テスト | minitest（backend）/ vitest ＋ @vue/test-utils（frontend） | Rails / Vite の標準的な選択。CI で PR ごとに実行 |
 | lint・静的検査 | RuboCop（rubocop-rails-omakase）・Brakeman・bundler-audit / ESLint ＋ Prettier | Rails 8・create-vue の標準構成。書き方の揺れとセキュリティ上の問題を自動で検出 |

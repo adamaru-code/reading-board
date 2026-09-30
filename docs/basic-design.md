@@ -98,6 +98,8 @@ erDiagram
         int genre "NOT NULL default 4(その他), enum(0-5 主ジャンル)"
         int media_type "NOT NULL default 0, enum(0:書籍/1:雑誌)"
         int position "NULL可, カラム内並び順"
+        string isbn "NULL可, ISBN（書影の取得に使った）"
+        string cover_url "NULL可, 書影の URL（Google の画像だけ）"
         datetime created_at "NOT NULL"
         datetime updated_at "NOT NULL"
     }
@@ -119,7 +121,7 @@ erDiagram
     }
 ```
 
-- 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。ISBN は照会（lookup）にだけ使い、保存しない。
+- 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。ISBN と書影（表紙画像）の URL は保存する（書影を付け直せるように。画像そのものは保存せず Google の画像を表示）。書誌（タイトル・著者）は照会で入力を補うだけ。
 - `books` は `user_id` で所有者（`users`）に紐づく（認証は実装済み。§3.1）。
 
 ### 3.1 認証（招待制の複数ユーザー・実装済み）
@@ -248,13 +250,16 @@ sequenceDiagram
     participant V as Vue SPA
     participant R as Rails API
     participant O as 書誌API(openBD)
+    participant G as 書影API(Google Books)
     U->>V: ISBN入力 or バーコード読取
     V->>R: GET /api/books/lookup?isbn=<code>
     R->>O: GET /v1/get?isbn=<code>（接続 3 秒・読み取り 5 秒で打ち切り）
     O-->>R: 書誌(タイトル/著者) or null
-    R-->>V: 200 { isbn, found, title, author, media_type }（不正な ISBN は 422）
+    R->>G: GET /books/v1/volumes?q=isbn:<code>&key=…（鍵が無ければ呼ばない。3 秒 / 5 秒で打ち切り）
+    G-->>R: 表紙画像の URL or なし
+    R-->>V: 200 { isbn, found, title, author, media_type, cover_url }（不正な ISBN は 422）
     alt 取得成功（found: true）
-        V-->>U: タイトル・著者を自動補完 / 形態を自動セット
+        V-->>U: タイトル・著者を自動補完 / 形態を自動セット / 表紙があれば表紙欄に表示（保存時に isbn・cover_url も保存）
     else 雑誌(491)・該当なし・失敗
         V-->>U: 手入力にフォールバック（形態は判定結果をセット）
     end
@@ -269,9 +274,9 @@ sequenceDiagram
 | 画面/要素 | 主な構成要素 | 使う API | 備考 |
 |---|---|---|---|
 | S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（著者/ジャンル/タグ）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&author=&tag=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
-| S2 書籍カード | ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
-| S3 追加フォーム | ISBN/バーコード登録、タイトル(必須)・著者・ステータス・ジャンル・形態・評価・メモ・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
-| S4 編集フォーム | 全項目入力（種別・タグ含む）、更新/削除/キャンセル | PATCH・DELETE /api/books/:id | 削除は確認の上 |
+| S2 書籍カード | 書影（あれば左に 60×86）、ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
+| S3 追加フォーム | ISBN/バーコード登録（書誌＋表紙）、タイトル(必須)・著者・ステータス・ジャンル・形態・評価・メモ・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
+| S4 編集フォーム | 表紙欄（ISBN で表紙だけ取得・外す）、全項目入力（種別・タグ含む）、更新/削除/キャンセル | GET /api/books/lookup（表紙欄）、PATCH・DELETE /api/books/:id | 削除は確認の上 |
 | S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
 | S6 管理 | 招待タブ・ユーザータブ | /api/invitations、/api/users、/api/users/:id/password_reset_link | 管理者のみ |
 | S7 アカウント | パスワード変更・アカウント削除タブ | /api/password、DELETE /api/registration | |
