@@ -3,9 +3,9 @@ import { computed, useId } from 'vue'
 import { BOOK_GENRES, GENRE_LABELS } from '../types/book'
 import type { BookGenre } from '../types/book'
 
-// 絞り込み（著者名・ジャンル・タグ）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。値は v-model:author / v-model:genre / v-model:tag。
-// 条件が変わったら change（著者名は入力が落ち着いてから）、「クリア」で clear を親に伝える
-const author = defineModel<string>('author', { required: true })
+// 絞り込み（キーワード＝タイトルまたは著者・ジャンル・タグ）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。値は v-model:keyword / v-model:genre / v-model:tag。
+// 条件が変わったら change（キーワードは入力が落ち着いてから）、「クリア」で clear を親に伝える
+const keyword = defineModel<string>('keyword', { required: true })
 const genre = defineModel<'' | BookGenre>('genre', { required: true })
 const tag = defineModel<string>('tag', { required: true })
 
@@ -14,34 +14,34 @@ defineProps<{ tagOptions: string[] }>()
 const emit = defineEmits<{ change: []; clear: [] }>()
 
 const hasFilters = computed(
-  () => genre.value !== '' || author.value.trim() !== '' || tag.value !== '',
+  () => genre.value !== '' || keyword.value.trim() !== '' || tag.value !== '',
 )
 
 // 先頭の見出し「絞り込み：」と、まとまり（role="group"）を結ぶ id
 const headingId = useId()
 
-let authorTimer: ReturnType<typeof setTimeout> | undefined
-function onAuthorInput() {
-  clearTimeout(authorTimer)
-  authorTimer = setTimeout(() => emit('change'), 300) // 入力が落ち着いてから再取得
+let keywordTimer: ReturnType<typeof setTimeout> | undefined
+function onKeywordInput() {
+  clearTimeout(keywordTimer)
+  keywordTimer = setTimeout(() => emit('change'), 300) // 入力が落ち着いてから再取得
 }
 </script>
 
 <template>
   <!-- display: contents：この div は並びに影響させず、中の部品をヘッダの並びに直接加える -->
-  <!-- 先頭に「絞り込み：」を 1 回だけ置き、各欄の見出しは何で絞るか（著者・ジャンル・タグ）にそろえる -->
+  <!-- 先頭に「絞り込み：」を 1 回だけ置き、各欄の見出しは何で絞るか（キーワード・ジャンル・タグ）にそろえる -->
   <div class="board-filters" role="group" :aria-labelledby="headingId">
     <span :id="headingId" class="filters-heading">絞り込み：</span>
     <label class="filter-field">
-      著者
+      キーワード
       <input
-        v-model="author"
+        v-model="keyword"
         type="search"
-        class="filter-author"
-        :class="{ active: author.trim() !== '' }"
-        placeholder="著者名"
-        aria-label="著者で絞り込み"
-        @input="onAuthorInput"
+        class="filter-keyword"
+        :class="{ active: keyword.trim() !== '' }"
+        placeholder="タイトル・著者"
+        aria-label="タイトル・著者で絞り込み"
+        @input="onKeywordInput"
       />
     </label>
     <label class="filter-field">
@@ -74,7 +74,7 @@ function onAuthorInput() {
 .board-filters {
   display: contents;
 }
-.filter-author {
+.filter-keyword {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -114,7 +114,7 @@ function onAuthorInput() {
 }
 /* 絞り込みに使っている欄：枠を濃紺グレーで太く、地をうっすら色付き（どの条件が効いているか分かる）。
    枠が 1px 太くなる分 padding を 1px 減らし、大きさを変えない */
-.filter-author.active {
+.filter-keyword.active {
   border: 2px solid var(--slate);
   background: var(--slate-tint);
   padding: 6px 9px;

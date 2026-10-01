@@ -48,4 +48,18 @@ describe('listBooks', () => {
       dir: 'desc',
     })
   })
+
+  it('キーワード（q）とジャンル・タグをクエリに載せる', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ items: [], pagination: {} })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listBooks({ q: 'リーダブル', genre: 'it_tech', tag: '名著' })
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.searchParams.get('q')).toBe('リーダブル')
+    expect(url.searchParams.get('genre')).toBe('it_tech')
+    expect(url.searchParams.get('tag')).toBe('名著')
+  })
 })

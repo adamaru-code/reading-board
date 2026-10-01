@@ -87,10 +87,11 @@ export interface BookLookupResult {
   cover_url: string | null
 }
 
-// 一覧の絞り込み条件（互いに AND。author は部分一致、genre/tag は完全一致）
+// 一覧の絞り込み条件（互いに AND。q はタイトルまたは著者の部分一致、author は著者の部分一致、genre/tag は完全一致）
 export interface BookListParams {
   status?: BookStatus
   genre?: BookGenre
+  q?: string
   author?: string
   tag?: string
 }

@@ -94,10 +94,10 @@ describe('BoardFilters', () => {
     vi.useRealTimers()
   })
 
-  const mountFilters = (author = '', genre = '' as const, tag = '') =>
-    mount(BoardFilters, { props: { author, genre, tag, tagOptions: ['歴史', '宗教'] } })
+  const mountFilters = (keyword = '', genre = '' as const, tag = '') =>
+    mount(BoardFilters, { props: { keyword, genre, tag, tagOptions: ['歴史', '宗教'] } })
 
-  it('ジャンルを選ぶとすぐ change、著者名は入力が落ち着いてから change', async () => {
+  it('ジャンルを選ぶとすぐ change、キーワードは入力が落ち着いてから change', async () => {
     vi.useFakeTimers()
     const wrapper = mountFilters()
 
@@ -111,7 +111,7 @@ describe('BoardFilters', () => {
     expect(wrapper.emitted('change')).toHaveLength(2)
   })
 
-  it('先頭に「絞り込み：」を出してまとまりと結び、著者欄の見出しは「著者」', () => {
+  it('先頭に「絞り込み：」を出してまとまりと結び、文字の欄は「キーワード」（タイトル・著者）', () => {
     const wrapper = mountFilters()
     const group = wrapper.find('[role="group"]')
     const heading = wrapper.find('.filters-heading')
@@ -119,8 +119,9 @@ describe('BoardFilters', () => {
     expect(group.attributes('aria-labelledby')).toBe(heading.attributes('id'))
 
     const input = wrapper.find('input[type="search"]')
-    expect(input.element.closest('label')?.textContent).toContain('著者')
-    expect(input.attributes('aria-label')).toContain('著者')
+    expect(input.element.closest('label')?.textContent).toContain('キーワード')
+    expect(input.attributes('placeholder')).toBe('タイトル・著者')
+    expect(input.attributes('aria-label')).toBe('タイトル・著者で絞り込み')
   })
 
   it('条件があるときだけ「クリア」を出し、押すと clear', async () => {
