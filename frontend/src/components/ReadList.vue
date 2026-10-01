@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Book } from '../types/book'
+import type { Book, BookStats } from '../types/book'
 import { GENRE_LABELS, MEDIA_TYPE_LABELS } from '../types/book'
 
 // 読了一覧（/read）：読了本を 1 冊 1 行で左右 2 段に並べる。前半を左の段、後半を右の段にし、各段の上に列の見出しを付ける。
@@ -10,6 +10,7 @@ const props = defineProps<{
   total: number
   hasMore: boolean
   loadingMore: boolean
+  stats?: BookStats | null // 今年・今月の読了冊数（取得前・取得失敗は null で出さない）
 }>()
 const emit = defineEmits<{
   open: [book: Book] // 行をクリック / Enter / Space
@@ -52,6 +53,9 @@ function durationText(days: number | null): string {
     <div class="list-header">
       <h2 id="read-list-title" class="list-title">読了</h2>
       <span class="list-count">{{ total }}</span>
+      <span v-if="stats" class="list-stats">
+        今年 {{ stats.finished_this_year }} 冊・今月 {{ stats.finished_this_month }} 冊
+      </span>
       <slot name="header-actions" />
     </div>
 
@@ -146,6 +150,10 @@ function durationText(days: number | null): string {
   background: var(--col-read-strong);
   border-radius: 999px;
   padding: 1px 8px;
+}
+.list-stats {
+  font-size: 12px;
+  color: var(--text-sub);
 }
 .list-empty {
   color: var(--text-sub);

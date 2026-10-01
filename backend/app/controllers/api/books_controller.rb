@@ -56,6 +56,16 @@ module Api
       render json: book_json(find_book)
     end
 
+    # GET /api/books/stats
+    # 今「読了」の本のうち、読了日（最初に読了になった日）が今年・今月のものを数える。絞り込みには連動しない
+    def stats
+      today = Date.current
+      render json: {
+        finished_this_year: count_finished_between(today.beginning_of_year, today.end_of_year),
+        finished_this_month: count_finished_between(today.beginning_of_month, today.end_of_month)
+      }
+    end
+
     # GET /api/books/lookup?isbn=
     # openBD を照会し、フォーム自動入力用に書誌情報を返す
     def lookup
@@ -165,6 +175,13 @@ module Api
 
     def valid_genre?(genre)
       genre.present? && Book.genres.key?(genre)
+    end
+
+    # 最初に読了になった日（読了の履歴の最も古い日）が from〜to の本を、id のサブクエリで数える
+    def count_finished_between(from, to)
+      first_read_in_range = BookStatusEvent.read.group(:book_id)
+        .having("MIN(occurred_on) BETWEEN ? AND ?", from, to).select(:book_id)
+      current_user.books.read.where(id: first_read_in_range).count
     end
 
     # 部分一致の LIKE パターン。入力の % や _ は「何にでも一致」ではなく文字として扱う

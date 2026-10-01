@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
-import { listAllBooks, updateBook, reorderBooks } from '../api/books'
+import { listAllBooks, updateBook, reorderBooks, getBookStats } from '../api/books'
 import { logout } from '../api/session'
 import { listHiddenTags } from '../api/hiddenTags'
 import { ApiError } from '../api/http'
@@ -13,6 +13,7 @@ import type {
   BookSortKey,
   SortDir,
   HiddenTag,
+  BookStats,
 } from '../types/book'
 import type { BoardView } from '../types/view'
 import type { User } from '../types/auth'
@@ -74,6 +75,18 @@ const tagOptions = ref<string[]>([])
 const frequentTags = ref<string[]>([])
 // タグ候補から隠したタグ（書籍フォームで隠す・戻すと更新される）
 const hiddenTags = ref<HiddenTag[]>([])
+
+// 今年・今月の読了冊数（読了一覧の見出しに出す。読了一覧を開いているときだけ取る）
+const stats = ref<BookStats | null>(null)
+
+async function loadStats() {
+  if (props.view !== 'read') return
+  try {
+    stats.value = await getBookStats()
+  } catch {
+    // 取得できなくても冊数が出ないだけなので、一覧の表示は妨げない
+  }
+}
 
 async function loadHiddenTags() {
   try {
@@ -163,12 +176,16 @@ onMounted(() => {
   loadBooks()
   loadTagOptions()
   loadHiddenTags()
+  loadStats()
 })
 
 // ボード → 読了一覧に切り替えたとき
 watch(
   () => props.view,
-  () => fillReadList(),
+  () => {
+    fillReadList()
+    loadStats()
+  },
 )
 
 // 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す（読了一覧なら 60 件まで）
@@ -261,6 +278,7 @@ function onModalDone() {
   closeModal()
   loadBooks(true)
   loadTagOptions()
+  loadStats()
 }
 
 // 削除後は、その本だけに付いていたタグの「隠した候補」もサーバーで消えるので取り直す
@@ -303,6 +321,7 @@ function onBookDeleted() {
         :total="columns.read.total"
         :has-more="hasMore('read')"
         :loading-more="columns.read.loadingMore"
+        :stats="stats"
         @open="openEdit"
         @load-more="onLoadMore('read', READ_LIST_PAGE_SIZE)"
       >

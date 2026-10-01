@@ -8,6 +8,7 @@ import type {
   BookListPaging,
   BookListResult,
   BookLookupResult,
+  BookStats,
 } from '../types/book'
 
 // GET /api/books （絞り込み＋並び替え＋ページング。1ページ分を返す）
@@ -67,6 +68,11 @@ export function deleteBook(id: number): Promise<void> {
 // GET /api/books/lookup?isbn= （openBD 照会）
 export function lookupBook(isbn: string): Promise<BookLookupResult> {
   return request<BookLookupResult>('/books/lookup', { query: { isbn } })
+}
+
+// GET /api/books/stats （今年・今月の読了冊数）
+export function getBookStats(): Promise<BookStats> {
+  return request<BookStats>('/books/stats')
 }
 
 // PATCH /api/books/reorder （渡した id 順に position を保存）

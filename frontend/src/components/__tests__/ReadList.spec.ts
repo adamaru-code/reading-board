@@ -32,6 +32,20 @@ function mountList(items: Book[], total = items.length, hasMore = false) {
 }
 
 describe('ReadList（読了一覧）', () => {
+  it('見出しの横に今年・今月の読了冊数を出し、stats が無ければ出さない', () => {
+    const withStats = mount(ReadList, {
+      props: {
+        items: [],
+        total: 0,
+        hasMore: false,
+        loadingMore: false,
+        stats: { finished_this_year: 12, finished_this_month: 3 },
+      },
+    })
+    expect(withStats.find('.list-stats').text()).toBe('今年 12 冊・今月 3 冊')
+    expect(mountList([]).find('.list-stats').exists()).toBe(false)
+  })
+
   it('各段の上に列の見出しを出す（形態の列は文字なし）', () => {
     const wrapper = mountList([makeBook(1), makeBook(2)])
     const heads = wrapper.findAll('.row-head')
