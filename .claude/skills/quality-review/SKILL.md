@@ -246,3 +246,4 @@ cd infra && terraform fmt -check && terraform validate
 
 - プロジェクト規約: [CLAUDE.md](../../../CLAUDE.md)
 - ポート規約: [enforce-default-ports](../enforce-default-ports/SKILL.md)
+- 日報と再発防止の確認（詰まったことをここに書き足す手順）: [daily-report](../daily-report/SKILL.md)
