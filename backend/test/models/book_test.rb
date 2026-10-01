@@ -64,6 +64,15 @@ class BookTest < ActiveSupport::TestCase
     assert_equal Date.current, book.status_events.first.occurred_on
   end
 
+  test "状態の日付は日本時間の今日（UTC では前の日の朝 5 時でも、日本時間の日付で記録する）" do
+    travel_to Time.utc(2026, 6, 14, 20, 0) do # 日本時間 2026-06-15 05:00
+      book = @user.books.create!(title: "x", status: :want_to_read)
+      book.update!(status: :read)
+      assert_equal Date.new(2026, 6, 15), book.registered_on
+      assert_equal Date.new(2026, 6, 15), book.finished_on
+    end
+  end
+
   test "status 変更で新しいイベントを記録する" do
     book = @user.books.create!(title: "x", status: :want_to_read)
     book.update!(status: :reading)

@@ -21,7 +21,8 @@ module Backend
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    # config.time_zone = "Central Time (US & Canada)"
+    # アプリの「今日」・時刻は日本時間（状態の日付 occurred_on・読了冊数の今年/今月）。DB に保存する時刻は UTC のまま
+    config.time_zone = "Tokyo"
     # config.eager_load_paths << Rails.root.join("extras")
 
     # Only loads a smaller set of middleware suitable for API only apps.

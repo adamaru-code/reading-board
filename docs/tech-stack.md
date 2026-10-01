@@ -54,4 +54,5 @@
 - 依存管理: **Bundler**（`backend/Gemfile`）
 - セットアップ: `bundle install` → `bin/rails server` で起動（ポートは [CLAUDE.md](../CLAUDE.md) §8 参照）
 - チェック: `bin/rails test`・`bin/rubocop`・`bin/brakeman`・`bin/bundler-audit`（まとめて `bin/ci` でも実行可）
+- 時刻: アプリの「今日」・時刻は日本時間（`config.time_zone = "Tokyo"`）。DB への保存は UTC（Rails の標準）。API の日時は `+09:00` 付きで返す
 - 本番: `backend/Dockerfile`（Rails 8 標準）でコンテナ化。秘密鍵は `SECRET_KEY_BASE` 環境変数（[インフラ設計](infrastructure.md) §1.1）

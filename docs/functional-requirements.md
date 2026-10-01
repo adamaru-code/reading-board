@@ -206,8 +206,8 @@ UC9 招待して登録してもらう:
   "started_on": null,
   "finished_on": null,
   "duration_days": null,
-  "created_at": "2026-07-10T03:00:00.000Z",
-  "updated_at": "2026-07-10T03:00:00.000Z"
+  "created_at": "2026-07-10T12:00:00.000+09:00",
+  "updated_at": "2026-07-10T12:00:00.000+09:00"
 }
 ```
 
