@@ -115,12 +115,13 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `id` | bigint | PK, auto | 主キー |
 | `book_id` | bigint | FK → books, NOT NULL | 書籍 |
 | `status` | integer(enum) | NOT NULL | 入った状態（§2 enum） |
-| `occurred_on` | date | NOT NULL | 入った日（日付のみ） |
+| `occurred_on` | date | NOT NULL | 入った日（日付のみ。日本時間の日付） |
 | `created_at` | datetime | NOT NULL | 記録日時 |
 
 - **導出値**（API の `registered_on` / `started_on` / `finished_on`）：それぞれ最初の `want_to_read` / `reading` / `read` の日。
 - **所要日数**＝（最初の `read` の `occurred_on`）−（最初の `reading` の `occurred_on`）。開始が無ければ非表示。
 - 同一状態・同一日の重複は記録しない（`(book_id, status, occurred_on)` が UNIQUE）。
+- **日付は日本時間**（`config.time_zone = "Tokyo"` の `Date.current`）。DB に保存する日時（`created_at` など）は UTC のまま。2026-10-02 より前に日本時間 0:00〜8:59 に記録した日付は前の日になっていたため、マイグレーション `FixStatusEventDatesToTokyo` で 1 日進めた（`created_at` の UTC の日付が `occurred_on` と同じで 15 時以降のもの）。
 
 ---
 

@@ -472,6 +472,14 @@ module Api
       end
     end
 
+    test "stats の今年・今月は日本時間で決める（UTC では前の年の大みそかでも、日本時間の元日なら今年）" do
+      travel_to Time.utc(2025, 12, 31, 20, 0) do # 日本時間 2026-01-01 05:00
+        @owner.books.create!(title: "元日の朝に読了", status: :read)
+        get stats_api_books_url
+        assert_equal({ "finished_this_year" => 1, "finished_this_month" => 1 }, JSON.parse(response.body))
+      end
+    end
+
     test "stats は最初に読了になった日で数える（読み直して今月また読了にしても今月に入らない）" do
       travel_to Date.new(2026, 6, 15) do
         book = create_finished_book(Date.new(2025, 3, 1))
