@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { listAllBooks, listBooks } from '../books'
+import { getBookStats, listAllBooks, listBooks } from '../books'
 import type { Book } from '../../types/book'
 
 const book = (id: number) => ({ id, title: `本${id}` }) as Book
@@ -61,5 +61,18 @@ describe('listBooks', () => {
     expect(url.searchParams.get('q')).toBe('リーダブル')
     expect(url.searchParams.get('genre')).toBe('it_tech')
     expect(url.searchParams.get('tag')).toBe('名著')
+  })
+})
+
+describe('getBookStats', () => {
+  it('GET /api/books/stats の結果をそのまま返す', async () => {
+    const stats = { finished_this_year: 5, finished_this_month: 2 }
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(stats)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await getBookStats()).toEqual(stats)
+    expect(new URL(fetchMock.mock.calls[0][0], 'http://localhost').pathname).toBe(
+      '/api/books/stats',
+    )
   })
 })

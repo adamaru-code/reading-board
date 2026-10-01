@@ -449,5 +449,43 @@ module Api
       assert_equal [ a.id, b.id, moved.id, c.id, d.id ],
         JSON.parse(response.body)["items"].map { |x| x["id"] }
     end
+
+    # 読了日（最初に読了になった日）が finished_on の読了本を作る
+    def create_finished_book(finished_on, user: @owner)
+      book = user.books.create!(title: "読了 #{finished_on}", status: :read)
+      book.status_events.where(status: :read).update_all(occurred_on: finished_on)
+      book
+    end
+
+    test "stats は今年・今月の読了冊数を返す（去年・先月・読了でない本・他人の本は数えない）" do
+      travel_to Date.new(2026, 6, 15) do
+        create_finished_book(Date.new(2026, 6, 1))   # 今月
+        create_finished_book(Date.new(2026, 6, 30))  # 今月（月末）
+        create_finished_book(Date.new(2026, 5, 31))  # 先月（今年には入る）
+        create_finished_book(Date.new(2025, 12, 31)) # 去年
+        create_finished_book(Date.new(2026, 6, 10), user: users(:other)) # 他人の本
+        @owner.books.create!(title: "読書中", status: :reading)
+
+        get stats_api_books_url
+        assert_response :success
+        assert_equal({ "finished_this_year" => 3, "finished_this_month" => 2 }, JSON.parse(response.body))
+      end
+    end
+
+    test "stats は最初に読了になった日で数える（読み直して今月また読了にしても今月に入らない）" do
+      travel_to Date.new(2026, 6, 15) do
+        book = create_finished_book(Date.new(2025, 3, 1))
+        book.status_events.create!(status: :read, occurred_on: Date.new(2026, 6, 10))
+
+        get stats_api_books_url
+        assert_equal({ "finished_this_year" => 0, "finished_this_month" => 0 }, JSON.parse(response.body))
+      end
+    end
+
+    test "stats は未ログインだと 401" do
+      delete api_session_url
+      get stats_api_books_url
+      assert_response :unauthorized
+    end
   end
 end
