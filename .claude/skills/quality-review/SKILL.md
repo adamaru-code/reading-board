@@ -71,6 +71,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] `config/database.yml` の接続情報は環境変数化されている
 - [ ] 本番の **`config.hosts`** を空にしない（空だと確認されず全部許可）。許可する名前は `APP_HOSTS`（本番に届く Host は EC2 のパブリック DNS 名。`docs/infrastructure.md` §1.1）
 - [ ] **SQL を文字列の組み立て（`"... #{値} ..."`）で作らない**。`where(id: ...)`・プレースホルダ・Arel（例：`Arel::Nodes::Case`）を使う（値を整数化していても Brakeman は安全を判定できない）
+  - **既存の SQL 片を埋め込むのも同じ**：`where("#{self.class.first_occurred_on_sql('read')} BETWEEN ? AND ?", …)` は定数でも Brakeman が SQL Injection（Weak）を出す。集計・絞り込みは `BookStatusEvent.read.group(:book_id).having("MIN(occurred_on) BETWEEN ? AND ?", from, to).select(:book_id)` のような **id のサブクエリ**＋`where(id: …)` で書く（`Api::BooksController#count_finished_between`。2026-10-01、PR #236）
+  - Brakeman の結果は `Security Warnings: 0` まで見る（`| tail -2` などで切ると警告の行だけになり見落とす）
 - [ ] **外部 API 呼び出しにはタイムアウトを付ける**（`Net::HTTP.start(..., open_timeout:, read_timeout:)`。既定 60 秒のままだと Puma のスレッドを塞ぐ）。失敗時の扱い（nil を返して手入力にフォールバック等）も決めておく
 - [ ] **外部サービスは、記事の紹介だけで選ばず、実際に問い合わせて確かめてから選ぶ**（終わったサービスや、中身が空のサービスがある。例：国立国会図書館の書影 API は 2026-03-31 に終了、openBD は表紙がほぼ無い。同じ ISBN 5 冊などで取れる割合を見て決める。2026-09-30）
 
@@ -87,6 +89,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] テストが通る（`bin/rails test` または RSpec）
 - [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
 - [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
+- [ ] テストに**補助メソッド（`def create_… `など）を足す前に、同じファイルに同じ名前が無いか grep する**。Ruby は後から書いた定義で前のものを上書きするので、引数の違う既存テストが `ArgumentError: unknown keywords` で落ちる（`books_controller_test.rb` の `create_read_book`。2026-10-01、PR #236）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 
 ---
@@ -157,6 +160,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 - [ ] 上の表のとおり実装と一致している（特に API を足したら `functional-requirements.md` §3 と `basic-design.md` §4.3 の両方を更新）
 - [ ] 「単一ユーザー」「将来」「予定」「想定」など、実装が進んで古くなりやすい言葉を検索し、**実装済みなのに古いまま**の記述が無いか見直す（将来候補・見積もり・規模の想定としての記述は正当なので残してよい）
+- [ ] **画面の言葉・API パラメータ・部品の名前を変えたら、古い言葉で docs 全体を grep する**（例：`grep -rn "著者" docs/`）。表や図の 1 か所だけ直して、別の章（S8 の説明・基本設計の画面表）に古い言葉が残りやすい（PR #230 で「著者 → キーワード」が 2 か所残り、#236 で直した。2026-10-01）
 - [ ] バリデーションルール（文字数・範囲・必須）がモデルの validation と一致
 - [ ] README・docs の相対リンクが壊れていない
 
