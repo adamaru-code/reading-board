@@ -20,6 +20,7 @@ export function listBooks(
     query: {
       status: params.status,
       genre: params.genre,
+      q: params.q,
       author: params.author,
       tag: params.tag,
       page: page === undefined ? undefined : String(page),

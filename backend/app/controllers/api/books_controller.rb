@@ -20,13 +20,17 @@ module Api
     }.freeze
 
     # GET /api/books
-    # status（enum キー）・author（部分一致）で絞り込める。併用は AND。
+    # status・genre（enum キー）・q（タイトルまたは著者の部分一致）・author（著者の部分一致）・tag（名称）で絞り込める。併用は AND。
     # sort（SORT_EXPRESSIONS のキー）/ dir（asc|desc）で並び替え、page または offset ＋ per_page で分割する。
     def index
       books = current_user.books.includes(:tags, :status_events) # 所有者スコープ＋N+1 回避
       books = books.where(status: params[:status]) if valid_status?(params[:status])
       books = books.where(genre: params[:genre]) if valid_genre?(params[:genre])
-      books = books.where("author LIKE ?", "%#{params[:author]}%") if params[:author].present?
+      if params[:q].present?
+        pattern = like_pattern(params[:q])
+        books = books.where("title LIKE ? OR author LIKE ?", pattern, pattern)
+      end
+      books = books.where("author LIKE ?", like_pattern(params[:author])) if params[:author].present?
       # タグは名称で完全一致。includes と二重 JOIN しないよう id サブクエリで絞る
       if params[:tag].present?
         books = books.where(id: Book.joins(:tags).where(tags: { name: params[:tag] }))
@@ -161,6 +165,11 @@ module Api
 
     def valid_genre?(genre)
       genre.present? && Book.genres.key?(genre)
+    end
+
+    # 部分一致の LIKE パターン。入力の % や _ は「何にでも一致」ではなく文字として扱う
+    def like_pattern(text)
+      "%#{Book.sanitize_sql_like(text.to_s)}%"
     end
 
     # 取得開始位置。offset（0 以上）があれば優先し、無ければ page（1 以上）から求める。

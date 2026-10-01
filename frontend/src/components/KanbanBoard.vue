@@ -63,9 +63,9 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 // ---------- 絞り込み ----------
-const filters = reactive<{ genre: '' | BookGenre; author: string; tag: string }>({
+const filters = reactive<{ genre: '' | BookGenre; keyword: string; tag: string }>({
   genre: '',
-  author: '',
+  keyword: '',
   tag: '',
 })
 // タグ選択肢は絞り込みで痩せないよう、未絞り込みの一覧から集める
@@ -85,14 +85,14 @@ async function loadHiddenTags() {
 function activeParams(): BookListParams {
   const params: BookListParams = {}
   if (filters.genre !== '') params.genre = filters.genre
-  if (filters.author.trim() !== '') params.author = filters.author.trim()
+  if (filters.keyword.trim() !== '') params.q = filters.keyword.trim()
   if (filters.tag !== '') params.tag = filters.tag
   return params
 }
 
 function clearFilters() {
   filters.genre = ''
-  filters.author = ''
+  filters.keyword = ''
   filters.tag = ''
   loadBooks()
 }
@@ -281,7 +281,7 @@ function onBookDeleted() {
       @logout="onLogout"
     >
       <BoardFilters
-        v-model:author="filters.author"
+        v-model:keyword="filters.keyword"
         v-model:genre="filters.genre"
         v-model:tag="filters.tag"
         :tag-options="tagOptions"

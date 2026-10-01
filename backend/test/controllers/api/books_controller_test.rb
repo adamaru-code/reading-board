@@ -40,6 +40,23 @@ module Api
       assert_equal [ @book.id ], items.map { |b| b["id"] }
     end
 
+    test "index は q でタイトルまたは著者の部分一致で絞り込める" do
+      get api_books_url, params: { q: "リーダブル" } # タイトルに一致
+      assert_equal [ @book.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
+
+      get api_books_url, params: { q: "Boswell" } # 著者に一致
+      assert_equal [ @book.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
+    end
+
+    test "index の q と author は % や _ を文字として扱う（何にでも一致しない）" do
+      hit = @owner.books.create!(title: "100%の本", author: "a_b")
+      get api_books_url, params: { q: "%" }
+      assert_equal [ hit.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
+
+      get api_books_url, params: { author: "_" }
+      assert_equal [ hit.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
+    end
+
     test "index は genre で絞り込める" do
       target = @owner.books.create!(title: "教養本", genre: :liberal_arts)
       get api_books_url, params: { genre: "liberal_arts" }
