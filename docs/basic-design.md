@@ -29,7 +29,7 @@ flowchart LR
 
 ## 2. 画面遷移図
 
-画面は [画面設計](screen-design.md) の S1〜S8。未ログインならログイン画面（S5）、ログイン後はボード（S1）を中心に、各機能はモーダルで開いて閉じると戻る。
+画面は [画面設計](screen-design.md) の S1〜S9。未ログインならログイン画面（S5）、ログイン後はボード（S1）を中心に、各機能はモーダルで開いて閉じると戻る。
 
 ```mermaid
 flowchart TD
@@ -38,6 +38,7 @@ flowchart TD
     S5P["S5 パスワード再設定<br/>（/reset?token=トークン）"]
     S1["S1 カンバンボード<br/>（/ ・メイン画面）"]
     S8["S8 読了一覧<br/>（/read）"]
+    S9["S9 統計<br/>（/stats）"]
     S3["S3 追加フォーム<br/>（モーダル）"]
     S4["S4 編集フォーム<br/>（モーダル）"]
     S6["S6 管理<br/>（モーダル・管理者のみ）"]
@@ -58,6 +59,8 @@ flowchart TD
     S1 -->|"カードをドラッグ<br/>（status 更新・並び替え。画面は留まる）"| S1
     S1 <-->|"ヘッダの 読了一覧 / ボード"| S8
     S8 -->|"行をクリック"| S4
+    S1 <-->|"ヘッダの 統計 / ボード"| S9
+    S8 <-->|"ヘッダの 統計 / 読了一覧"| S9
 ```
 
 - 画面の切り替えは **vue-router**（`frontend/src/router/index.ts`）。URL ごとに画面を持つので、ブラウザの「戻る」・再読み込み・ブックマークが効く。S3・S4・S6・S7 はモーダルの開閉（URL は変わらない）。
@@ -66,6 +69,7 @@ flowchart TD
   |---|---|---|
   | `/` | S1 ボード | ログイン必須（未ログインなら `/login` へ） |
   | `/read` | S8 読了一覧 | ログイン必須。S1 と同じ部品（`KanbanBoard.vue`）に `view: 'read'` を渡す |
+  | `/stats` | S9 統計 | ログイン必須。S1 と同じ部品に `view: 'stats'` を渡す |
   | `/login` | S5 ログイン | ログイン済みなら `/` へ |
   | `/register?invite=<コード>` | S5 新規登録（コード入力済み） | ログイン済みなら `/` へ |
   | `/reset?token=<トークン>` | S5 パスワード再設定 | ログイン状態に関係なく表示 |
@@ -228,7 +232,7 @@ sequenceDiagram
 | 編集（評価・メモ・種別・タグ含む） | S4 編集フォーム | PATCH /api/books/:id | UPDATE（+ book_tags 同期） |
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
 | 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&q=&author=&tag=&sort=&dir=&page=\|offset=&per_page= | SELECT（AND 条件・ORDER BY・LIMIT/OFFSET） |
-| 読了冊数 | S8 見出し | GET /api/books/stats | SELECT COUNT（status=read かつ最初の読了日が今年 / 今月。2 クエリ） |
+| 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。今年・今月・月ごとはその日付を Ruby で数える（2 クエリ） |
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行（IP ごとに 3 分 10 回まで、超過は 429） |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |

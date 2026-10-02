@@ -39,7 +39,12 @@ describe('ReadList（読了一覧）', () => {
         total: 0,
         hasMore: false,
         loadingMore: false,
-        stats: { finished_this_year: 12, finished_this_month: 3 },
+        stats: {
+          finished_total: 30,
+          finished_this_year: 12,
+          finished_this_month: 3,
+          finished_by_month: [1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 0, 0],
+        },
       },
     })
     expect(withStats.find('.list-stats').text()).toBe('今年 12 冊・今月 3 冊')

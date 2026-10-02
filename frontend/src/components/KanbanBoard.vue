@@ -22,6 +22,7 @@ import BoardFilters from './BoardFilters.vue'
 import KanbanColumn from './KanbanColumn.vue'
 import ReadList from './ReadList.vue'
 import ReadSortControl from './ReadSortControl.vue'
+import StatsView from './StatsView.vue'
 import BookFormModal from './BookFormModal.vue'
 import AccountModal from './AccountModal.vue'
 import AdminModal from './AdminModal.vue'
@@ -76,15 +77,19 @@ const frequentTags = ref<string[]>([])
 // タグ候補から隠したタグ（書籍フォームで隠す・戻すと更新される）
 const hiddenTags = ref<HiddenTag[]>([])
 
-// 今年・今月の読了冊数（読了一覧の見出しに出す。読了一覧を開いているときだけ取る）
+// 読了冊数（読了一覧の見出しと統計画面に出す。そのどちらかを開いているときだけ取る）
 const stats = ref<BookStats | null>(null)
+const statsFailed = ref(false)
 
 async function loadStats() {
-  if (props.view !== 'read') return
+  if (props.view === 'board') return
   try {
     stats.value = await getBookStats()
-  } catch {
-    // 取得できなくても冊数が出ないだけなので、一覧の表示は妨げない
+    statsFailed.value = false
+  } catch (e) {
+    if (handleAuthError(e)) return
+    // 読了一覧では冊数が出ないだけ（一覧の表示は妨げない）。統計画面ではお知らせを出す
+    statsFailed.value = true
   }
 }
 
@@ -298,7 +303,9 @@ function onBookDeleted() {
       @account="accountModalOpen = true"
       @logout="onLogout"
     >
+      <!-- 統計は絞り込みに連動しないので、統計画面では絞り込みを出さない -->
       <BoardFilters
+        v-if="view !== 'stats'"
         v-model:keyword="filters.keyword"
         v-model:genre="filters.genre"
         v-model:tag="filters.tag"
@@ -314,6 +321,8 @@ function onBookDeleted() {
       <span>{{ error }}</span>
       <button type="button" class="retry-btn" @click="loadBooks()">再読み込み</button>
     </div>
+
+    <StatsView v-else-if="view === 'stats'" :stats="stats" :failed="statsFailed" />
 
     <main v-else-if="view === 'read'">
       <ReadList
