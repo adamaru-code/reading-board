@@ -104,14 +104,14 @@ describe('ReadList（読了一覧）', () => {
     expect(paneTitles(25)).toHaveLength(1)
   })
 
-  it('26 冊目から右の段へ続け、50 冊を超えたら左右半分ずつ（左が 1 冊多いことがある）', () => {
+  it('26 冊目から右の段へ続け（50 冊で 25・25）、もっと見るで 50 冊を超えたら左右半分ずつ', () => {
     const [left, right] = paneTitles(26)
     expect(left).toHaveLength(25)
     expect(right).toEqual(['本26'])
     const sizes = (count: number) => paneTitles(count).map((pane) => pane.length)
     expect(sizes(50)).toEqual([25, 25])
     expect(sizes(51)).toEqual([26, 25])
-    expect(sizes(60)).toEqual([30, 30])
+    expect(sizes(100)).toEqual([50, 50])
   })
 
   it('行のクリック・Enter で open を伝える', async () => {

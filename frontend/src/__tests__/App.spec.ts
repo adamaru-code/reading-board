@@ -62,7 +62,7 @@ describe('App（画面の切り替え）', () => {
     expect(router.currentRoute.value.name).toBe('login')
   })
 
-  it('「読了一覧」で /read に切り替わり、読了本を 60 件まで読み込む。「ボード」で戻る', async () => {
+  it('「読了一覧」で /read に切り替わり、読了本を 50 件まで読み込む。「ボード」で戻る', async () => {
     vi.spyOn(sessionApi, 'fetchCurrentUser').mockResolvedValue(owner)
     // 読了は 70 冊（1 回の取得で頼まれた件数だけ返す）。ほかのカラムは空
     const readBooks = Array.from({ length: 70 }, (_, i) => ({
@@ -104,10 +104,10 @@ describe('App（画面の切り替え）', () => {
     expect(router.currentRoute.value.name).toBe('read')
     expect(listSpy).toHaveBeenLastCalledWith(
       { status: 'read' },
-      { offset: 20, perPage: 40, sort: 'finished_on', dir: 'desc' },
+      { offset: 20, perPage: 30, sort: 'finished_on', dir: 'desc' },
     )
-    expect(wrapper.findAll('.row')).toHaveLength(60)
-    expect(wrapper.find('.load-more-btn').text()).toBe('もっと見る（残り 10 件）')
+    expect(wrapper.findAll('.row')).toHaveLength(50)
+    expect(wrapper.find('.load-more-btn').text()).toBe('もっと見る（残り 20 件）')
 
     await link('ボード').trigger('click')
     await flushPromises()

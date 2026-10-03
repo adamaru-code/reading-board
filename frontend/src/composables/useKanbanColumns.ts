@@ -6,8 +6,8 @@ import { BOOK_STATUSES } from '../types/book'
 import type { Book, BookStatus, BookListParams, BookListPaging } from '../types/book'
 
 export const COLUMN_PAGE_SIZE = 20
-// 読了一覧（/read）で一度に読み込む件数（1 冊 1 行で左右 2 段に並べるので、ボードより多く出す）
-export const READ_LIST_PAGE_SIZE = 60
+// 読了一覧（/read）で一度に読み込む件数（1 冊 1 行で左右 2 段に 25 冊ずつ並べるので、ボードより多く出す）
+export const READ_LIST_PAGE_SIZE = 50
 // API の per_page 上限（Api::BooksController#pagination_per_page）
 const MAX_PER_PAGE = 200
 

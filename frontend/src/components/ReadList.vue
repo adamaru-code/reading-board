@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Book, BookStats } from '../types/book'
 import { GENRE_LABELS, MEDIA_TYPE_LABELS } from '../types/book'
+import { READ_LIST_PAGE_SIZE } from '../composables/useKanbanColumns'
 
 // 読了一覧（/read）：読了本を 1 冊 1 行で左右 2 段に並べる。左の段から縦に埋めて右の段へ続け、各段の上に列の見出しを付ける。
 // 見出しの右（並び替え）は header-actions スロットに親が入れる。props・emit は KanbanColumn.vue にそろえている
@@ -30,8 +31,9 @@ const COLUMN_HEADINGS: readonly { label: string; align: 'left' | 'center' | 'rig
 ]
 
 // 左の段を LEFT_PANE_MIN 冊まで先に埋めてから右の段へ（本が少なくても横に並ばず、上から縦に増える）。
-// 26〜50 冊は左 25 冊・右に残り。51 冊以上は前半を左、後半を右（左が 1 冊多いことがある。60 冊で 30・30）
-const LEFT_PANE_MIN = 25
+// 一度に読み込む 50 冊までは左 25 冊・右に残り（50 冊で左右 25 冊ずつ）。「もっと見る」で 51 冊以上になったら
+// 前半を左、後半を右（100 冊で 50・50。左が 1 冊多いことがある）
+const LEFT_PANE_MIN = READ_LIST_PAGE_SIZE / 2
 const panes = computed(() => {
   const count = props.items.length
   const left = Math.max(Math.ceil(count / 2), Math.min(count, LEFT_PANE_MIN))
