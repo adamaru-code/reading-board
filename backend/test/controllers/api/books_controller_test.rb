@@ -451,8 +451,8 @@ module Api
     end
 
     # 読了日（最初に読了になった日）が finished_on の読了本を作る
-    def create_finished_book(finished_on, user: @owner)
-      book = user.books.create!(title: "読了 #{finished_on}", status: :read)
+    def create_finished_book(finished_on, user: @owner, genre: :other)
+      book = user.books.create!(title: "読了 #{finished_on}", status: :read, genre: genre)
       book.status_events.where(status: :read).update_all(occurred_on: finished_on)
       book
     end
@@ -473,6 +473,22 @@ module Api
         assert_equal 2, body["finished_this_month"]
         assert_equal [ 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0 ], body["finished_by_month"] # 5 月 1 冊・6 月 2 冊
         assert_equal 4, body["finished_total"] # これまで＝去年の分も入る（他人の本・読書中は入らない）
+      end
+    end
+
+    test "stats は今年の読了をジャンル別に数える（6 ジャンルすべて・去年と他人の本は入れない）" do
+      travel_to Date.new(2026, 6, 15) do
+        create_finished_book(Date.new(2026, 6, 1), genre: :it_tech)
+        create_finished_book(Date.new(2026, 2, 1), genre: :it_tech)
+        create_finished_book(Date.new(2026, 3, 1), genre: :classic_novel)
+        create_finished_book(Date.new(2025, 12, 31), genre: :it_tech) # 去年
+        create_finished_book(Date.new(2026, 6, 10), user: users(:other), genre: :it_tech) # 他人の本
+
+        get stats_api_books_url
+        assert_equal(
+          { "classic_novel" => 1, "liberal_arts" => 0, "health_body" => 0, "practical" => 0, "other" => 0, "it_tech" => 2 },
+          JSON.parse(response.body)["finished_by_genre"]
+        )
       end
     end
 

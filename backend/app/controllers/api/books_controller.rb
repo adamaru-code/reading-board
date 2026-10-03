@@ -57,18 +57,21 @@ module Api
     end
 
     # GET /api/books/stats
-    # 今「読了」の本を数える（統計画面・読了一覧の見出し）。今年・今月・今年の月ごと（1〜12 月の 12 個）は
+    # 今「読了」の本を数える（統計画面・読了一覧の見出し）。今年・今月・今年の月ごと（1〜12 月の 12 個）・今年のジャンル別は
     # 読了日（最初に読了になった日。日本時間）で数える。これまで＝読了の本すべて。絞り込みには連動しない
     def stats
       today = Date.current
-      this_year = first_finished_dates.select { |date| date.year == today.year }
+      this_year = first_finished_on_by_book.select { |_book_id, date| date.year == today.year }
       by_month = Array.new(12, 0)
-      this_year.each { |date| by_month[date.month - 1] += 1 }
+      this_year.each_value { |date| by_month[date.month - 1] += 1 }
       render json: {
         finished_total: current_user.books.read.count,
         finished_this_year: this_year.size,
         finished_this_month: by_month[today.month - 1],
-        finished_by_month: by_month
+        finished_by_month: by_month,
+        # 6 ジャンルすべて（0 冊も含める）。キーは enum のキー
+        finished_by_genre: Book.genres.keys.index_with(0)
+          .merge(current_user.books.where(id: this_year.keys).group(:genre).count)
       }
     end
 
@@ -183,10 +186,10 @@ module Api
       genre.present? && Book.genres.key?(genre)
     end
 
-    # 今「読了」の自分の本ごとの、最初に読了になった日（読了の履歴の最も古い日）の一覧
-    def first_finished_dates
+    # 今「読了」の自分の本ごとの、最初に読了になった日（読了の履歴の最も古い日）。{ book_id => 日付 }
+    def first_finished_on_by_book
       BookStatusEvent.read.where(book_id: current_user.books.read.select(:id))
-        .group(:book_id).minimum(:occurred_on).values
+        .group(:book_id).minimum(:occurred_on)
     end
 
     # 部分一致の LIKE パターン。入力の % や _ は「何にでも一致」ではなく文字として扱う

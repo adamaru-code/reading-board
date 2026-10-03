@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StatsView from '../StatsView.vue'
 import ReadMonthlyChart from '../ReadMonthlyChart.vue'
+import ReadGenreChart from '../ReadGenreChart.vue'
 import type { BookStats } from '../../types/book'
 
 const stats: BookStats = {
@@ -9,6 +10,14 @@ const stats: BookStats = {
   finished_this_year: 42,
   finished_this_month: 3,
   finished_by_month: [4, 6, 3, 5, 2, 7, 4, 3, 5, 3, 0, 0],
+  finished_by_genre: {
+    classic_novel: 8,
+    liberal_arts: 12,
+    health_body: 3,
+    practical: 0,
+    it_tech: 12,
+    other: 7,
+  },
 }
 const today = new Date(2026, 9, 3) // 2026-10-03
 
@@ -56,5 +65,37 @@ describe('ReadMonthlyChart（月ごとの読了冊数）', () => {
       props: { counts: Array(12).fill(0), year: 2026, currentMonth: 1 },
     })
     expect(wrapper.findAll('.month')[0].find('.bar').attributes('style')).toContain('height: 0%')
+  })
+})
+
+describe('ReadGenreChart（ジャンル別の読了冊数）', () => {
+  const mountChart = () =>
+    mount(ReadGenreChart, { props: { counts: stats.finished_by_genre, year: 2026 } })
+
+  it('見出しに年を出し、冊数の多い順に 6 ジャンルを並べる（同じ冊数ならいつものジャンル順。0 冊も出す）', () => {
+    const wrapper = mountChart()
+    expect(wrapper.find('.chart-title').text()).toBe('2026年 ジャンル別の読了冊数')
+    expect(wrapper.findAll('.row').map((r) => r.attributes('aria-label'))).toEqual([
+      '教養・人文・思想 12冊',
+      'IT・技術 12冊',
+      '古典・名作小説 8冊',
+      'その他・未分類 7冊',
+      '健康・身体 3冊',
+      '実用・暮らし 0冊',
+    ])
+  })
+
+  it('いちばん多いジャンルの棒を 100% にし、棒にジャンルの色（genre-*）を付ける', () => {
+    const rows = mountChart().findAll('.row')
+    expect(rows[0].find('.bar').attributes('style')).toContain('width: 100%')
+    expect(rows[2].find('.bar').attributes('style')).toContain('width: 67%') // 8 / 12
+    expect(rows[5].find('.bar').attributes('style')).toContain('width: 0%')
+    expect(rows[0].find('.bar').classes()).toContain('genre-liberal_arts')
+  })
+
+  it('統計画面に月ごとのグラフと一緒に出る', () => {
+    const wrapper = mount(StatsView, { props: { stats, today } })
+    expect(wrapper.findComponent(ReadMonthlyChart).exists()).toBe(true)
+    expect(wrapper.findComponent(ReadGenreChart).exists()).toBe(true)
   })
 })

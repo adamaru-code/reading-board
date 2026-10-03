@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { BookStats } from '../types/book'
 import ReadMonthlyChart from './ReadMonthlyChart.vue'
+import ReadGenreChart from './ReadGenreChart.vue'
 
-// 統計（/stats）：読了冊数（今年・今月・これまで）と、今年の月ごとの読了冊数の棒グラフ。
+// 統計（/stats）：読了冊数（今年・今月・これまで）と、今年の月ごと・ジャンル別の読了冊数のグラフ。
 // 値は親（KanbanBoard.vue）が GET /api/books/stats で取って渡す。絞り込みには連動しない
 withDefaults(
   defineProps<{
@@ -41,6 +42,7 @@ withDefaults(
         :year="today.getFullYear()"
         :current-month="today.getMonth() + 1"
       />
+      <ReadGenreChart :counts="stats.finished_by_genre" :year="today.getFullYear()" />
     </template>
   </main>
 </template>
