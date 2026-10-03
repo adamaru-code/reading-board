@@ -94,6 +94,7 @@ export interface BookStats {
   finished_this_year: number
   finished_this_month: number
   finished_by_month: number[] // 今年の 1〜12 月（12 個）
+  finished_by_genre: Record<BookGenre, number> // 今年のジャンル別（6 ジャンルすべて）
 }
 
 // 一覧の絞り込み条件（互いに AND。q はタイトルまたは著者の部分一致、author は著者の部分一致、genre/tag は完全一致）

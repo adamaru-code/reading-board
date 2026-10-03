@@ -232,7 +232,7 @@ sequenceDiagram
 | 編集（評価・メモ・種別・タグ含む） | S4 編集フォーム | PATCH /api/books/:id | UPDATE（+ book_tags 同期） |
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
 | 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&q=&author=&tag=&sort=&dir=&page=\|offset=&per_page= | SELECT（AND 条件・ORDER BY・LIMIT/OFFSET） |
-| 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。今年・今月・月ごとはその日付を Ruby で数える（2 クエリ） |
+| 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。今年・今月・月ごとはその日付を Ruby で数え、ジャンル別は今年の本の `GROUP BY genre` で数える（3 クエリ） |
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行（IP ごとに 3 分 10 回まで、超過は 429） |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
