@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, useId, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import type { Book, BookStatus } from '../types/book'
 import BookCard from './BookCard.vue'
 
 // ボードの 1 カラム（読みたい / 読書中 / 読了）：見出し・件数・カード一覧・「もっと見る」・ドロップ先。
-// 見出しの右（読了カラムの並び替えなど）は header-actions スロットに親が入れる
+// 見出しの右（読了カラムの並び替えなど）は header-actions スロットに親が入れる。titleTo を渡すと見出し（名前と件数）がその画面へのリンクになる
 const props = withDefaults(
   defineProps<{
     status: BookStatus
@@ -15,8 +16,10 @@ const props = withDefaults(
     loadingMore: boolean
     draggingId: number | null // ドラッグ中のカード（半透明にする）
     filtered?: boolean // 絞り込んで取った一覧か（0 件の文言を変える）
+    titleTo?: RouteLocationRaw // 見出しを押したときに開く画面（読了カラム → 読了一覧）
+    titleLinkLabel?: string // そのリンクの説明（マウスを乗せる・キーボードで選ぶと吹き出しで出す）
   }>(),
-  { filtered: false },
+  { filtered: false, titleTo: undefined, titleLinkLabel: undefined },
 )
 const emit = defineEmits<{
   open: [book: Book] // カードをクリック / Enter / Space
@@ -25,6 +28,8 @@ const emit = defineEmits<{
   drop: [index: number] // このカラムの何番目に落とされたか（移動中のカード自身は数えない）
   'load-more': []
 }>()
+// 見出しのリンクの吹き出しと、リンクを結ぶ id（読み上げで説明として読まれる）
+const tooltipId = useId()
 
 const dragOver = ref(false)
 const sectionEl = ref<HTMLElement | null>(null)
@@ -68,8 +73,23 @@ function onDrop(event: DragEvent) {
     @drop.prevent="onDrop"
   >
     <div class="column-header">
-      <span class="column-title">{{ title }}</span>
-      <span class="column-count">{{ total }}</span>
+      <!-- 説明はブラウザ標準の title（出るまで 1 秒ほど待つ・変えられない）ではなく、自前の吹き出しで 0.2 秒後に出す -->
+      <RouterLink
+        v-if="titleTo"
+        :to="titleTo"
+        class="column-title-link"
+        :aria-describedby="titleLinkLabel ? tooltipId : undefined"
+      >
+        <span class="column-title">{{ title }}</span>
+        <span class="column-count">{{ total }}</span>
+        <span v-if="titleLinkLabel" :id="tooltipId" role="tooltip" class="title-tooltip">
+          {{ titleLinkLabel }}
+        </span>
+      </RouterLink>
+      <template v-else>
+        <span class="column-title">{{ title }}</span>
+        <span class="column-count">{{ total }}</span>
+      </template>
       <slot name="header-actions" />
     </div>
     <div class="card-list">
@@ -134,6 +154,51 @@ function onDrop(event: DragEvent) {
 .column-title {
   font-size: 14px;
   font-weight: 700;
+}
+/* 見出しのリンク（読了 → 読了一覧）。見た目は普通の見出しのまま、マウスを乗せると名前に下線 */
+.column-title-link {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.column-title-link:hover .column-title {
+  text-decoration: underline;
+}
+.column-title-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* 見出しのリンクの説明（吹き出し）。見出しの上に出す（右は並び替えがあり、重なって隠すため）。
+   マウスを乗せる・キーボードで選ぶと 0.2 秒後に出す（通り過ぎただけでは出さない） */
+.title-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  padding: 4px 8px;
+  border-radius: 4px;
+  /* 色は件数バッジと同じカラムの色（読了＝濃い緑） */
+  background: var(--col-badge, var(--text));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.1s,
+    visibility 0.1s;
+}
+.column-title-link:hover .title-tooltip,
+.column-title-link:focus-visible .title-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.2s;
 }
 /* 件数バッジ：カラムの線と同じ色味の地に白い太字 */
 .column-count {
