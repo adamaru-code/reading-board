@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, useId, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import type { Book, BookStatus } from '../types/book'
 import BookCard from './BookCard.vue'
@@ -17,7 +17,7 @@ const props = withDefaults(
     draggingId: number | null // ドラッグ中のカード（半透明にする）
     filtered?: boolean // 絞り込んで取った一覧か（0 件の文言を変える）
     titleTo?: RouteLocationRaw // 見出しを押したときに開く画面（読了カラム → 読了一覧）
-    titleLinkLabel?: string // そのリンクの説明（マウスを乗せたときに出す）
+    titleLinkLabel?: string // そのリンクの説明（マウスを乗せる・キーボードで選ぶと吹き出しで出す）
   }>(),
   { filtered: false, titleTo: undefined, titleLinkLabel: undefined },
 )
@@ -28,6 +28,8 @@ const emit = defineEmits<{
   drop: [index: number] // このカラムの何番目に落とされたか（移動中のカード自身は数えない）
   'load-more': []
 }>()
+// 見出しのリンクの吹き出しと、リンクを結ぶ id（読み上げで説明として読まれる）
+const tooltipId = useId()
 
 const dragOver = ref(false)
 const sectionEl = ref<HTMLElement | null>(null)
@@ -71,9 +73,18 @@ function onDrop(event: DragEvent) {
     @drop.prevent="onDrop"
   >
     <div class="column-header">
-      <RouterLink v-if="titleTo" :to="titleTo" class="column-title-link" :title="titleLinkLabel">
+      <!-- 説明はブラウザ標準の title（出るまで 1 秒ほど待つ・変えられない）ではなく、自前の吹き出しで 0.2 秒後に出す -->
+      <RouterLink
+        v-if="titleTo"
+        :to="titleTo"
+        class="column-title-link"
+        :aria-describedby="titleLinkLabel ? tooltipId : undefined"
+      >
         <span class="column-title">{{ title }}</span>
         <span class="column-count">{{ total }}</span>
+        <span v-if="titleLinkLabel" :id="tooltipId" role="tooltip" class="title-tooltip">
+          {{ titleLinkLabel }}
+        </span>
       </RouterLink>
       <template v-else>
         <span class="column-title">{{ title }}</span>
@@ -146,6 +157,7 @@ function onDrop(event: DragEvent) {
 }
 /* 見出しのリンク（読了 → 読了一覧）。見た目は普通の見出しのまま、マウスを乗せると名前に下線 */
 .column-title-link {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
@@ -159,6 +171,32 @@ function onDrop(event: DragEvent) {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+/* 見出しのリンクの説明（吹き出し）。マウスを乗せる・キーボードで選ぶと 0.2 秒後に出す（通り過ぎただけでは出さない） */
+.title-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--text);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.1s,
+    visibility 0.1s;
+}
+.column-title-link:hover .title-tooltip,
+.column-title-link:focus-visible .title-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.2s;
 }
 /* 件数バッジ：カラムの線と同じ色味の地に白い太字 */
 .column-count {

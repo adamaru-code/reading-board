@@ -226,8 +226,13 @@ describe('KanbanColumn', () => {
       global: { plugins: [router] },
     })
     const link = wrapper.find('.column-title-link')
-    expect(link.text()).toBe('読了2')
-    expect(link.attributes('title')).toBe('読了一覧を開く')
+    expect(link.find('.column-title').text()).toBe('読了')
+    expect(link.find('.column-count').text()).toBe('2')
+    // 説明はブラウザ標準の title ではなく自前の吹き出し（リンクと aria-describedby で結ぶ）
+    expect(link.attributes('title')).toBeUndefined()
+    const tooltip = link.find('[role="tooltip"]')
+    expect(tooltip.text()).toBe('読了一覧を開く')
+    expect(link.attributes('aria-describedby')).toBe(tooltip.attributes('id'))
     await link.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('read')
