@@ -44,6 +44,16 @@ describe('router（画面の切り替え）', () => {
     expect(read.matched[0].props).toEqual({ default: { view: 'read' } })
   })
 
+  it('統計（/stats）はログイン必須で、ボードと同じ部品に view=stats を渡す', async () => {
+    loggedOut()
+    expect((await open('/stats')).name).toBe('login')
+    resetAuthForTest()
+    loggedIn()
+    const stats = await open('/stats')
+    expect(stats.name).toBe('stats')
+    expect(stats.matched[0].props).toEqual({ default: { view: 'stats' } })
+  })
+
   it('ログイン済みでログイン・登録画面を開くとボードへ', async () => {
     loggedIn()
     expect((await open('/login')).name).toBe('board')

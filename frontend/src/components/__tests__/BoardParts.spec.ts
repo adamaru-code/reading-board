@@ -34,7 +34,7 @@ function makeBook(id: number, title: string): Book {
   }
 }
 
-// ヘッダは「ボード｜読了一覧」の切り替えに RouterLink を使うので、ルーターを付けて描く
+// ヘッダは「ボード｜読了一覧｜統計」の切り替えに RouterLink を使うので、ルーターを付けて描く
 async function mountHeader(user: User = owner, view: BoardView = 'board') {
   const Empty = { template: '<div />' }
   const router = createRouter({
@@ -42,9 +42,10 @@ async function mountHeader(user: User = owner, view: BoardView = 'board') {
     routes: [
       { path: '/', name: 'board', component: Empty },
       { path: '/read', name: 'read', component: Empty },
+      { path: '/stats', name: 'stats', component: Empty },
     ],
   })
-  await router.push(view === 'read' ? '/read' : '/')
+  await router.push({ board: '/', read: '/read', stats: '/stats' }[view])
   const wrapper = mount(BoardHeader, { props: { user, view }, global: { plugins: [router] } })
   return { wrapper, router }
 }
@@ -86,6 +87,13 @@ describe('BoardHeader', () => {
     await wrapper.setProps({ view: 'read' })
     expect(link('読了一覧').attributes('aria-current')).toBe('page')
     expect(link('読了一覧').classes()).toContain('current')
+
+    await link('統計').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('stats')
+    await wrapper.setProps({ view: 'stats' })
+    expect(link('統計').attributes('aria-current')).toBe('page')
+    expect(link('読了一覧').classes()).not.toContain('current')
   })
 })
 

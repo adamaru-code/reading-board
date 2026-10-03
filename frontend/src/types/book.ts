@@ -87,10 +87,13 @@ export interface BookLookupResult {
   cover_url: string | null
 }
 
-// 読了冊数（GET /api/books/stats）。今「読了」の本のうち、読了日が今年・今月のもの。絞り込みには連動しない
+// 読了冊数（GET /api/books/stats）。今「読了」の自分の本を数える。今年・今月・月ごとは読了日（最初に読了になった日）で数える。
+// 絞り込みには連動しない
 export interface BookStats {
+  finished_total: number // これまで（読了の本すべて）
   finished_this_year: number
   finished_this_month: number
+  finished_by_month: number[] // 今年の 1〜12 月（12 個）
 }
 
 // 一覧の絞り込み条件（互いに AND。q はタイトルまたは著者の部分一致、author は著者の部分一致、genre/tag は完全一致）

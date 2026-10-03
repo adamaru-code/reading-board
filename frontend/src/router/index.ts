@@ -16,7 +16,7 @@ declare module 'vue-router' {
 const queryString = (value: unknown) => (typeof value === 'string' ? value : '')
 
 export const routes: RouteRecordRaw[] = [
-  // ボード（/）と読了一覧（/read）は同じ部品。切り替えても作り直されないので、絞り込みや読み込み済みの本が残る
+  // ボード（/）・読了一覧（/read）・統計（/stats）は同じ部品。切り替えても作り直されないので、絞り込みや読み込み済みの本が残る
   {
     path: '/',
     name: 'board',
@@ -30,6 +30,13 @@ export const routes: RouteRecordRaw[] = [
     component: KanbanBoard,
     meta: { requiresAuth: true },
     props: { view: 'read' },
+  },
+  {
+    path: '/stats',
+    name: 'stats',
+    component: KanbanBoard,
+    meta: { requiresAuth: true },
+    props: { view: 'stats' },
   },
   { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
   {

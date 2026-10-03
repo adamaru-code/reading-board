@@ -468,7 +468,11 @@ module Api
 
         get stats_api_books_url
         assert_response :success
-        assert_equal({ "finished_this_year" => 3, "finished_this_month" => 2 }, JSON.parse(response.body))
+        body = JSON.parse(response.body)
+        assert_equal 3, body["finished_this_year"]
+        assert_equal 2, body["finished_this_month"]
+        assert_equal [ 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0 ], body["finished_by_month"] # 5 月 1 冊・6 月 2 冊
+        assert_equal 4, body["finished_total"] # これまで＝去年の分も入る（他人の本・読書中は入らない）
       end
     end
 
@@ -476,7 +480,9 @@ module Api
       travel_to Time.utc(2025, 12, 31, 20, 0) do # 日本時間 2026-01-01 05:00
         @owner.books.create!(title: "元日の朝に読了", status: :read)
         get stats_api_books_url
-        assert_equal({ "finished_this_year" => 1, "finished_this_month" => 1 }, JSON.parse(response.body))
+        body = JSON.parse(response.body)
+        assert_equal [ 1, 1 ], body.values_at("finished_this_year", "finished_this_month")
+        assert_equal 1, body["finished_by_month"][0] # 1 月
       end
     end
 
@@ -486,7 +492,10 @@ module Api
         book.status_events.create!(status: :read, occurred_on: Date.new(2026, 6, 10))
 
         get stats_api_books_url
-        assert_equal({ "finished_this_year" => 0, "finished_this_month" => 0 }, JSON.parse(response.body))
+        body = JSON.parse(response.body)
+        assert_equal [ 0, 0 ], body.values_at("finished_this_year", "finished_this_month")
+        assert_equal Array.new(12, 0), body["finished_by_month"]
+        assert_equal 1, body["finished_total"]
       end
     end
 

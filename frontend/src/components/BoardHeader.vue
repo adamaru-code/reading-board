@@ -2,9 +2,9 @@
 import type { User } from '../types/auth'
 import type { BoardView } from '../types/view'
 
-// ボード上部のヘッダ：タイトル・「＋ 本を追加」・画面の切り替え（ボード｜読了一覧）・アカウントまわりのボタン。
+// ボード上部のヘッダ：タイトル・「＋ 本を追加」・画面の切り替え（ボード｜読了一覧｜統計）・アカウントまわりのボタン。
 // 絞り込み（BoardFilters）は親がスロットに入れる。ボタンは押されたことを親に伝えるだけ。
-// 切り替えは URL（/ と /read）を移るリンクで、view（今の画面）の方を強調する
+// 切り替えは URL（/・/read・/stats）を移るリンクで、view（今の画面）の方を強調する
 defineProps<{ user: User; view: BoardView }>()
 const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
 </script>
@@ -32,6 +32,14 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
           :aria-current="view === 'read' ? 'page' : undefined"
         >
           読了一覧
+        </RouterLink>
+        <RouterLink
+          :to="{ name: 'stats' }"
+          class="to-stats"
+          :class="{ current: view === 'stats' }"
+          :aria-current="view === 'stats' ? 'page' : undefined"
+        >
+          統計
         </RouterLink>
       </nav>
     </div>
@@ -117,6 +125,9 @@ const emit = defineEmits<{ add: []; admin: []; account: []; logout: [] }>()
 }
 .view-switch a.to-read.current {
   background: var(--col-read-strong);
+}
+.view-switch a.to-stats.current {
+  background: var(--slate);
 }
 .view-switch a:focus-visible {
   outline: 2px solid var(--primary);
