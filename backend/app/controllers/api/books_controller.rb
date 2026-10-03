@@ -56,22 +56,30 @@ module Api
       render json: book_json(find_book)
     end
 
-    # GET /api/books/stats
-    # 今「読了」の本を数える（統計画面・読了一覧の見出し）。今年・今月・今年の月ごと（1〜12 月の 12 個）・今年のジャンル別は
-    # 読了日（最初に読了になった日。日本時間）で数える。これまで＝読了の本すべて。絞り込みには連動しない
+    # GET /api/books/stats?year=YYYY
+    # 今「読了」の本を数える（統計画面・読了一覧の見出し）。日付は読了日（最初に読了になった日。日本時間）。絞り込みには連動しない
+    # - 今年・今月・これまで（finished_this_year / finished_this_month / finished_total）：year に関係なくいつも同じ
+    # - 選んだ年（year。無い・不正なら今年）：その年の冊数・月ごと（1〜12 月の 12 個）・ジャンル別（6 ジャンル、0 冊も含む）
+    # - years：選べる年（読了した本がある年＋今年、新しい順）
     def stats
       today = Date.current
-      this_year = first_finished_on_by_book.select { |_book_id, date| date.year == today.year }
+      finished_on = first_finished_on_by_book
+      years = (finished_on.values.map(&:year) + [ today.year ]).uniq.sort.reverse
+      year = stats_year(years, today.year)
+      in_year = finished_on.select { |_book_id, date| date.year == year }
       by_month = Array.new(12, 0)
-      this_year.each_value { |date| by_month[date.month - 1] += 1 }
+      in_year.each_value { |date| by_month[date.month - 1] += 1 }
+      this_year = finished_on.values.select { |date| date.year == today.year }
       render json: {
         finished_total: current_user.books.read.count,
         finished_this_year: this_year.size,
-        finished_this_month: by_month[today.month - 1],
+        finished_this_month: this_year.count { |date| date.month == today.month },
+        years: years,
+        year: year,
+        finished_in_year: in_year.size,
         finished_by_month: by_month,
-        # 6 ジャンルすべて（0 冊も含める）。キーは enum のキー
         finished_by_genre: Book.genres.keys.index_with(0)
-          .merge(current_user.books.where(id: this_year.keys).group(:genre).count)
+          .merge(current_user.books.where(id: in_year.keys).group(:genre).count)
       }
     end
 
@@ -184,6 +192,12 @@ module Api
 
     def valid_genre?(genre)
       genre.present? && Book.genres.key?(genre)
+    end
+
+    # 統計で表示する年。選べる年（years）に無い値・数字でない値は今年にする
+    def stats_year(years, this_year)
+      requested = Integer(params[:year], exception: false)
+      years.include?(requested) ? requested : this_year
     end
 
     # 今「読了」の自分の本ごとの、最初に読了になった日（読了の履歴の最も古い日）。{ book_id => 日付 }

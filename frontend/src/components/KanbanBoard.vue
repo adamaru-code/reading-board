@@ -80,17 +80,24 @@ const hiddenTags = ref<HiddenTag[]>([])
 // 読了冊数（読了一覧の見出しと統計画面に出す。そのどちらかを開いているときだけ取る）
 const stats = ref<BookStats | null>(null)
 const statsFailed = ref(false)
+// 統計画面で選んだ年（未選択なら今年。保存・削除のあとも選んだ年のまま取り直す）
+const statsYear = ref<number | undefined>(undefined)
 
 async function loadStats() {
   if (props.view === 'board') return
   try {
-    stats.value = await getBookStats()
+    stats.value = await getBookStats(statsYear.value)
     statsFailed.value = false
   } catch (e) {
     if (handleAuthError(e)) return
     // 読了一覧では冊数が出ないだけ（一覧の表示は妨げない）。統計画面ではお知らせを出す
     statsFailed.value = true
   }
+}
+
+function onStatsYearChange(year: number) {
+  statsYear.value = year
+  loadStats()
 }
 
 async function loadHiddenTags() {
@@ -322,7 +329,12 @@ function onBookDeleted() {
       <button type="button" class="retry-btn" @click="loadBooks()">再読み込み</button>
     </div>
 
-    <StatsView v-else-if="view === 'stats'" :stats="stats" :failed="statsFailed" />
+    <StatsView
+      v-else-if="view === 'stats'"
+      :stats="stats"
+      :failed="statsFailed"
+      @change-year="onStatsYearChange"
+    />
 
     <main v-else-if="view === 'read'">
       <ReadList

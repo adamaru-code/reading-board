@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { BookStats } from '../types/book'
 import ReadMonthlyChart from './ReadMonthlyChart.vue'
 import ReadGenreChart from './ReadGenreChart.vue'
 
-// 統計（/stats）：読了冊数（今年・今月・これまで）と、今年の月ごと・ジャンル別の読了冊数のグラフ。
-// 値は親（KanbanBoard.vue）が GET /api/books/stats で取って渡す。絞り込みには連動しない
-withDefaults(
+// 統計（/stats）：読了冊数（今年・今月・これまで）と、選んだ年の月ごと・ジャンル別の読了冊数のグラフ。
+// 値は親（KanbanBoard.vue）が GET /api/books/stats で取って渡す。年を選ぶと change-year で親に伝え、親が取り直す。
+// 絞り込みには連動しない
+const props = withDefaults(
   defineProps<{
     stats: BookStats | null
     failed?: boolean // 取得に失敗した
@@ -13,6 +15,16 @@ withDefaults(
   }>(),
   { failed: false, today: () => new Date() },
 )
+const emit = defineEmits<{ 'change-year': [year: number] }>()
+
+// 今年を選んでいるときだけ今月を渡す（まだ来ていない月を線だけにし、今月を強調する）
+const currentMonth = computed(() =>
+  props.stats?.year === props.today.getFullYear() ? props.today.getMonth() + 1 : undefined,
+)
+
+function onYearChange(event: Event) {
+  emit('change-year', Number((event.target as HTMLSelectElement).value))
+}
 </script>
 
 <template>
@@ -37,12 +49,21 @@ withDefaults(
           <dd>{{ stats.finished_total }} <small>冊</small></dd>
         </div>
       </dl>
+      <div class="year-bar">
+        <label class="year-select">
+          表示する年
+          <select :value="stats.year" @change="onYearChange">
+            <option v-for="y in stats.years" :key="y" :value="y">{{ y }}年</option>
+          </select>
+        </label>
+        <span class="year-count">{{ stats.year }}年の読了 {{ stats.finished_in_year }} 冊</span>
+      </div>
       <ReadMonthlyChart
         :counts="stats.finished_by_month"
-        :year="today.getFullYear()"
-        :current-month="today.getMonth() + 1"
+        :year="stats.year"
+        :current-month="currentMonth"
       />
-      <ReadGenreChart :counts="stats.finished_by_genre" :year="today.getFullYear()" />
+      <ReadGenreChart :counts="stats.finished_by_genre" :year="stats.year" />
     </template>
   </main>
 </template>
@@ -82,6 +103,31 @@ withDefaults(
   font-size: 13px;
   font-weight: 600;
   color: var(--text-sub);
+}
+.year-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 0 10px;
+}
+.year-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.year-select select {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text);
+}
+.year-count {
+  font-size: 13px;
+  font-weight: 600;
 }
 .visually-hidden {
   position: absolute;

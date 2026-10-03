@@ -8,6 +8,9 @@ import type { BookStats } from '../../types/book'
 const stats: BookStats = {
   finished_total: 128,
   finished_this_year: 42,
+  years: [2026, 2025],
+  year: 2026,
+  finished_in_year: 42,
   finished_this_month: 3,
   finished_by_month: [4, 6, 3, 5, 2, 7, 4, 3, 5, 3, 0, 0],
   finished_by_genre: {
@@ -26,6 +29,31 @@ describe('StatsView（統計）', () => {
     const wrapper = mount(StatsView, { props: { stats, today } })
     const tiles = wrapper.findAll('.tile').map((t) => t.text())
     expect(tiles).toEqual(['今年の読了42 冊', '今月の読了3 冊', 'これまでの読了128 冊'])
+  })
+
+  it('表示する年を選べ、選んだ年の冊数を出す。年を変えると change-year を伝える', async () => {
+    const wrapper = mount(StatsView, { props: { stats, today } })
+    const select = wrapper.find('.year-select select')
+    expect(select.findAll('option').map((o) => o.text())).toEqual(['2026年', '2025年'])
+    expect(wrapper.find('.year-count').text()).toBe('2026年の読了 42 冊')
+    await select.setValue('2025')
+    expect(wrapper.emitted('change-year')).toEqual([[2025]])
+  })
+
+  it('過去の年はグラフに今月を渡さない（12 か月すべて棒を出し、強調しない）', () => {
+    const past = { ...stats, year: 2025, finished_in_year: 30 }
+    const wrapper = mount(StatsView, { props: { stats: past, today } })
+    const chart = wrapper.findComponent(ReadMonthlyChart)
+    expect(chart.props('year')).toBe(2025)
+    expect(chart.props('currentMonth')).toBeUndefined()
+    expect(wrapper.findComponent(ReadGenreChart).props('year')).toBe(2025)
+    expect(wrapper.find('.year-count').text()).toBe('2025年の読了 30 冊')
+    // 今年なら今月（10 月）を渡す
+    expect(
+      mount(StatsView, { props: { stats, today } })
+        .findComponent(ReadMonthlyChart)
+        .props('currentMonth'),
+    ).toBe(10)
   })
 
   it('取得前は「読み込み中…」、失敗したらお知らせを出す', () => {
@@ -58,6 +86,16 @@ describe('ReadMonthlyChart（月ごとの読了冊数）', () => {
     expect(months[10].classes()).toContain('future')
     expect(months[10].find('.count').text()).toBe('')
     expect(months[10].attributes('aria-label')).toBe('11月 まだ')
+  })
+
+  it('今月を渡さない（過去の年）と、12 か月すべて冊数と棒を出し、強調しない', () => {
+    const wrapper = mount(ReadMonthlyChart, {
+      props: { counts: stats.finished_by_month, year: 2025 },
+    })
+    const months = wrapper.findAll('.month')
+    expect(months.filter((m) => m.classes().includes('future'))).toHaveLength(0)
+    expect(months.filter((m) => m.classes().includes('current'))).toHaveLength(0)
+    expect(months[11].attributes('aria-label')).toBe('12月 0冊')
   })
 
   it('1 冊も無い年でも棒の高さは 0%（0 で割らない）', () => {

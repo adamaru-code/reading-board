@@ -70,9 +70,11 @@ export function lookupBook(isbn: string): Promise<BookLookupResult> {
   return request<BookLookupResult>('/books/lookup', { query: { isbn } })
 }
 
-// GET /api/books/stats （今年・今月の読了冊数）
-export function getBookStats(): Promise<BookStats> {
-  return request<BookStats>('/books/stats')
+// GET /api/books/stats?year= （読了冊数。year を省くと今年）
+export function getBookStats(year?: number): Promise<BookStats> {
+  return request<BookStats>('/books/stats', {
+    query: { year: year === undefined ? undefined : String(year) },
+  })
 }
 
 // PATCH /api/books/reorder （渡した id 順に position を保存）
