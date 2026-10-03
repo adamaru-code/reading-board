@@ -52,8 +52,8 @@ describe('ReadList（読了一覧）', () => {
   })
 
   it('各段の上に列の見出しを出す（形態の列は文字なし）', () => {
-    // 右の段ができる 31 冊で、両方の段に見出しが付くことを見る
-    const wrapper = mountList(Array.from({ length: 31 }, (_, i) => makeBook(i + 1)))
+    // 右の段ができる 26 冊で、両方の段に見出しが付くことを見る
+    const wrapper = mountList(Array.from({ length: 26 }, (_, i) => makeBook(i + 1)))
     const heads = wrapper.findAll('.row-head')
     expect(heads).toHaveLength(2)
     expect(heads[0].findAll('span').map((s) => s.text())).toEqual([
@@ -99,17 +99,19 @@ describe('ReadList（読了一覧）', () => {
       .findAll('.pane')
       .map((pane) => pane.findAll('.row-title').map((t) => t.text()))
 
-  it('30 冊までは左の段だけに上から縦に並べる（横には並べない）', () => {
+  it('25 冊までは左の段だけに上から縦に並べる（横には並べない）', () => {
     expect(paneTitles(5)).toEqual([['本1', '本2', '本3', '本4', '本5']])
-    expect(paneTitles(30)).toHaveLength(1)
+    expect(paneTitles(25)).toHaveLength(1)
   })
 
-  it('31 冊目から右の段へ続け、60 冊を超えたら左右半分ずつ（左が 1 冊多い）', () => {
-    const [left, right] = paneTitles(31)
-    expect(left).toHaveLength(30)
-    expect(right).toEqual(['本31'])
-    expect(paneTitles(60).map((pane) => pane.length)).toEqual([30, 30])
-    expect(paneTitles(61).map((pane) => pane.length)).toEqual([31, 30])
+  it('26 冊目から右の段へ続け（50 冊で 25・25）、もっと見るで 50 冊を超えたら左右半分ずつ', () => {
+    const [left, right] = paneTitles(26)
+    expect(left).toHaveLength(25)
+    expect(right).toEqual(['本26'])
+    const sizes = (count: number) => paneTitles(count).map((pane) => pane.length)
+    expect(sizes(50)).toEqual([25, 25])
+    expect(sizes(51)).toEqual([26, 25])
+    expect(sizes(100)).toEqual([50, 50])
   })
 
   it('行のクリック・Enter で open を伝える', async () => {

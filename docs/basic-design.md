@@ -195,7 +195,7 @@ sequenceDiagram
 
 - 一覧はページング対応（`page` 既定1・下限1、`per_page` 既定100・1〜200 にクランプ）。`offset`（0 以上）を指定すると `page` より優先。レスポンスは `{ items, pagination }` エンベロープ。
 - 並びは既定 `position IS NULL, position, created_at, id`。`sort`（`finished_on` / `registered_on` / `rating` / `duration_days`）＋`dir`（`asc`/`desc`）で並び替え（値が無い本は末尾、同値はタイトル順。position は使わない）。不正な `sort` は無視。
-- カンバンは**カラム（status）ごとに個別取得**し、初期 20 件・「もっと見る」で追加読込（`useKanbanColumns`）。件数表示は `total`。読了一覧（S8）は読了カラムと同じデータを使い、60 件まで・「もっと見る」で 60 件ずつ読み込む（`loadMore(status, READ_LIST_PAGE_SIZE)`）。
+- カンバンは**カラム（status）ごとに個別取得**し、初期 20 件・「もっと見る」で追加読込（`useKanbanColumns`）。件数表示は `total`。読了一覧（S8）は読了カラムと同じデータを使い、50 件まで・「もっと見る」で 50 件ずつ読み込む（`loadMore(status, READ_LIST_PAGE_SIZE)`）。
   - 追加読込は **`offset` = 読み込み済み件数**。D&D でカードが移るとページ境界がずれるため、page 番号ではなく offset で取りこぼしを防ぐ（重複は id で除外）。
   - 読了カラムの並び替えはページをまたいで正しくなるよう**サーバー側**（`sort`/`dir`）で行い、変更時は先頭から取り直す。
   - 読了カラムはキーで並べるため**カラム内の手動並び替えの対象外**。他カラムからドロップしたときは status だけ更新し、読了カラムを取り直してキー順の位置に置く（reorder は呼ばない）。
@@ -285,7 +285,7 @@ sequenceDiagram
 | S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
 | S6 管理 | 招待タブ・ユーザータブ | /api/invitations、/api/users、/api/users/:id/password_reset_link | 管理者のみ |
 | S7 アカウント | パスワード変更・アカウント削除タブ | /api/password、DELETE /api/registration | |
-| S8 読了一覧 | 読了（件数）・今年 / 今月の読了冊数・並び替え・列の見出し付きの 2 段の行一覧・もっと見る | GET /api/books?status=read&genre=&q=&tag=&sort=&dir=&offset=&per_page=、GET /api/books/stats | S1 の読了カラムと同じデータを使う（開いたときに 60 件まで追加で読み込む） |
+| S8 読了一覧 | 読了（件数）・今年 / 今月の読了冊数・並び替え・列の見出し付きの 2 段の行一覧・もっと見る | GET /api/books?status=read&genre=&q=&tag=&sort=&dir=&offset=&per_page=、GET /api/books/stats | S1 の読了カラムと同じデータを使う（開いたときに 50 件まで追加で読み込む） |
 
 ---
 

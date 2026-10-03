@@ -158,7 +158,7 @@ async function loadBooks(keepLoaded = false) {
   } finally {
     loading.value = false
   }
-  // 先頭 20 件に戻したとき（最初の表示・絞り込みの変更）、読了一覧なら 60 件まで足す
+  // 先頭 20 件に戻したとき（最初の表示・絞り込みの変更）、読了一覧なら 50 件まで足す
   if (!keepLoaded) fillReadList()
 }
 
@@ -193,7 +193,7 @@ watch(
   },
 )
 
-// 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す（読了一覧なら 60 件まで）
+// 並びはサーバー側で決まるので、変更したら読了カラムを先頭から取り直す（読了一覧なら 50 件まで）
 watch(readSort, async () => {
   try {
     await reloadColumn('read')

@@ -77,7 +77,7 @@ describe('useKanbanColumns', () => {
     expect(hasMore('want_to_read')).toBe(false)
   })
 
-  it('もっと見るに件数を渡すと、その件数ずつ取得する（読了一覧は 60 件）', async () => {
+  it('もっと見るに件数を渡すと、その件数ずつ取得する（読了一覧は 50 件）', async () => {
     const spy = fakeListBooks()
     const { reloadAll, loadMore } = useKanbanColumns(() => ({}))
     await reloadAll()
