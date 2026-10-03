@@ -91,6 +91,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
 - [ ] テストに**補助メソッド（`def create_… `など）を足す前に、同じファイルに同じ名前が無いか grep する**。Ruby は後から書いた定義で前のものを上書きするので、引数の違う既存テストが `ArgumentError: unknown keywords` で落ちる（`books_controller_test.rb` の `create_read_book`。2026-10-01、PR #236）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
+- [ ] **データを直すマイグレーション**は、`db:migrate` の前に**確認用データ（直す対象・直さない対象・重なる場合）を作ってから**試す。流した後でも `bin/rails runner 'require Rails.root.join("db/migrate/<ファイル>").to_s; ActiveRecord::Migration.suppress_messages { <クラス>.new.up }'` で何度でも試せる。確認用データは最後に消す（2026-10-02、PR #246 で先に流してしまい、runner で試し直した）
 
 ---
 
@@ -101,6 +102,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] `any` を使っていない（やむを得ない箇所は `unknown` + 型ガード）
 - [ ] コンポーネントの **props / emits に型**が定義されている（`defineProps<...>()` / `defineEmits<...>()`）
 - [ ] API レスポンスは `types/` の型に寄せる
+- [ ] **型に項目を足したら、その型の値を書いているテストも grep して足す**（例：`grep -rn "finished_by_month: \[" frontend/src`）。vitest は型を見ないので通っても、`npm run build`（vue-tsc）で「missing the following properties」で落ちる（2026-10-03、`BookStats`）
 
 ### 2.2 リアクティビティ / Composition API
 
@@ -114,6 +116,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] `v-for` の **`:key` は安定した一意 id**（配列インデックスではなく `book.id`）。並び替わらない固定の一覧（★の表示・エラーメッセージの列挙）は index でも可
 - [ ] クリッカブル要素は `button` を使う（`div` の場合は `role` / `tabindex` / `@keydown`）
 - [ ] フォーム要素に `label` が紐付いている
+- [ ] 説明（ツールチップ）を**すぐ出したい**ときは `title` 属性ではなく自前の吹き出しにする。`title` は出るまでの待ち時間をブラウザが決め（Chrome で約 1 秒）、アプリからは変えられない。自前の吹き出しは CSS の `:hover` / `:focus-visible` ＋ `transition-delay: 0.2s`（0 だと通り過ぎただけでちらつく）、`role="tooltip"` を `aria-describedby` で結ぶ。隣の部品に重ならない側に出す（`KanbanColumn.vue` の読了見出し。2026-10-03、PR #260）
 
 ### 2.4 エラー / ローディング表現
 
@@ -161,6 +164,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] 上の表のとおり実装と一致している（特に API を足したら `functional-requirements.md` §3 と `basic-design.md` §4.3 の両方を更新）
 - [ ] 「単一ユーザー」「将来」「予定」「想定」など、実装が進んで古くなりやすい言葉を検索し、**実装済みなのに古いまま**の記述が無いか見直す（将来候補・見積もり・規模の想定としての記述は正当なので残してよい）
 - [ ] **画面の言葉・API パラメータ・部品の名前を変えたら、古い言葉で docs 全体を grep する**（例：`grep -rn "著者" docs/`）。表や図の 1 か所だけ直して、別の章（S8 の説明・基本設計の画面表）に古い言葉が残りやすい（PR #230 で「著者 → キーワード」が 2 か所残り、#236 で直した。2026-10-01）
+- [ ] **境目のある動き**（例：何冊から右の段へ移るか）を docs やコメントに書くときは、式に**境目の値**（25・26・50・51 など）を入れて確かめてから書く。「30 冊を超えたら半分ずつ」のように丸めると、31〜60 冊の実際の動き（左 30・右に残り）とずれる（2026-10-03、PR #250）
+- [ ] docs に**日付**（「2026-10-03 に対応済み」など）を書くときは、思い込まずに `date +%F` で今日を確かめる（2026-10-03、10-04 と書きかけた）
 - [ ] バリデーションルール（文字数・範囲・必須）がモデルの validation と一致
 - [ ] README・docs の相対リンクが壊れていない
 
