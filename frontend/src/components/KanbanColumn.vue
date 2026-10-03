@@ -180,10 +180,11 @@ function onDrop(event: DragEvent) {
   z-index: 10;
   padding: 4px 8px;
   border-radius: 4px;
-  background: var(--text);
+  /* 色は件数バッジと同じカラムの色（読了＝濃い緑） */
+  background: var(--col-badge, var(--text));
   color: #fff;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
