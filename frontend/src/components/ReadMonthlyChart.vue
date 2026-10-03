@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-// 今年の月ごとの読了冊数の棒グラフ（1〜12 月）。グラフ用の道具は使わず、HTML と CSS の棒で描く。
-// 棒の高さはいちばん多い月を 100% にした割合。まだ来ていない月は棒を出さず線だけ、今月は濃い緑
+// 月ごとの読了冊数の棒グラフ（1〜12 月）。グラフ用の道具は使わず、HTML と CSS の棒で描く。
+// 棒の高さはいちばん多い月を 100% にした割合。今年なら、まだ来ていない月は棒を出さず線だけ、今月は濃い緑
 const props = defineProps<{
   counts: number[] // 1〜12 月の冊数（12 個）
   year: number
-  currentMonth: number // 1〜12
+  currentMonth?: number // 今年なら今月（1〜12）。過去の年は渡さない（12 か月すべて棒を出し、強調しない）
 }>()
 
 const max = computed(() => Math.max(1, ...props.counts))
@@ -14,7 +14,7 @@ const max = computed(() => Math.max(1, ...props.counts))
 const months = computed(() =>
   props.counts.map((count, i) => {
     const month = i + 1
-    const future = month > props.currentMonth
+    const future = props.currentMonth !== undefined && month > props.currentMonth
     return {
       month,
       count,

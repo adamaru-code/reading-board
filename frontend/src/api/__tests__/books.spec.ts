@@ -66,7 +66,7 @@ describe('listBooks', () => {
 
 describe('getBookStats', () => {
   it('GET /api/books/stats の結果をそのまま返す', async () => {
-    const stats = { finished_this_year: 5, finished_this_month: 2 }
+    const stats = { finished_this_year: 5, finished_this_month: 2, year: 2026 }
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(stats)))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -74,5 +74,20 @@ describe('getBookStats', () => {
     expect(new URL(fetchMock.mock.calls[0][0], 'http://localhost').pathname).toBe(
       '/api/books/stats',
     )
+  })
+})
+
+describe('getBookStats の年', () => {
+  it('年を渡すと ?year= を付け、省くと付けない', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => new Response(JSON.stringify({ year: 2025 })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getBookStats(2025)
+    await getBookStats()
+    const urls = fetchMock.mock.calls.map((c) => new URL(c[0], 'http://localhost'))
+    expect(urls[0].searchParams.get('year')).toBe('2025')
+    expect(urls[1].searchParams.has('year')).toBe(false)
   })
 })

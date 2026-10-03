@@ -42,6 +42,9 @@ describe('ReadList（読了一覧）', () => {
         stats: {
           finished_total: 30,
           finished_this_year: 12,
+          years: [2026],
+          year: 2026,
+          finished_in_year: 12,
           finished_this_month: 3,
           finished_by_month: [1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 0, 0],
           finished_by_genre: {

@@ -515,6 +515,37 @@ module Api
       end
     end
 
+    test "stats は year で選んだ年の冊数・月ごと・ジャンル別を返し、今年・今月・これまでは変えない" do
+      travel_to Date.new(2026, 6, 15) do
+        create_finished_book(Date.new(2026, 6, 1), genre: :it_tech)
+        create_finished_book(Date.new(2025, 3, 1), genre: :classic_novel)
+        create_finished_book(Date.new(2025, 3, 20), genre: :classic_novel)
+        create_finished_book(Date.new(2023, 1, 5))
+
+        get stats_api_books_url, params: { year: 2025 }
+        body = JSON.parse(response.body)
+        assert_equal [ 2026, 2025, 2023 ], body["years"] # 読了した本がある年＋今年、新しい順
+        assert_equal 2025, body["year"]
+        assert_equal 2, body["finished_in_year"]
+        assert_equal [ 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 ], body["finished_by_month"]
+        assert_equal 2, body["finished_by_genre"]["classic_novel"]
+        assert_equal 0, body["finished_by_genre"]["it_tech"]
+        assert_equal [ 1, 1, 4 ], body.values_at("finished_this_year", "finished_this_month", "finished_total")
+      end
+    end
+
+    test "stats は year が無い・不正・読了の無い年なら今年を返す" do
+      travel_to Date.new(2026, 6, 15) do
+        create_finished_book(Date.new(2025, 3, 1))
+        [ nil, "abc", "2024", "2026; DROP TABLE books" ].each do |year|
+          get stats_api_books_url, params: { year: year }.compact
+          body = JSON.parse(response.body)
+          assert_equal 2026, body["year"], "year=#{year.inspect}"
+          assert_equal [ 2026, 2025 ], body["years"]
+        end
+      end
+    end
+
     test "stats は未ログインだと 401" do
       delete api_session_url
       get stats_api_books_url
