@@ -199,6 +199,40 @@ describe('KanbanColumn', () => {
     expect(mountColumn({ filtered: true }).find('.column-empty').exists()).toBe(false)
   })
 
+  it('titleTo を渡すと見出し（名前と件数）がその画面へのリンクになる。渡さなければリンクにしない', async () => {
+    expect(mountColumn().find('.column-title-link').exists()).toBe(false)
+
+    const Empty = { template: '<div />' }
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', name: 'board', component: Empty },
+        { path: '/read', name: 'read', component: Empty },
+      ],
+    })
+    await router.push('/')
+    const wrapper = mount(KanbanColumn, {
+      props: {
+        status: 'read',
+        title: '読了',
+        items,
+        total: 2,
+        hasMore: false,
+        loadingMore: false,
+        draggingId: null,
+        titleTo: { name: 'read' },
+        titleLinkLabel: '読了一覧を開く',
+      },
+      global: { plugins: [router] },
+    })
+    const link = wrapper.find('.column-title-link')
+    expect(link.text()).toBe('読了2')
+    expect(link.attributes('title')).toBe('読了一覧を開く')
+    await link.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('read')
+  })
+
   it('「もっと見る」に残りの件数を出し、押すと load-more', async () => {
     const wrapper = mountColumn()
     const more = wrapper.find('.load-more-btn')

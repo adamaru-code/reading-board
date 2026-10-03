@@ -369,6 +369,8 @@ function onBookDeleted() {
         :has-more="hasMore(status)"
         :loading-more="columns[status].loadingMore"
         :filtered="filtered"
+        :title-to="status === 'read' ? { name: 'read' } : undefined"
+        :title-link-label="status === 'read' ? '読了一覧を開く' : undefined"
         :dragging-id="draggingId"
         @open="openEdit"
         @card-dragstart="onDragStart"
