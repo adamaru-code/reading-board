@@ -172,10 +172,11 @@ function onDrop(event: DragEvent) {
   outline-offset: 2px;
   border-radius: 4px;
 }
-/* 見出しのリンクの説明（吹き出し）。マウスを乗せる・キーボードで選ぶと 0.2 秒後に出す（通り過ぎただけでは出さない） */
+/* 見出しのリンクの説明（吹き出し）。見出しの上に出す（右は並び替えがあり、重なって隠すため）。
+   マウスを乗せる・キーボードで選ぶと 0.2 秒後に出す（通り過ぎただけでは出さない） */
 .title-tooltip {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   left: 0;
   z-index: 10;
   padding: 4px 8px;
