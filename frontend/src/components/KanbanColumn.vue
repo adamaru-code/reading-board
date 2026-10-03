@@ -5,15 +5,19 @@ import BookCard from './BookCard.vue'
 
 // ボードの 1 カラム（読みたい / 読書中 / 読了）：見出し・件数・カード一覧・「もっと見る」・ドロップ先。
 // 見出しの右（読了カラムの並び替えなど）は header-actions スロットに親が入れる
-const props = defineProps<{
-  status: BookStatus
-  title: string
-  items: Book[]
-  total: number
-  hasMore: boolean
-  loadingMore: boolean
-  draggingId: number | null // ドラッグ中のカード（半透明にする）
-}>()
+const props = withDefaults(
+  defineProps<{
+    status: BookStatus
+    title: string
+    items: Book[]
+    total: number
+    hasMore: boolean
+    loadingMore: boolean
+    draggingId: number | null // ドラッグ中のカード（半透明にする）
+    filtered?: boolean // 絞り込んで取った一覧か（0 件の文言を変える）
+  }>(),
+  { filtered: false },
+)
 const emit = defineEmits<{
   open: [book: Book] // カードをクリック / Enter / Space
   'card-dragstart': [event: DragEvent, book: Book]
@@ -84,7 +88,9 @@ function onDrop(event: DragEvent) {
         @keydown.enter="emit('open', book)"
         @keydown.space.prevent="emit('open', book)"
       />
-      <p v-if="items.length === 0" class="column-empty">まだありません</p>
+      <p v-if="items.length === 0" class="column-empty">
+        {{ filtered ? '当てはまる本はありません' : 'まだありません' }}
+      </p>
       <button
         v-if="hasMore"
         type="button"

@@ -187,6 +187,18 @@ describe('KanbanColumn', () => {
     expect(wrapper.emitted('open')).toEqual([[items[1]]])
   })
 
+  it('本が無ければ「まだありません」、絞り込んで 0 件なら「当てはまる本はありません」', () => {
+    const empty = { items: [], total: 0, hasMore: false }
+    expect(mountColumn(empty).find('.column-empty').text()).toBe('まだありません')
+    expect(
+      mountColumn({ ...empty, filtered: true })
+        .find('.column-empty')
+        .text(),
+    ).toBe('当てはまる本はありません')
+    // 本があれば文言は出さない
+    expect(mountColumn({ filtered: true }).find('.column-empty').exists()).toBe(false)
+  })
+
   it('「もっと見る」に残りの件数を出し、押すと load-more', async () => {
     const wrapper = mountColumn()
     const more = wrapper.find('.load-more-btn')

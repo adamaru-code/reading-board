@@ -114,4 +114,20 @@ describe('App（画面の切り替え）', () => {
     expect(router.currentRoute.value.name).toBe('board')
     expect(wrapper.find('.board').exists()).toBe(true)
   })
+
+  it('絞り込んで 0 件のカラムは「当てはまる本はありません」、クリアで「まだありません」に戻る', async () => {
+    vi.spyOn(sessionApi, 'fetchCurrentUser').mockResolvedValue(owner)
+    const { wrapper } = await mountAt('/')
+    const emptyTexts = () => wrapper.findAll('.column-empty').map((p) => p.text())
+    expect(emptyTexts()).toEqual(['まだありません', 'まだありません', 'まだありません'])
+
+    // ジャンルを選ぶとすぐ取り直す（空のまま）
+    await wrapper.find('.board-filters select').setValue('it_tech')
+    await flushPromises()
+    expect(emptyTexts()).toEqual(Array(3).fill('当てはまる本はありません'))
+
+    await wrapper.find('.clear-btn').trigger('click')
+    await flushPromises()
+    expect(emptyTexts()).toEqual(Array(3).fill('まだありません'))
+  })
 })

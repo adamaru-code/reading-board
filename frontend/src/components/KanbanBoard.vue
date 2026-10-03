@@ -154,10 +154,15 @@ function showLoadError(e: unknown) {
     e instanceof ApiError ? e.message : '書籍の取得に失敗しました。時間をおいて再度お試しください。'
 }
 
+// 今の一覧が絞り込んで取ったものか（0 件のときの文言を「当てはまる本はありません」にする）。
+// 入力中の欄ではなく、実際に取り直した条件で決める
+const filtered = ref(false)
+
 // keepLoaded: 編集後などに「もっと見る」で読み込んだ件数を保って取り直す（ボードは隠さない）
 async function loadBooks(keepLoaded = false) {
   if (!keepLoaded) loading.value = true
   error.value = null
+  filtered.value = Object.keys(activeParams()).length > 0
   try {
     await reloadAll(keepLoaded)
   } catch (e) {
@@ -342,6 +347,7 @@ function onBookDeleted() {
         :total="columns.read.total"
         :has-more="hasMore('read')"
         :loading-more="columns.read.loadingMore"
+        :filtered="filtered"
         :stats="stats"
         @open="openEdit"
         @load-more="onLoadMore('read', READ_LIST_PAGE_SIZE)"
@@ -362,6 +368,7 @@ function onBookDeleted() {
         :total="columns[status].total"
         :has-more="hasMore(status)"
         :loading-more="columns[status].loadingMore"
+        :filtered="filtered"
         :dragging-id="draggingId"
         @open="openEdit"
         @card-dragstart="onDragStart"

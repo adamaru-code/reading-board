@@ -12,6 +12,7 @@ const props = defineProps<{
   hasMore: boolean
   loadingMore: boolean
   stats?: BookStats | null // 今年・今月の読了冊数（取得前・取得失敗は null で出さない）
+  filtered?: boolean // 絞り込んで取った一覧か（0 件の文言を変える）
 }>()
 const emit = defineEmits<{
   open: [book: Book] // 行をクリック / Enter / Space
@@ -64,7 +65,9 @@ function durationText(days: number | null): string {
       <slot name="header-actions" />
     </div>
 
-    <p v-if="items.length === 0" class="list-empty">まだありません</p>
+    <p v-if="items.length === 0" class="list-empty">
+      {{ filtered ? '当てはまる本はありません' : 'まだありません' }}
+    </p>
     <div v-else class="panes">
       <div v-for="(pane, i) in panes" :key="i" class="pane">
         <div class="row-head" aria-hidden="true">

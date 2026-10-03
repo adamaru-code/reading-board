@@ -141,9 +141,14 @@ describe('ReadList（読了一覧）', () => {
     expect(wrapper.emitted('load-more')).toHaveLength(1)
   })
 
-  it('本が無ければ「まだありません」を出す', () => {
+  it('本が無ければ「まだありません」、絞り込んで 0 件なら「当てはまる本はありません」を出す', () => {
     const wrapper = mountList([])
-    expect(wrapper.text()).toContain('まだありません')
+    expect(wrapper.find('.list-empty').text()).toBe('まだありません')
     expect(wrapper.find('.row-head').exists()).toBe(false)
+
+    const filtered = mount(ReadList, {
+      props: { items: [], total: 0, hasMore: false, loadingMore: false, filtered: true },
+    })
+    expect(filtered.find('.list-empty').text()).toBe('当てはまる本はありません')
   })
 })
