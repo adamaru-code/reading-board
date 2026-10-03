@@ -31,7 +31,7 @@ const COLUMN_HEADINGS: readonly { label: string; align: 'left' | 'center' | 'rig
 ]
 
 // 左の段を LEFT_PANE_MIN 冊まで先に埋めてから右の段へ（本が少なくても横に並ばず、上から縦に増える）。
-// それより多いときは前半を左、後半を右（一度に読み込む 60 冊ちょうどで左右 30 冊ずつ。「もっと見る」で増えると境目は移る）
+// 31〜60 冊は左 30 冊・右に残り。61 冊以上（「もっと見る」のあと）は前半を左、後半を右（境目は増えるたびに移る）
 const LEFT_PANE_MIN = READ_LIST_PAGE_SIZE / 2
 const panes = computed(() => {
   const count = props.items.length
