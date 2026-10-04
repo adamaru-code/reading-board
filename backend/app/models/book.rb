@@ -31,10 +31,12 @@ class Book < ApplicationRecord
   validate :isbn_must_be_valid
   validate :cover_url_must_be_google_image
 
-  # tags: string[] を受け取り、正規化して find_or_create で紐づける
+  # tags: string[] を受け取り、書き方をそろえて（Tag.normalize_name）find_or_create で紐づける。
+  # そろえたあとも DB が同じ名前とみなすもの（大文字・小文字、ひらがな・カタカナなど）は同じタグになるので、
+  # タグで重複を除いて 1 回だけ付ける（2 回付けると book_tags の UNIQUE に当たって保存に失敗する）
   def tag_names=(names)
-    cleaned = Array(names).map { |name| name.to_s.strip }.reject(&:blank?).uniq
-    self.tags = cleaned.map { |name| Tag.find_or_create_by(name: name) }
+    cleaned = Array(names).map { |name| Tag.normalize_name(name) }.reject(&:blank?).uniq
+    self.tags = cleaned.map { |name| Tag.find_or_create_by(name: name) }.uniq
   end
 
   def tag_names

@@ -18,8 +18,13 @@ const emit = defineEmits<{ error: [messages: string[]] }>()
 
 const tagInput = ref('')
 
+// タグ名の書き方をそろえる（全角英数字 → 半角、半角カナ → 全角など。バックエンドの Tag.normalize_name と同じ NFKC）
+function normalizeTagName(name: string): string {
+  return name.normalize('NFKC').trim()
+}
+
 function addTag() {
-  const name = tagInput.value.trim()
+  const name = normalizeTagName(tagInput.value)
   if (name !== '' && !tags.value.includes(name)) tags.value = [...tags.value, name]
   tagInput.value = ''
 }

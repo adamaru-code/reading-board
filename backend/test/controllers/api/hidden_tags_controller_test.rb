@@ -20,6 +20,16 @@ module Api
       assert_equal %w[名著 積読].sort, body.map { |t| t["name"] }
     end
 
+    test "隠すタグ名も本のタグと同じく NFKC でそろえ、全角と半角は同じものとして扱う" do
+      post api_hidden_tags_url, params: { name: "ＩＴ" }
+      assert_equal "IT", body["name"]
+      first_id = body["id"]
+      assert_no_difference -> { HiddenTag.count } do
+        post api_hidden_tags_url, params: { name: "IT" }
+      end
+      assert_equal first_id, body["id"]
+    end
+
     test "同じタグを 2 回隠しても 1 件のまま（200 で同じものを返す）" do
       post api_hidden_tags_url, params: { name: "積読" }
       first_id = body["id"]

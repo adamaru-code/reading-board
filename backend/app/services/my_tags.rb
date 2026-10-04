@@ -21,9 +21,9 @@ class MyTags
   # 自分の本の from を to に付け替える。to が既にある名前なら 1 つにまとめる（両方付いた本は from を外すだけ）
   def rename(from, to)
     from_tag = find_my_tag(from)
-    return failure("not_found", name: from.to_s.strip) unless from_tag
+    return failure("not_found", name: Tag.normalize_name(from)) unless from_tag
 
-    to = to.to_s.strip
+    to = Tag.normalize_name(to)
     return failure("new_name_blank") if to.empty?
     return failure("new_name_too_long", count: NAME_MAX_LENGTH) if to.length > NAME_MAX_LENGTH
 
@@ -47,7 +47,7 @@ class MyTags
   # 自分の本から name のタグを外す
   def remove(name)
     tag = find_my_tag(name)
-    return failure("not_found", name: name.to_s.strip) unless tag
+    return failure("not_found", name: Tag.normalize_name(name)) unless tag
 
     count = 0
     Tag.transaction do
@@ -64,7 +64,7 @@ class MyTags
   end
 
   def find_my_tag(name)
-    tag = Tag.find_by(name: name.to_s.strip)
+    tag = Tag.find_by(name: name) # Tag の normalizes で書き方をそろえて探す
     tag if tag && my_links.exists?(tag_id: tag.id)
   end
 
