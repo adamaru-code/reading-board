@@ -93,6 +93,17 @@ module Api
         filename: "reading-board-books-#{Date.current.strftime('%Y%m%d')}.csv"
     end
 
+    # POST /api/books/import { csv: "…", dry_run: true|false }
+    # CSV の本をまとめて登録する（BookCsvImporter）。間違った行があれば何も登録せず 422。
+    # dry_run は登録せず { to_create, skipped } を返し、本番は { created, skipped } を返す
+    def import
+      result = BookCsvImporter.new(current_user, params.require(:csv)).call(dry_run: dry_run?)
+      return render json: { errors: result.errors }, status: :unprocessable_content unless result.ok
+
+      count_key = dry_run? ? :to_create : :created
+      render json: { count_key => result.to_create, skipped: result.skipped }
+    end
+
     # GET /api/books/lookup?isbn=
     # openBD を照会し、フォーム自動入力用に書誌情報を返す
     def lookup
@@ -202,6 +213,10 @@ module Api
 
     def valid_genre?(genre)
       genre.present? && Book.genres.key?(genre)
+    end
+
+    def dry_run?
+      ActiveModel::Type::Boolean.new.cast(params[:dry_run]) == true
     end
 
     # 統計で表示する年。選べる年（years）に無い値・数字でない値は今年にする

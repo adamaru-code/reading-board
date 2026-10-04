@@ -95,6 +95,13 @@ async function loadStats() {
   }
 }
 
+// CSV で本を取り込んだら、ボード・タグの選択肢・統計を取り直す
+function onImported() {
+  loadBooks(true)
+  loadTagOptions()
+  loadStats()
+}
+
 function onStatsYearChange(year: number) {
   statsYear.value = year
   loadStats()
@@ -399,6 +406,7 @@ function onBookDeleted() {
       @close="accountModalOpen = false"
       @unauthorized="emit('logout')"
       @deleted="emit('logout')"
+      @imported="onImported"
     />
 
     <AdminModal

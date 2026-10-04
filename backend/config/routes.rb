@@ -24,6 +24,7 @@ Rails.application.routes.draw do
         patch :reorder # PATCH /api/books/reorder（カラム内の並び順を保存）
         get :stats # GET /api/books/stats（今年・今月の読了冊数）
         get :export # GET /api/books/export（自分の本をすべて CSV で書き出す）
+        post :import # POST /api/books/import（CSV の本をまとめて登録。dry_run で確認だけ）
       end
     end
   end

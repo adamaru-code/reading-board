@@ -9,6 +9,8 @@ import type {
   BookListResult,
   BookLookupResult,
   BookStats,
+  BookImportPreview,
+  BookImportResult,
 } from '../types/book'
 
 // GET /api/books （絞り込み＋並び替え＋ページング。1ページ分を返す）
@@ -75,6 +77,16 @@ export function getBookStats(year?: number): Promise<BookStats> {
   return request<BookStats>('/books/stats', {
     query: { year: year === undefined ? undefined : String(year) },
   })
+}
+
+// POST /api/books/import （CSV の本をまとめて登録。dryRun は登録せず件数だけ。間違った行があれば ApiError 422）
+export function importBooks(csv: string, dryRun: true): Promise<BookImportPreview>
+export function importBooks(csv: string, dryRun: false): Promise<BookImportResult>
+export function importBooks(
+  csv: string,
+  dryRun: boolean,
+): Promise<BookImportPreview | BookImportResult> {
+  return request('/books/import', { method: 'POST', body: { csv, dry_run: dryRun } })
 }
 
 // PATCH /api/books/reorder （渡した id 順に position を保存）
