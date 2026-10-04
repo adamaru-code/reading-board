@@ -44,6 +44,16 @@ class BookTest < ActiveSupport::TestCase
     assert_equal %w[名著 入門], book.reload.tags.map(&:name)
   end
 
+  test "tag_names= は全角英数字・半角カナを NFKC でそろえて保存する" do
+    book = @user.books.create!(title: "x", tag_names: %w[２０２６年 ＩＴ ｶﾅ ①])
+    assert_equal %w[2026年 IT カナ 1], book.tags.map(&:name)
+  end
+
+  test "tag_names= は DB が同じ名前とみなすタグ（半角・全角、大文字・小文字、かな）を 1 回だけ付ける（保存に失敗しない）" do
+    book = @user.books.create!(title: "x", tag_names: %w[1 １ IT it はな ハナ])
+    assert_equal %w[1 IT はな], book.reload.tags.map(&:name)
+  end
+
   test "同名タグは既存を再利用する（find_or_create）" do
     @user.books.create!(title: "a", tag_names: [ "再読" ])
     assert_difference "Tag.count", 0 do

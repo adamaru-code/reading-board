@@ -59,6 +59,12 @@ class MyTagsTest < ActiveSupport::TestCase
     assert_equal %w[Ruby はな], MyTags.new(@me).list.map { |t| t[:name] } # どれも変わっていない
   end
 
+  test "rename の新しい名前も NFKC でそろえる（全角で入れても半角で保存）" do
+    book = @me.books.create!(title: "A", tag_names: %w[技術])
+    assert MyTags.new(@me).rename("技術", "ＩＴ").ok
+    assert_equal %w[IT], tags_of(book)
+  end
+
   test "remove は自分の本からだけ外し、他人の本の同じタグは残す" do
     mine = @me.books.create!(title: "自分", tag_names: %w[名著 歴史])
     theirs = @other.books.create!(title: "他人", tag_names: %w[名著])

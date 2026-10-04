@@ -26,6 +26,19 @@ describe('BookFormModal のタグ候補', () => {
     expect((input.element as HTMLInputElement).value).toBe('')
   })
 
+  it('打ったタグは全角英数字・半角カナを半角・全角にそろえ、そろえて同じになるタグは 2 つ付けない', async () => {
+    const wrapper = mount(BookFormModal, { props: { book: null } })
+    const input = wrapper.find('input[placeholder="タグを入力して Enter"]')
+    for (const name of ['２０２６年', 'ｶﾅ', '2026年']) {
+      await input.setValue(name)
+      await input.trigger('keydown', { key: 'Enter' })
+    }
+    expect(wrapper.findAll('.tag-chip').map((c) => c.text())).toEqual([
+      expect.stringContaining('2026年'),
+      expect.stringContaining('カナ'),
+    ])
+  })
+
   it('候補が多いときは 8 件だけ出し、「すべて表示」で残りも出し、「少なく表示」で戻す', async () => {
     // よく使う順で 11 個（「歴史」は 9 番目以降）
     const knownTags = [

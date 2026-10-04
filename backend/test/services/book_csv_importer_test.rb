@@ -96,6 +96,12 @@ class BookCsvImporterTest < ActiveSupport::TestCase
     assert_match(/CSV ファイルの形が正しくありません/, import("タイトル\n\"閉じない\n").errors.first)
   end
 
+  test "タグに半角・全角の同じ名前が並んでいても、1 つにそろえて取り込む" do
+    result = import(csv([ "本", nil, nil, nil, nil, nil, "１、1、ＩＴ" ]))
+    assert result.ok, result.errors.inspect
+    assert_equal %w[1 IT], @other.books.find_by!(title: "本").tags.map(&:name)
+  end
+
   test "BOM 付き（書き出したそのまま）でも読める" do
     result = import(BookCsvExporter::BOM + csv([ "BOM の本" ]))
     assert result.ok, result.errors.inspect
