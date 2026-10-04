@@ -6,11 +6,18 @@ import { ApiError } from '../api/http'
 import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 import BaseModal from './BaseModal.vue'
 import CsvPanel from './CsvPanel.vue'
+import TagsPanel from './TagsPanel.vue'
 
-const emit = defineEmits<{ close: []; unauthorized: []; deleted: []; imported: [] }>()
+const emit = defineEmits<{
+  close: []
+  unauthorized: []
+  deleted: []
+  imported: [] // CSV で本を取り込んだ
+  'tags-changed': [] // タグの名前を変えた・まとめた・外した
+}>()
 
-// パスワード変更 / CSV（書き出し・読み込み。CsvPanel.vue）/ アカウント削除 の切り替え
-const tab = ref<'password' | 'csv' | 'delete'>('password')
+// パスワード変更 / CSV（書き出し・読み込み。CsvPanel.vue）/ タグ（TagsPanel.vue）/ アカウント削除 の切り替え
+const tab = ref<'password' | 'csv' | 'tags' | 'delete'>('password')
 
 const currentPassword = ref('')
 const password = ref('')
@@ -107,6 +114,15 @@ async function onSubmit() {
         type="button"
         role="tab"
         class="tab"
+        :aria-selected="tab === 'tags'"
+        @click="tab = 'tags'"
+      >
+        タグ
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="tab"
         :aria-selected="tab === 'delete'"
         @click="tab = 'delete'"
       >
@@ -118,6 +134,13 @@ async function onSubmit() {
       v-if="tab === 'csv'"
       @close="emit('close')"
       @imported="emit('imported')"
+      @unauthorized="emit('unauthorized')"
+    />
+
+    <TagsPanel
+      v-else-if="tab === 'tags'"
+      @close="emit('close')"
+      @changed="emit('tags-changed')"
       @unauthorized="emit('unauthorized')"
     />
 

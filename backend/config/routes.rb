@@ -17,6 +17,13 @@ Rails.application.routes.draw do
     end
     resource :password_reset, only: %i[show update] # 再設定リンクの確認 / 新パスワードの設定
     resources :hidden_tags, only: %i[index create destroy] # タグ候補から隠したタグ
+    # 自分の本のタグ（一覧・名前を変える／まとめる・外す。自分の本のつながりだけを変える）
+    resources :tags, only: :index do
+      collection do
+        patch :rename # PATCH /api/tags/rename { from, to }
+        delete :remove # DELETE /api/tags/remove?name=
+      end
+    end
 
     resources :books, only: %i[index show create update destroy] do
       collection do
