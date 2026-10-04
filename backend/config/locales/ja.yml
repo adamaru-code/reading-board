@@ -75,7 +75,8 @@ ja:
         not_found: 「%{name}」のタグが付いた本がありません
         new_name_blank: 新しい名前を入力してください
         new_name_too_long: 新しい名前は %{count} 文字以内にしてください
-        same_name: 今と同じ名前です（大文字・小文字、ひらがな・カタカナ、濁点・半濁点の違いは同じ名前として扱います）
+        same_name: 今と同じ名前です
+        spelling_admin_only: 書き方（大文字・小文字、ひらがな・カタカナ、濁点・半濁点など）だけの変更は、管理者だけができます
       # CSV 読み込み（BookCsvImporter）。行のエラーは「%{line} 行目：…」の形で返す
       csv_import:
         row: "%{line} 行目：%{message}"

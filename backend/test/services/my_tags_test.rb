@@ -45,18 +45,38 @@ class MyTagsTest < ActiveSupport::TestCase
     assert_not Tag.exists?(name: "健康法") # 誰も使わなくなったので消す
   end
 
-  test "rename は自分の本に無い名前・空・同じ名前（大文字小文字の違いも）・長すぎる名前を断る" do
+  test "rename は自分の本に無い名前・空・まったく同じ名前・長すぎる名前を断る" do
     @me.books.create!(title: "A", tag_names: %w[Ruby])
     @other.books.create!(title: "他人", tag_names: %w[他人のタグ])
     tags = MyTags.new(@me)
     assert_equal [ "「他人のタグ」のタグが付いた本がありません" ], tags.rename("他人のタグ", "x").errors
     assert_equal [ "新しい名前を入力してください" ], tags.rename("Ruby", "  ").errors
-    assert_match(/今と同じ名前です/, tags.rename("Ruby", "Ruby").errors.first)
-    assert_match(/今と同じ名前です/, tags.rename("Ruby", "ruby").errors.first)
-    @me.books.create!(title: "B", tag_names: %w[はな])
-    assert_match(/今と同じ名前です/, tags.rename("はな", "ハナ").errors.first) # かなの違いも同じ名前
+    assert_equal [ "今と同じ名前です" ], tags.rename("Ruby", "Ruby").errors
     assert_match(/255 文字以内/, tags.rename("Ruby", "あ" * 256).errors.first)
-    assert_equal %w[Ruby はな], MyTags.new(@me).list.map { |t| t[:name] } # どれも変わっていない
+    assert_equal %w[Ruby], MyTags.new(@me).list.map { |t| t[:name] } # 変わっていない
+  end
+
+  test "管理者は書き方だけの変更（it → IT、はな → ハナ）ができ、タグの名前が書き換わる（同じタグのほかの人の本の表示も変わる）" do
+    assert @me.admin?
+    mine = @me.books.create!(title: "自分", tag_names: %w[it はな])
+    theirs = @other.books.create!(title: "他人", tag_names: %w[it])
+
+    result = MyTags.new(@me).rename("it", "IT")
+    assert result.ok
+    assert_equal 1, result.count
+    assert_not result.merged
+    assert MyTags.new(@me).rename("はな", "ハナ").ok
+    assert_equal %w[IT ハナ], tags_of(mine)
+    assert_equal %w[IT], tags_of(theirs)
+  end
+
+  test "管理者でない人の書き方だけの変更は断り、名前は変わらない" do
+    assert_not @other.admin?
+    book = @other.books.create!(title: "A", tag_names: %w[it])
+    result = MyTags.new(@other).rename("it", "IT")
+    assert_not result.ok
+    assert_equal [ "書き方（大文字・小文字、ひらがな・カタカナ、濁点・半濁点など）だけの変更は、管理者だけができます" ], result.errors
+    assert_equal %w[it], tags_of(book)
   end
 
   test "rename の新しい名前も NFKC でそろえる（全角で入れても半角で保存）" do

@@ -28,8 +28,9 @@ class MyTags
     return failure("new_name_too_long", count: NAME_MAX_LENGTH) if to.length > NAME_MAX_LENGTH
 
     to_tag = Tag.find_by(name: to)
-    # DB の照合順序（utf8mb4_0900_ai_ci）は大文字・小文字、ひらがな・カタカナ、濁点の違いを同じ名前とみなすので、同じタグになるなら変えられない
-    return failure("same_name") if to_tag&.id == from_tag.id
+    # DB の照合順序（utf8mb4_0900_ai_ci）は大文字・小文字、ひらがな・カタカナ、濁点の違いを同じ名前とみなすので、
+    # 書き方だけの変更（it → IT）は同じタグになる。そのときはタグの名前そのものを書き換える（管理者だけ）
+    return change_spelling(from_tag, to) if to_tag&.id == from_tag.id
 
     merged = to_tag.present? && my_links.exists?(tag_id: to_tag.id)
     book_ids = []
@@ -58,6 +59,16 @@ class MyTags
   end
 
   private
+
+  # 書き方だけの変更（it → IT など）。タグは全ユーザーで共有なので、名前を書き換えると同じタグを付けているすべての本の表示が変わる。
+  # そのため管理者だけに許す（2026-10-04、ユーザーと相談して決定）
+  def change_spelling(tag, to)
+    return failure("same_name") if tag.name == to
+    return failure("spelling_admin_only") unless @user.admin?
+
+    tag.update!(name: to)
+    Result.new(ok: true, errors: [], count: my_links.where(tag_id: tag.id).count, merged: false)
+  end
 
   def my_links
     BookTag.joins(:book).where(books: { user_id: @user.id })
