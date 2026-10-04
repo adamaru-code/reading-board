@@ -72,7 +72,10 @@ describe('AccountModal（パスワード変更）', () => {
 describe('AccountModal（アカウント削除）', () => {
   async function openDeleteTab() {
     const wrapper = mount(AccountModal)
-    await wrapper.findAll('[role="tab"]')[1].trigger('click')
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((t) => t.text() === 'アカウント削除')!
+      .trigger('click')
     await wrapper.find('input[type="password"]').setValue('current-pw')
     return wrapper
   }
@@ -111,5 +114,28 @@ describe('AccountModal（アカウント削除）', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toBe('最後の管理者は削除できません')
     expect(wrapper.emitted('deleted')).toBeUndefined()
+  })
+})
+
+describe('AccountModal（書き出し）', () => {
+  it('タブは「パスワード変更｜書き出し｜アカウント削除」の順', () => {
+    const tabs = mount(AccountModal)
+      .findAll('[role="tab"]')
+      .map((t) => t.text())
+    expect(tabs).toEqual(['パスワード変更', '書き出し', 'アカウント削除'])
+  })
+
+  it('「書き出し」で説明と CSV を保存するリンク（/api/books/export）を出す', async () => {
+    const wrapper = mount(AccountModal)
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((t) => t.text() === '書き出し')!
+      .trigger('click')
+    expect(wrapper.text()).toContain('CSV ファイルで保存します')
+    expect(wrapper.text()).toContain('読み込む）機能はまだありません')
+    const link = wrapper.find('a.export-link')
+    expect(link.text()).toBe('CSV で書き出す')
+    expect(link.attributes('href')).toBe('/api/books/export')
+    expect(link.attributes('download')).toBeDefined()
   })
 })
