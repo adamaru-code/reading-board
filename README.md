@@ -5,11 +5,13 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 
 ## 主要機能
 
-- 書籍の登録・表示・編集・削除（CRUD）。ISBN 入力・バーコード読取で書誌を自動入力（openBD）
+- 書籍の登録・表示・編集・削除（CRUD）。ISBN 入力・バーコード読取で書誌を自動入力（openBD）、表紙画像も表示（Google Books）
 - カンバンのドラッグでステータス変更（読みたい ⇄ 読書中 ⇄ 読了）とカラム内の並び替え
 - 評価（★1〜5）・感想メモ・主ジャンル・形態・タグ（候補の提案つき）
-- 各状態に入った日と読了までの日数の記録、読了カラムの並び替え、ジャンル・著者・タグでの絞り込み
-- カラムごとのページング（20 件＋「もっと見る」）
+- 各状態に入った日（日本時間）と読了までの日数の記録、読了カラムの並び替え、キーワード（タイトル・著者）・ジャンル・タグでの絞り込み
+- カラムごとのページング（20 件＋「もっと見る」）、読了本を 1 冊 1 行で並べる読了一覧（`/read`）
+- 統計（`/stats`）：今年・今月・これまでの読了冊数、月ごと・ジャンル別のグラフ（年を切り替えられる）
+- CSV 書き出し・読み込み（アカウント画面）：自分の本を CSV で保存し、CSV からまとめて登録
 - ログイン、招待制の新規登録、パスワード変更・管理者発行の再設定リンク・アカウント削除
 
 詳細は [docs/requirements.md](docs/requirements.md) と [docs/functional-requirements.md](docs/functional-requirements.md)。
@@ -39,6 +41,7 @@ docker compose up -d
 
 # 2. バックエンド（Rails API, :3000）
 cd backend
+bundle install                           # 初回と、Gemfile が変わったとき（Ruby の部品を入れる）
 bin/rails db:create db:migrate db:seed   # 初回のみ（seed で初期ユーザー＝管理者とデモ用の本を作成）
 bin/rails server
 
