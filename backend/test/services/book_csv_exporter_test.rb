@@ -24,6 +24,13 @@ class BookCsvExporterTest < ActiveSupport::TestCase
                    nil, "2026-09-01", "2026-09-11", "10" ], row
   end
 
+  test "タグ・著者・メモが空の本は、その欄に何も書かない（\"\" にしない）" do
+    book = @user.books.create!(title: "空の本", author: "", memo: "", status: :want_to_read)
+    line = BookCsvExporter.call([ book ]).lines.last
+    assert_not_includes line, '""'
+    assert line.start_with?("空の本,,読みたい,その他・未分類,書籍,,,,,")
+  end
+
   test "空の値は空欄、メモのカンマ・改行・引用符は崩れずに 1 つの欄に入る" do
     book = @user.books.create!(title: "雑誌", status: :want_to_read, media_type: :magazine, memo: "1行目, カンマ\n2行目 \"引用\"")
     row = parse(BookCsvExporter.call([ book ]))[1]

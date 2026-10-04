@@ -26,17 +26,18 @@ class BookCsvExporter
     end
   end
 
+  # 文字の値は空なら nil にする（CSV では nil は何も書かない、空の文字は "" になり、空欄の形がそろわないため）
   def self.row(book)
     [
       book.title,
-      book.author,
+      book.author.presence,
       STATUS_LABELS.fetch(book.status),
       GENRE_LABELS.fetch(book.genre),
       MEDIA_TYPE_LABELS.fetch(book.media_type),
       book.rating,
-      book.tags.map(&:name).join(TAG_SEPARATOR),
-      book.memo,
-      book.isbn,
+      book.tags.map(&:name).join(TAG_SEPARATOR).presence,
+      book.memo.presence,
+      book.isbn.presence,
       book.registered_on&.iso8601,
       book.started_on&.iso8601,
       book.finished_on&.iso8601,
