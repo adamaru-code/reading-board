@@ -6,7 +6,8 @@ import { ApiError } from '../api/http'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 // アカウント画面の「タグ」タブ：自分の本のタグの一覧（冊数つき）と、名前を変える・まとめる・外す。
-// タグは全ユーザーで共有なので、変えるのは自分の本のつながりだけ（ほかの人の本のタグは変わらない）
+// タグは全ユーザーで共有なので、変えるのは自分の本のつながりだけ（ほかの人の本のタグは変わらない）。
+// 画面にはこの仕組みを書かない（使う人にはタグは自分の本のものなので、「ほかの人の本」と書くとかえって迷う）
 const emit = defineEmits<{ close: []; changed: []; unauthorized: [] }>()
 
 const tags = ref<MyTag[]>([])
@@ -100,7 +101,7 @@ async function onConfirmRemove() {
   <div class="tags-panel">
     <p class="tags-text tags-sub">
       自分の本に付いているタグです。名前を変える・すでにある名前にして 1
-      つにまとめる・すべての本から外す、ができます（ほかの人の本のタグは変わりません）。
+      つにまとめる・すべての本から外す、ができます。
     </p>
 
     <ul v-if="errors.length" class="form-errors" role="alert">
@@ -168,7 +169,7 @@ async function onConfirmRemove() {
       v-if="removing"
       title="タグを外しますか？"
       :message="`「${removing.name}」を、自分の ${removing.count} 冊の本から外します。`"
-      note="本は消えません。ほかの人の本のタグは変わりません。"
+      note="本は消えません。"
       confirm-label="外す"
       :busy="busy"
       @confirm="onConfirmRemove"
