@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { getBookStats, listAllBooks, listBooks } from '../books'
+import { getBookStats, importBooks, listAllBooks, listBooks } from '../books'
 import type { Book } from '../../types/book'
 
 const book = (id: number) => ({ id, title: `本${id}` }) as Book
@@ -89,5 +89,20 @@ describe('getBookStats の年', () => {
     const urls = fetchMock.mock.calls.map((c) => new URL(c[0], 'http://localhost'))
     expect(urls[0].searchParams.get('year')).toBe('2025')
     expect(urls[1].searchParams.has('year')).toBe(false)
+  })
+})
+
+describe('importBooks', () => {
+  it('CSV の文字と dry_run を JSON で POST /api/books/import に送る', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ to_create: 1, skipped: [] })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await importBooks('タイトル\n本\n', true)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(new URL(url, 'http://localhost').pathname).toBe('/api/books/import')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ csv: 'タイトル\n本\n', dry_run: true })
   })
 })

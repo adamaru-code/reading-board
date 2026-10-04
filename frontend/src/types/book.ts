@@ -100,6 +100,22 @@ export interface BookStats {
   finished_by_genre: Record<BookGenre, number> // 選んだ年のジャンル別（6 ジャンルすべて）
 }
 
+// CSV 読み込み（POST /api/books/import）。skipped は自分の本と重なって飛ばす行（CSV の行番号とタイトル）
+export interface BookImportSkipped {
+  line: number
+  title: string
+}
+// dry_run（取り込む前の確認）の結果
+export interface BookImportPreview {
+  to_create: number
+  skipped: BookImportSkipped[]
+}
+// 取り込んだ結果
+export interface BookImportResult {
+  created: number
+  skipped: BookImportSkipped[]
+}
+
 // 一覧の絞り込み条件（互いに AND。q はタイトルまたは著者の部分一致、author は著者の部分一致、genre/tag は完全一致）
 export interface BookListParams {
   status?: BookStatus

@@ -70,3 +70,14 @@ ja:
       invalid_isbn: ISBN が不正です
       hidden_tag_name_blank: タグ名を入力してください
       hidden_tag_not_found: 隠したタグが見つかりません
+      # CSV 読み込み（BookCsvImporter）。行のエラーは「%{line} 行目：…」の形で返す
+      csv_import:
+        row: "%{line} 行目：%{message}"
+        malformed: CSV ファイルの形が正しくありません（%{detail}）
+        no_title_column: 1 行目に「タイトル」の列が見つかりません。書き出した CSV と同じ見出しにしてください
+        empty: 取り込む本がありません（2 行目から本を書いてください）
+        too_many_rows: 一度に取り込めるのは %{max} 冊までです（%{count} 冊ありました）
+        title_blank: タイトルを入力してください
+        invalid_label: "%{column}は「%{choices}」のどれかにしてください（「%{value}」は使えません）"
+        invalid_rating: 評価は 1〜5 の数字か空欄にしてください（「%{value}」は使えません）
+        invalid_date: "%{column}は 2026-09-01 の形（年-月-日）か空欄にしてください（「%{value}」は使えません）"

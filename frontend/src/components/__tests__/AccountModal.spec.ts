@@ -117,25 +117,27 @@ describe('AccountModal（アカウント削除）', () => {
   })
 })
 
-describe('AccountModal（書き出し）', () => {
-  it('タブは「パスワード変更｜書き出し｜アカウント削除」の順', () => {
+describe('AccountModal（CSV）', () => {
+  it('タブは「パスワード変更｜CSV｜アカウント削除」の順', () => {
     const tabs = mount(AccountModal)
       .findAll('[role="tab"]')
       .map((t) => t.text())
-    expect(tabs).toEqual(['パスワード変更', '書き出し', 'アカウント削除'])
+    expect(tabs).toEqual(['パスワード変更', 'CSV', 'アカウント削除'])
   })
 
-  it('「書き出し」で説明と CSV を保存するリンク（/api/books/export）を出す', async () => {
+  it('「CSV」で書き出しのリンク（/api/books/export）と読み込みを出し、取り込んだら imported を伝える', async () => {
     const wrapper = mount(AccountModal)
     await wrapper
       .findAll('[role="tab"]')
-      .find((t) => t.text() === '書き出し')!
+      .find((t) => t.text() === 'CSV')!
       .trigger('click')
-    expect(wrapper.text()).toContain('CSV ファイルで保存します')
-    expect(wrapper.text()).toContain('読み込む）機能はまだありません')
     const link = wrapper.find('a.export-link')
     expect(link.text()).toBe('CSV で書き出す')
     expect(link.attributes('href')).toBe('/api/books/export')
     expect(link.attributes('download')).toBeDefined()
+    expect(wrapper.find('input[type="file"]').exists()).toBe(true)
+
+    wrapper.findComponent({ name: 'CsvPanel' }).vm.$emit('imported')
+    expect(wrapper.emitted('imported')).toHaveLength(1)
   })
 })

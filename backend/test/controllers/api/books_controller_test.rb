@@ -565,6 +565,34 @@ module Api
       assert_not_includes rows.map(&:first), "他人の本"
     end
 
+    test "import は dry_run なら件数だけ返して登録せず、本番は登録して件数を返す" do
+      csv = "タイトル,著者\nリーダブルコード,Dustin Boswell\n新しい本,誰か\n" # 1 冊目は既存（fixture）なので飛ばす
+      assert_no_difference "Book.count" do
+        post import_api_books_url, params: { csv: csv, dry_run: true }, as: :json
+      end
+      assert_response :success
+      assert_equal({ "to_create" => 1, "skipped" => [ { "line" => 2, "title" => "リーダブルコード" } ] }, JSON.parse(response.body))
+
+      assert_difference "@owner.books.count", 1 do
+        post import_api_books_url, params: { csv: csv, dry_run: false }, as: :json
+      end
+      assert_equal 1, JSON.parse(response.body)["created"]
+    end
+
+    test "import は間違った行があれば 422 で何も登録しない" do
+      assert_no_difference "Book.count" do
+        post import_api_books_url, params: { csv: "タイトル,評価\n良い本,3\n悪い本,9\n" }, as: :json
+      end
+      assert_response :unprocessable_content
+      assert_equal [ "3 行目：評価は 1〜5 の数字か空欄にしてください（「9」は使えません）" ], JSON.parse(response.body)["errors"]
+    end
+
+    test "import は未ログインだと 401" do
+      delete api_session_url
+      post import_api_books_url, params: { csv: "タイトル\nx\n" }, as: :json
+      assert_response :unauthorized
+    end
+
     test "export は未ログインだと 401" do
       delete api_session_url
       get export_api_books_url
