@@ -83,6 +83,16 @@ module Api
       }
     end
 
+    # GET /api/books/export
+    # 自分の本をすべて CSV ファイルで返す（絞り込みは使わない。登録順）。ファイル名の日付は日本時間の今日
+    def export
+      books = current_user.books.includes(:tags, :status_events).order(:created_at, :id)
+      send_data BookCsvExporter.call(books),
+        type: "text/csv; charset=utf-8",
+        disposition: "attachment",
+        filename: "reading-board-books-#{Date.current.strftime('%Y%m%d')}.csv"
+    end
+
     # GET /api/books/lookup?isbn=
     # openBD を照会し、フォーム自動入力用に書誌情報を返す
     def lookup

@@ -23,6 +23,7 @@ Rails.application.routes.draw do
         get :lookup # GET /api/books/lookup?isbn=（openBD 照会）
         patch :reorder # PATCH /api/books/reorder（カラム内の並び順を保存）
         get :stats # GET /api/books/stats（今年・今月の読了冊数）
+        get :export # GET /api/books/export（自分の本をすべて CSV で書き出す）
       end
     end
   end

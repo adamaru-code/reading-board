@@ -8,8 +8,11 @@ import BaseModal from './BaseModal.vue'
 
 const emit = defineEmits<{ close: []; unauthorized: []; deleted: [] }>()
 
-// パスワード変更 / アカウント削除 の切り替え
-const tab = ref<'password' | 'delete'>('password')
+// パスワード変更 / 書き出し / アカウント削除 の切り替え
+const tab = ref<'password' | 'export' | 'delete'>('password')
+
+// 自分の本をすべて CSV で保存する（GET /api/books/export。同じオリジンなのでログインの Cookie が付く）
+const EXPORT_URL = '/api/books/export'
 
 const currentPassword = ref('')
 const password = ref('')
@@ -97,6 +100,15 @@ async function onSubmit() {
         type="button"
         role="tab"
         class="tab"
+        :aria-selected="tab === 'export'"
+        @click="tab = 'export'"
+      >
+        書き出し
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="tab"
         :aria-selected="tab === 'delete'"
         @click="tab = 'delete'"
       >
@@ -104,7 +116,25 @@ async function onSubmit() {
       </button>
     </div>
 
-    <form v-if="tab === 'delete'" class="delete-form" @submit.prevent="onDelete">
+    <div v-if="tab === 'export'" class="export-panel">
+      <p class="export-text">
+        自分の本をすべて CSV ファイルで保存します。Excel・Numbers・Google
+        スプレッドシートで表として開けます。
+      </p>
+      <p class="export-text export-sub">
+        入る項目：タイトル・著者・状態・ジャンル・形態・評価・タグ・メモ・ISBN・登録日・開始日・読了日・所要日数（絞り込みに関係なく全件）
+      </p>
+      <p class="export-text export-sub">
+        保存したファイルからアプリへ戻す（読み込む）機能はまだありません。
+      </p>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" @click="emit('close')">閉じる</button>
+        <a :href="EXPORT_URL" class="btn btn-primary export-link" download>CSV で書き出す</a>
+      </div>
+    </div>
+
+    <form v-else-if="tab === 'delete'" class="delete-form" @submit.prevent="onDelete">
       <ul v-if="deleteErrors.length" class="form-errors" role="alert">
         <li v-for="(msg, i) in deleteErrors" :key="i">{{ msg }}</li>
       </ul>
@@ -217,6 +247,18 @@ async function onSubmit() {
   color: var(--primary);
   border-bottom-color: var(--primary);
   font-weight: 600;
+}
+.export-text {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.export-sub {
+  color: var(--text-sub);
+}
+/* リンクをボタンと同じ見た目にする */
+.export-link {
+  display: inline-block;
+  text-decoration: none;
 }
 .delete-warning {
   margin: 0 0 14px;

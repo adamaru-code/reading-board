@@ -546,6 +546,31 @@ module Api
       end
     end
 
+    test "export は自分の本をすべて CSV ファイルで返す（他人の本は入らない）" do
+      users(:other).books.create!(title: "他人の本")
+      travel_to Time.zone.local(2026, 10, 4, 9, 0) do
+        get export_api_books_url
+      end
+      assert_response :success
+      assert_equal "text/csv; charset=utf-8", response.media_type + "; charset=" + response.charset
+      assert_includes response.headers["Content-Disposition"], "attachment"
+      assert_includes response.headers["Content-Disposition"], "reading-board-books-20261004.csv"
+
+      body = response.body.dup.force_encoding("UTF-8")
+      assert body.start_with?("\uFEFF")
+      rows = CSV.parse(body.delete_prefix("\uFEFF"))
+      assert_equal BookCsvExporter::HEADERS, rows.first
+      assert_equal @owner.books.order(:created_at, :id).pluck(:title), rows.drop(1).map(&:first)
+      assert_equal @owner.books.count, rows.size - 1
+      assert_not_includes rows.map(&:first), "他人の本"
+    end
+
+    test "export は未ログインだと 401" do
+      delete api_session_url
+      get export_api_books_url
+      assert_response :unauthorized
+    end
+
     test "stats は未ログインだと 401" do
       delete api_session_url
       get stats_api_books_url
