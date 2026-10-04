@@ -128,6 +128,8 @@ aws cloudfront list-distributions --query 'DistributionList.Quantity'
 2. `backend/Dockerfile` で API イメージをビルドし、`db:prepare`（新規 DB なら作成・seed、復元した DB ならマイグレーションのみ）と `admin:ensure`（初期管理者のパスワードを今回の SSM の値に合わせる）を実行してから、SSM から取ったシークレットを環境変数にして起動
 3. Node コンテナで `frontend` をビルドし、nginx で配信（`/api` と `/up` はコンテナへ転送）
 
+nginx は受け取るリクエストの大きさを `client_max_body_size 1m`（`infra/templates/nginx.conf`）で 1MB までにしている。CSV 読み込み（`POST /api/books/import`。ファイルの中身を JSON で送る）もこの上限を受ける。2026-10-04 の開発 DB 9 冊の CSV は 1,263 バイト（1 冊およそ 140 バイト）なので、メモが長くなければ読み込みの上限 1,000 冊でも収まる。大きくするときはここを変える。
+
 手順の詳細は [infra/README.md](../infra/README.md)。
 
 ---
