@@ -90,6 +90,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
 - [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
 - [ ] テストに**補助メソッド（`def create_… `など）を足す前に、同じファイルに同じ名前が無いか grep する**。Ruby は後から書いた定義で前のものを上書きするので、引数の違う既存テストが `ArgumentError: unknown keywords` で落ちる（`books_controller_test.rb` の `create_read_book`。2026-10-01、PR #236）
+- [ ] ユーザーが入力する文字を保存・比較・検索・重複チェックする変更では [text-input-check](../text-input-check/SKILL.md) を確かめる（DB の照合順序は半角・全角・大文字小文字・かなを同じとみなす。2026-10-04、#271）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 - [ ] **データを直すマイグレーション**は、`db:migrate` の前に**確認用データ（直す対象・直さない対象・重なる場合）を作ってから**試す。流した後でも `bin/rails runner 'require Rails.root.join("db/migrate/<ファイル>").to_s; ActiveRecord::Migration.suppress_messages { <クラス>.new.up }'` で何度でも試せる。確認用データは最後に消す（2026-10-02、PR #246 で先に流してしまい、runner で試し直した）
 
@@ -251,4 +252,5 @@ cd infra && terraform fmt -check && terraform validate
 
 - プロジェクト規約: [CLAUDE.md](../../../CLAUDE.md)
 - ポート規約: [enforce-default-ports](../enforce-default-ports/SKILL.md)
+- 文字入力（保存・比較・検索・重複チェック）の確認: [text-input-check](../text-input-check/SKILL.md)
 - 日報と再発防止の確認（詰まったことをここに書き足す手順）: [daily-report](../daily-report/SKILL.md)
