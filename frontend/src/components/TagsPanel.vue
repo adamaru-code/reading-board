@@ -185,11 +185,13 @@ async function onConfirmRemove() {
 .tags-sub {
   color: var(--text-sub);
 }
+/* 一覧は画面の高さの 6 割まで伸ばし、それより多いときだけ一覧の中でスクロールする
+   （Mac はスクロールバーがふだん隠れていて、続きがあると気づきにくいので、低く切らない） */
 .tag-rows {
   margin: 0;
   padding: 0;
   list-style: none;
-  max-height: 320px;
+  max-height: 60vh;
   overflow-y: auto;
 }
 .tag-row {
