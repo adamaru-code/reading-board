@@ -102,6 +102,13 @@ function onImported() {
   loadStats()
 }
 
+// タグの名前を変えた・まとめた・外したら、カードのタグ・タグの選択肢・隠した候補を取り直す
+function onTagsChanged() {
+  loadBooks(true)
+  loadTagOptions()
+  loadHiddenTags()
+}
+
 function onStatsYearChange(year: number) {
   statsYear.value = year
   loadStats()
@@ -407,6 +414,7 @@ function onBookDeleted() {
       @unauthorized="emit('logout')"
       @deleted="emit('logout')"
       @imported="onImported"
+      @tags-changed="onTagsChanged"
     />
 
     <AdminModal

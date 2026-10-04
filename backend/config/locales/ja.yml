@@ -70,6 +70,12 @@ ja:
       invalid_isbn: ISBN が不正です
       hidden_tag_name_blank: タグ名を入力してください
       hidden_tag_not_found: 隠したタグが見つかりません
+      # タグの管理（MyTags）。自分の本のタグだけを付け替える・外す
+      tags:
+        not_found: 「%{name}」のタグが付いた本がありません
+        new_name_blank: 新しい名前を入力してください
+        new_name_too_long: 新しい名前は %{count} 文字以内にしてください
+        same_name: 今と同じ名前です（大文字・小文字、ひらがな・カタカナ、濁点・半濁点の違いは同じ名前として扱います）
       # CSV 読み込み（BookCsvImporter）。行のエラーは「%{line} 行目：…」の形で返す
       csv_import:
         row: "%{line} 行目：%{message}"

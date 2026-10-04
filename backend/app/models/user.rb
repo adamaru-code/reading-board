@@ -20,4 +20,13 @@ class User < ApplicationRecord
     format: { with: URI::MailTo::EMAIL_REGEXP }
   # 新しく設定するときだけ検証（未変更の更新では password は nil）
   validates :password, length: { minimum: PASSWORD_MIN_LENGTH }, allow_nil: true
+
+  # タグ候補から隠したタグのうち、自分の本でもう使われていない名前を消す（本の削除・タグの付け替え・外したあと）。
+  # 自分のほかの本にまだ付いているタグは残す。辞書・定番タグにもある名前は再び候補に出る
+  def forget_hidden_tags_no_longer_used(tag_names)
+    return if tag_names.empty?
+
+    still_used = Tag.joins(:books).where(name: tag_names, books: { user_id: id }).distinct.pluck(:name)
+    hidden_tags.where(name: tag_names - still_used).delete_all
+  end
 end

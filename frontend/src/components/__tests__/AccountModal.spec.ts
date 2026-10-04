@@ -118,11 +118,11 @@ describe('AccountModal（アカウント削除）', () => {
 })
 
 describe('AccountModal（CSV）', () => {
-  it('タブは「パスワード変更｜CSV｜アカウント削除」の順', () => {
+  it('タブは「パスワード変更｜CSV｜タグ｜アカウント削除」の順', () => {
     const tabs = mount(AccountModal)
       .findAll('[role="tab"]')
       .map((t) => t.text())
-    expect(tabs).toEqual(['パスワード変更', 'CSV', 'アカウント削除'])
+    expect(tabs).toEqual(['パスワード変更', 'CSV', 'タグ', 'アカウント削除'])
   })
 
   it('「CSV」で書き出しのリンク（/api/books/export）と読み込みを出し、取り込んだら imported を伝える', async () => {

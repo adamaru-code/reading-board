@@ -235,6 +235,7 @@ sequenceDiagram
 | 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。選べる年・今年・今月・選んだ年（`?year=`）の冊数と月ごとはその日付を Ruby で数え、ジャンル別は選んだ年の本の `GROUP BY genre` で数える（3 クエリ） |
 | CSV 書き出し | S7 CSV | GET /api/books/export | 自分の本を tags・status_events と一緒に SELECT（登録順）し、`BookCsvExporter` で BOM 付き CSV にして `send_data` |
 | CSV 読み込み | S7 CSV | POST /api/books/import { csv, dry_run } | `BookCsvImporter` が行を検査（エラーがあれば何も INSERT せず 422）→ 自分の本の ISBN・タイトル＋著者と照らして重複を飛ばす → 本番は 1 トランザクションで books・book_tags（タグは find_or_create）・book_status_events を INSERT（CSV の日付で履歴を作り直す） |
+| タグの管理 | S7 タグ | GET /api/tags、PATCH /api/tags/rename { from, to }、DELETE /api/tags/remove?name= | `MyTags`：自分の本の book_tags だけを付け替える（UPDATE tag_id。両方付いた本は DELETE）・外す（DELETE）。`tags` の名前は書き換えない（全ユーザーで共有のため）。誰も使わなくなった tags と、自分の本で使われなくなった hidden_tags を DELETE |
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行（IP ごとに 3 分 10 回まで、超過は 429） |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
@@ -286,7 +287,7 @@ sequenceDiagram
 | S4 編集フォーム | 表紙欄（ISBN で表紙だけ取得・外す）、全項目入力（種別・タグ含む）、更新/削除/キャンセル | GET /api/books/lookup（表紙欄）、PATCH・DELETE /api/books/:id | 削除は確認の上 |
 | S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
 | S6 管理 | 招待タブ・ユーザータブ | /api/invitations、/api/users、/api/users/:id/password_reset_link | 管理者のみ |
-| S7 アカウント | パスワード変更・CSV（書き出し・読み込み）・アカウント削除タブ | /api/password、GET /api/books/export、POST /api/books/import、DELETE /api/registration | 書き出しは CSV ファイルの保存（リンクの `download`）。読み込みはファイルをブラウザで文字にして JSON で送る（dry_run で確認 → 本番） |
+| S7 アカウント | パスワード変更・CSV（書き出し・読み込み）・タグ・アカウント削除タブ | /api/password、GET /api/books/export、POST /api/books/import、GET /api/tags、PATCH /api/tags/rename、DELETE /api/tags/remove、DELETE /api/registration | 書き出しは CSV ファイルの保存（リンクの `download`）。読み込みはファイルをブラウザで文字にして JSON で送る（dry_run で確認 → 本番） |
 | S8 読了一覧 | 読了（件数）・今年 / 今月の読了冊数・並び替え・列の見出し付きの 2 段の行一覧・もっと見る | GET /api/books?status=read&genre=&q=&tag=&sort=&dir=&offset=&per_page=、GET /api/books/stats | S1 の読了カラムと同じデータを使う（開いたときに 50 件まで追加で読み込む） |
 
 ---
