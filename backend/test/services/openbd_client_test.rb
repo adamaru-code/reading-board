@@ -8,6 +8,11 @@ class OpenbdClientTest < ActiveSupport::TestCase
     assert_equal "080442957X", OpenbdClient.normalize("0-8044-2957-x")
   end
 
+  test "normalize は全角の数字・ハイフン・X を半角にそろえる（消さない）" do
+    assert_equal "9784873115658", OpenbdClient.normalize("９７８－４－８７３１１－５６５－８")
+    assert_equal "080442957X", OpenbdClient.normalize("０８０４４２９５７ｘ")
+  end
+
   test "valid? は 13 桁 / 10 桁(末尾X可) を許容し、それ以外を弾く" do
     assert OpenbdClient.valid?("9784873115658") # ISBN-13
     assert OpenbdClient.valid?("4873115655")    # ISBN-10

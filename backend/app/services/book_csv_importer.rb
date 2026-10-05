@@ -4,7 +4,8 @@ require "set"
 # CSV の本をまとめて登録する（アカウント画面の「CSV」→ 読み込み。POST /api/books/import）。
 # 書き出し（BookCsvExporter）と同じ見出し・日本語の名前を使い、列は見出しの名前で探す（並び替え・足りない列も可）。
 # - 間違った行が 1 行でもあれば何も登録せず、行番号付きのエラーを返す
-# - 自分の本と同じ ISBN（両方にあるとき）か同じタイトル＋著者の行は飛ばす（同じ CSV の中で重なった 2 つ目以降も）
+# - 自分の本と同じ ISBN（両方にあるとき）か同じタイトル＋著者の行は飛ばす（同じ CSV の中で重なった 2 つ目以降も）。
+#   タイトル＋著者は DB と同じ比べ方（半角・全角、大文字・小文字、ひらがな・カタカナなどの違いは同じとみなす）
 # - dry_run: true は登録せずに件数だけ返す（取り込む前の確認）
 # - 登録日・開始日・読了日があれば、その日付で状態の履歴を作り直す。表紙は取りに行かない
 class BookCsvImporter
@@ -56,12 +57,8 @@ class BookCsvImporter
 
   # 行ごとに検査し、登録する本の予定・飛ばす行・エラーに分ける
   def plan_rows(table)
-    plans = []
-    skipped = []
+    candidates = []
     errors = []
-    isbns = @user.books.where.not(isbn: nil).pluck(:isbn).to_set
-    title_authors = @user.books.pluck(:title, :author).to_set { |title, author| [ title.strip, author.to_s.strip ] }
-
     table.each.with_index(2) do |row, line|
       attrs, dates, row_errors = read_row(row)
       if row_errors.empty?
@@ -70,19 +67,52 @@ class BookCsvImporter
       end
       if row_errors.any?
         errors.concat(row_errors.map { |message| t("row", line: line, message: message) })
-        next
+      else
+        candidates << { line: line, book: book, plan: { attrs: attrs, tag_names: split_tags(row["タグ"]), dates: dates } }
       end
+    end
+    return [ [], [], errors ] if errors.any?
 
-      key = [ book.title.strip, book.author.to_s.strip ]
+    plans, skipped = remove_duplicates(candidates)
+    [ plans, skipped, errors ]
+  end
+
+  # 自分の本と同じ ISBN か同じタイトル＋著者の行を飛ばす（CSV の中で重なった 2 つ目以降も）
+  def remove_duplicates(candidates)
+    existing = @user.books.pluck(:title, :author).map { |title, author| [ title.strip, author.to_s.strip ] }
+    new_pairs = candidates.map { |c| [ c[:book].title.strip, c[:book].author.to_s.strip ] }
+    keys = comparison_keys((existing + new_pairs).flatten)
+    title_authors = existing.to_set { |pair| pair.map(&keys) }
+    isbns = @user.books.where.not(isbn: nil).pluck(:isbn).to_set
+
+    plans = []
+    skipped = []
+    candidates.zip(new_pairs) do |candidate, pair|
+      book = candidate[:book]
+      key = pair.map(&keys)
       if (book.isbn.present? && isbns.include?(book.isbn)) || title_authors.include?(key)
-        skipped << { line: line, title: book.title }
+        skipped << { line: candidate[:line], title: book.title }
         next
       end
       isbns << book.isbn if book.isbn.present?
       title_authors << key
-      plans << { attrs: attrs, tag_names: split_tags(row["タグ"]), dates: dates }
+      plans << candidate[:plan]
     end
-    [ plans, skipped, errors ]
+    [ plans, skipped ]
+  end
+
+  # DB（照合順序 utf8mb4_0900_ai_ci）が同じとみなす文字列に同じキーを返す（{ 文字列 => キー }）。
+  # Ruby の == は「第2版」と「第２版」、「Ruby」と「ruby」、「はな」と「ハナ」を別とみなすので、
+  # MySQL が文字を比べるときに使う重み（WEIGHT_STRING）を DB に出させて、キーワード検索・タグと同じ比べ方にそろえる
+  def comparison_keys(strings)
+    connection = Book.connection
+    strings.uniq.each_slice(500).each_with_object({}) do |slice, keys|
+      sql = slice.each_with_index.map do |string, i|
+        "SELECT #{i} AS i, WEIGHT_STRING(#{connection.quote(string)} COLLATE utf8mb4_0900_ai_ci) AS w"
+      end.join(" UNION ALL ")
+      weights = connection.select_rows(sql).to_h
+      slice.each_with_index { |string, i| keys[string] = weights.fetch(i) }
+    end
   end
 
   # 1 行を Book の属性・状態ごとの日付・エラーに読み替える

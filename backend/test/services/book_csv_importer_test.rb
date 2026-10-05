@@ -66,6 +66,38 @@ class BookCsvImporterTest < ActiveSupport::TestCase
     assert_equal 2, @other.books.count # dry_run は登録しない
   end
 
+  test "タイトル＋著者は DB と同じ比べ方（半角・全角、大文字・小文字、ひらがな・カタカナ）で重複とみなす" do
+    @other.books.create!(title: "第2版", author: "A")
+    @other.books.create!(title: "Ruby入門", author: "Matz")
+    @other.books.create!(title: "はな")
+    rows = [
+      [ "第２版", "Ａ" ],      # 2 行目：全角
+      [ "ruby入門", "MATZ" ], # 3 行目：大文字・小文字
+      [ "ハナ" ],             # 4 行目：カタカナ
+      [ "ＩＴ入門" ],         # 5 行目：足す
+      [ "IT入門" ]            # 6 行目：CSV の中で 5 行目と重なった
+    ]
+    result = import(csv(*rows), dry_run: true)
+    assert result.ok, result.errors.inspect
+    assert_equal [ 2, 3, 4, 6 ], result.skipped.map { |s| s[:line] }
+    assert_equal 1, result.to_create
+  end
+
+  test "DB でも別の文字列（間の空白の有無）は別の本として足す" do
+    @other.books.create!(title: "ノルウェイの森", author: "村上春樹")
+    result = import(csv([ "ノルウェイの森", "村上 春樹" ]), dry_run: true)
+    assert result.ok, result.errors.inspect
+    assert_equal 1, result.to_create
+    assert_empty result.skipped
+  end
+
+  test "全角数字の ISBN も半角にそろえて、同じ ISBN の本として飛ばす" do
+    @other.books.create!(title: "ISBN の本", isbn: "9784101010137")
+    result = import(csv([ "別の題", nil, nil, nil, nil, nil, nil, nil, "９７８４１０１０１０１３７" ]), dry_run: true)
+    assert result.ok, result.errors.inspect
+    assert_equal [ 2 ], result.skipped.map { |s| s[:line] }
+  end
+
   test "間違った行が 1 行でもあれば何も登録せず、行番号付きでまとめて知らせる" do
     rows = [
       [ "正しい本" ],
