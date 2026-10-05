@@ -9,9 +9,9 @@ class OpenbdClient
   OPEN_TIMEOUT = 3
   READ_TIMEOUT = 5
 
-  # ハイフン・空白などを除去し、数字（と ISBN-10 末尾の X）だけにする
+  # 全角の数字・X は半角にそろえ（NFKC）、ハイフン・空白などを除去して数字（と ISBN-10 末尾の X）だけにする
   def self.normalize(raw)
-    raw.to_s.gsub(/[^0-9Xx]/, "").upcase
+    raw.to_s.unicode_normalize(:nfkc).gsub(/[^0-9Xx]/, "").upcase
   end
 
   # ISBN-13（13桁）または ISBN-10（9桁＋数字/X）
