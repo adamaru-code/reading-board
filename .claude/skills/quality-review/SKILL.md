@@ -243,6 +243,9 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] コミットメッセージが Conventional Commits（`feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`）+ 日本語本文。**`style:` など他の type は使わない**（整形だけのコミットも `chore:`）
 - [ ] PR 本文に `Closes #<issue#>` が含まれる
 - [ ] **マージ前に GitHub が `Closes` を認識しているか確かめる**（`gh pr view <PR番号> --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'` が `[]` なら、マージ後に手動で閉じる前提）。マージ後は Issue が閉じたかも確かめ、`OPEN` のままなら手動で閉じる（CLAUDE.md §6。2026-09-30 から GitHub 全体の不具合で Closes のつながりが作られず、PR #222・#224・#226 で自動で閉じなかった）
+- [ ] **CI が `fail` でも、まず中身を見る**。ジョブが実行する機械を待ったまま（queued）取り消されると、テストを 1 つも流さずに `fail` と出る（2026-10-05、文章だけの PR #286 で Backend (Rails test) が 15 分 queued → cancelled）
+  - 見分け方：`gh run view <run番号> --json jobs -q '.jobs[] | {name, conclusion, steps: (.steps | length)}'` で `conclusion` が `cancelled`・`steps` が `0`
+  - 直し方：コードは変えず `gh run rerun <run番号> --failed` でやり直す。`failure`（テストが落ちた）なら `gh run view <run番号> --log-failed` で原因を見る
 - [ ] PR テンプレ（`.github/pull_request_template.md`）に沿っている
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
 - [ ] 1 PR = 1 トピック。複数トピックを混ぜていない
