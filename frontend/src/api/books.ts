@@ -26,6 +26,7 @@ export function listBooks(
       q: params.q,
       author: params.author,
       tag: params.tag,
+      rating: params.rating,
       page: page === undefined ? undefined : String(page),
       offset: offset === undefined ? undefined : String(offset),
       per_page: String(perPage),

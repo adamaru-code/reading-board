@@ -116,6 +116,18 @@ export interface BookImportResult {
   skipped: BookImportSkipped[]
 }
 
+// 評価の絞り込み：'1'〜'5' はその★以上、'unrated' は未評価
+export type RatingFilter = '1' | '2' | '3' | '4' | '5' | 'unrated'
+// 絞り込みの選択肢（上から順に表示）
+export const RATING_FILTER_OPTIONS: { value: RatingFilter; label: string }[] = [
+  { value: '5', label: '★★★★★' },
+  { value: '4', label: '★★★★ 以上' },
+  { value: '3', label: '★★★ 以上' },
+  { value: '2', label: '★★ 以上' },
+  { value: '1', label: '★ 以上' },
+  { value: 'unrated', label: '未評価' },
+]
+
 // 一覧の絞り込み条件（互いに AND。q はタイトルまたは著者の部分一致、author は著者の部分一致、genre/tag は完全一致）
 export interface BookListParams {
   status?: BookStatus
@@ -123,6 +135,7 @@ export interface BookListParams {
   q?: string
   author?: string
   tag?: string
+  rating?: RatingFilter
 }
 
 // 並び替えキー（読了カラムで使用。値が無い本は常に末尾）

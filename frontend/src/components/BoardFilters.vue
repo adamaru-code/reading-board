@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
-import { BOOK_GENRES, GENRE_LABELS } from '../types/book'
-import type { BookGenre } from '../types/book'
+import { BOOK_GENRES, GENRE_LABELS, RATING_FILTER_OPTIONS } from '../types/book'
+import type { BookGenre, RatingFilter } from '../types/book'
 
-// 絞り込み（キーワード＝タイトルまたは著者・ジャンル・タグ）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。値は v-model:keyword / v-model:genre / v-model:tag。
+// 絞り込み（キーワード＝タイトルまたは著者・ジャンル・タグ・評価）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。
+// 値は v-model:keyword / v-model:genre / v-model:tag / v-model:rating。
 // 条件が変わったら change（キーワードは入力が落ち着いてから）、「クリア」で clear を親に伝える
 const keyword = defineModel<string>('keyword', { required: true })
 const genre = defineModel<'' | BookGenre>('genre', { required: true })
 const tag = defineModel<string>('tag', { required: true })
+const rating = defineModel<'' | RatingFilter>('rating', { required: true })
 
 // tagOptions：タグの選択肢（未絞り込みの一覧から集めたもの）
 defineProps<{ tagOptions: string[] }>()
 const emit = defineEmits<{ change: []; clear: [] }>()
 
 const hasFilters = computed(
-  () => genre.value !== '' || keyword.value.trim() !== '' || tag.value !== '',
+  () =>
+    genre.value !== '' || keyword.value.trim() !== '' || tag.value !== '' || rating.value !== '',
 )
 
 // 先頭の見出し「絞り込み：」と、まとまり（role="group"）を結ぶ id
@@ -29,7 +32,7 @@ function onKeywordInput() {
 
 <template>
   <!-- display: contents：この div は並びに影響させず、中の部品をヘッダの並びに直接加える -->
-  <!-- 先頭に「絞り込み：」を 1 回だけ置き、各欄の見出しは何で絞るか（キーワード・ジャンル・タグ）にそろえる -->
+  <!-- 先頭に「絞り込み：」を 1 回だけ置き、各欄の見出しは何で絞るか（キーワード・ジャンル・タグ・評価）にそろえる -->
   <div class="board-filters" role="group" :aria-labelledby="headingId">
     <span :id="headingId" class="filters-heading">絞り込み：</span>
     <label class="filter-field">
@@ -56,6 +59,15 @@ function onKeywordInput() {
       <select v-model="tag" :class="{ active: tag !== '' }" @change="emit('change')">
         <option value="">すべて</option>
         <option v-for="t in tagOptions" :key="t" :value="t">{{ t }}</option>
+      </select>
+    </label>
+    <label class="filter-field">
+      評価
+      <select v-model="rating" :class="{ active: rating !== '' }" @change="emit('change')">
+        <option value="">すべて</option>
+        <option v-for="o in RATING_FILTER_OPTIONS" :key="o.value" :value="o.value">
+          {{ o.label }}
+        </option>
       </select>
     </label>
     <button

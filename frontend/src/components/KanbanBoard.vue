@@ -11,6 +11,7 @@ import type {
   BookGenre,
   BookListParams,
   BookSortKey,
+  RatingFilter,
   SortDir,
   HiddenTag,
   BookStats,
@@ -65,10 +66,16 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 // ---------- 絞り込み ----------
-const filters = reactive<{ genre: '' | BookGenre; keyword: string; tag: string }>({
+const filters = reactive<{
+  genre: '' | BookGenre
+  keyword: string
+  tag: string
+  rating: '' | RatingFilter
+}>({
   genre: '',
   keyword: '',
   tag: '',
+  rating: '',
 })
 // タグ選択肢は絞り込みで痩せないよう、未絞り込みの一覧から集める
 const tagOptions = ref<string[]>([])
@@ -126,6 +133,7 @@ function activeParams(): BookListParams {
   if (filters.genre !== '') params.genre = filters.genre
   if (filters.keyword.trim() !== '') params.q = filters.keyword.trim()
   if (filters.tag !== '') params.tag = filters.tag
+  if (filters.rating !== '') params.rating = filters.rating
   return params
 }
 
@@ -133,6 +141,7 @@ function clearFilters() {
   filters.genre = ''
   filters.keyword = ''
   filters.tag = ''
+  filters.rating = ''
   loadBooks()
 }
 
@@ -335,6 +344,7 @@ function onBookDeleted() {
         v-model:keyword="filters.keyword"
         v-model:genre="filters.genre"
         v-model:tag="filters.tag"
+        v-model:rating="filters.rating"
         :tag-options="tagOptions"
         @change="loadBooks()"
         @clear="clearFilters"

@@ -231,7 +231,7 @@ sequenceDiagram
 | 登録 | S3 追加フォーム | POST /api/books（種別・タグ含む） | INSERT（+ book_tags / status_event） |
 | 編集（評価・メモ・種別・タグ含む） | S4 編集フォーム | PATCH /api/books/:id | UPDATE（+ book_tags 同期） |
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
-| 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&q=&author=&tag=&sort=&dir=&page=\|offset=&per_page= | SELECT（AND 条件・ORDER BY・LIMIT/OFFSET） |
+| 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&q=&author=&tag=&rating=&sort=&dir=&page=\|offset=&per_page= | SELECT（AND 条件・ORDER BY・LIMIT/OFFSET） |
 | 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。選べる年・今年・今月・選んだ年（`?year=`）の冊数と月ごとはその日付を Ruby で数え、ジャンル別は選んだ年の本の `GROUP BY genre` で数える（3 クエリ） |
 | CSV 書き出し | S7 CSV | GET /api/books/export | 自分の本を tags・status_events と一緒に SELECT（登録順）し、`BookCsvExporter` で BOM 付き CSV にして `send_data` |
 | CSV 読み込み | S7 CSV | POST /api/books/import { csv, dry_run } | `BookCsvImporter` が行を検査（エラーがあれば何も INSERT せず 422）→ 自分の本の ISBN・タイトル＋著者と照らして重複を飛ばす（タイトル＋著者は `WEIGHT_STRING` で DB の照合順序と同じ比べ方）→ 本番は 1 トランザクションで books・book_tags（タグは find_or_create）・book_status_events を INSERT（CSV の日付で履歴を作り直す） |
@@ -281,14 +281,14 @@ sequenceDiagram
 
 | 画面/要素 | 主な構成要素 | 使う API | 備考 |
 |---|---|---|---|
-| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（キーワード/ジャンル/タグ）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&q=&tag=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
+| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（キーワード/ジャンル/タグ/評価）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&q=&tag=&rating=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
 | S2 書籍カード | 書影（あれば左に 60×86）、ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
 | S3 追加フォーム | ISBN/バーコード登録（書誌＋表紙）、タイトル(必須)・著者・ステータス・ジャンル・形態・評価・メモ・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
 | S4 編集フォーム | 表紙欄（ISBN で表紙だけ取得・外す）、全項目入力（種別・タグ含む）、更新/削除/キャンセル | GET /api/books/lookup（表紙欄）、PATCH・DELETE /api/books/:id | 削除は確認の上 |
 | S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
 | S6 管理 | 招待タブ・ユーザータブ | /api/invitations、/api/users、/api/users/:id/password_reset_link | 管理者のみ |
 | S7 アカウント | パスワード変更・CSV（書き出し・読み込み）・タグ・アカウント削除タブ | /api/password、GET /api/books/export、POST /api/books/import、GET /api/tags、PATCH /api/tags/rename、DELETE /api/tags/remove、DELETE /api/registration | 書き出しは CSV ファイルの保存（リンクの `download`）。読み込みはファイルをブラウザで文字にして JSON で送る（dry_run で確認 → 本番） |
-| S8 読了一覧 | 読了（件数）・今年 / 今月の読了冊数・並び替え・列の見出し付きの 2 段の行一覧・もっと見る | GET /api/books?status=read&genre=&q=&tag=&sort=&dir=&offset=&per_page=、GET /api/books/stats | S1 の読了カラムと同じデータを使う（開いたときに 50 件まで追加で読み込む） |
+| S8 読了一覧 | 読了（件数）・今年 / 今月の読了冊数・並び替え・列の見出し付きの 2 段の行一覧・もっと見る | GET /api/books?status=read&genre=&q=&tag=&rating=&sort=&dir=&offset=&per_page=、GET /api/books/stats | S1 の読了カラムと同じデータを使う（開いたときに 50 件まで追加で読み込む） |
 
 ---
 

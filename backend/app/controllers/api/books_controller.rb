@@ -20,12 +20,14 @@ module Api
     }.freeze
 
     # GET /api/books
-    # status・genre（enum キー）・q（タイトルまたは著者の部分一致）・author（著者の部分一致）・tag（名称）で絞り込める。併用は AND。
+    # status・genre（enum キー）・q（タイトルまたは著者の部分一致）・author（著者の部分一致）・tag（名称）・
+    # rating（1〜5＝その★以上 / unrated＝未評価）で絞り込める。併用は AND。
     # sort（SORT_EXPRESSIONS のキー）/ dir（asc|desc）で並び替え、page または offset ＋ per_page で分割する。
     def index
       books = current_user.books.includes(:tags, :status_events) # 所有者スコープ＋N+1 回避
       books = books.where(status: params[:status]) if valid_status?(params[:status])
       books = books.where(genre: params[:genre]) if valid_genre?(params[:genre])
+      books = filter_by_rating(books, params[:rating])
       if params[:q].present?
         pattern = like_pattern(params[:q])
         books = books.where("title LIKE ? OR author LIKE ?", pattern, pattern)
@@ -205,6 +207,15 @@ module Api
 
     def valid_genre?(genre)
       genre.present? && Book.genres.key?(genre)
+    end
+
+    # rating=1〜5 はその★以上、unrated は未評価（空または 0）。ほかの値は絞り込まない
+    def filter_by_rating(books, rating)
+      case rating
+      when "unrated" then books.where(rating: [ nil, 0 ])
+      when /\A[1-5]\z/ then books.where(rating: rating.to_i..)
+      else books
+      end
     end
 
     def dry_run?
