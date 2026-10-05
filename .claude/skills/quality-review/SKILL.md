@@ -95,6 +95,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] テストに**補助メソッド（`def create_… `など）を足す前に、同じファイルに同じ名前が無いか grep する**。Ruby は後から書いた定義で前のものを上書きするので、引数の違う既存テストが `ArgumentError: unknown keywords` で落ちる（`books_controller_test.rb` の `create_read_book`。2026-10-01、PR #236）
 - [ ] ユーザーが入力する文字を保存・比較・検索・重複チェックする変更では [text-input-check](../text-input-check/SKILL.md) を確かめる（DB の照合順序は半角・全角・大文字小文字・かなを同じとみなす。2026-10-04、#271）
 - [ ] **「◯◯は入らない・変わらない」を確かめる（否定の）テストでは、その◯◯を必ず用意する**。他人の本を作らずに「他人の本は入らない」と書くと、何も確かめていないのに通る（`export` のテスト。2026-10-04、PR #264 で作ってから確かめ直した）
+- [ ] **一覧・絞り込みのテストの期待値は、fixture（`test/fixtures/*.yml` の初期データ）の本も数に入れる**。作った本だけで `assert_equal [ five.id, four.id ]` と書いたら、fixture の ★4 の本（`readable_code`）も当たって落ちた。`assert_includes` / `assert_not_includes` で「入る本・入らない本」を確かめ、fixture の本もどちらかに入れる（`books_controller_test.rb` の rating。2026-10-05、PR #284）
+- [ ] **不具合を直したら、足したテストを直す前のコードで流し、落ちることを確かめる**（落ちないテストは不具合を見つけられない）：`git stash push <直したファイル>` → `bin/rails test <テスト>` → `git stash pop`（2026-10-05、PR #282 で 3 件落ちることを確認）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 - [ ] **データを直すマイグレーション**は、`db:migrate` の前に**確認用データ（直す対象・直さない対象・重なる場合）を作ってから**試す。流した後でも `bin/rails runner 'require Rails.root.join("db/migrate/<ファイル>").to_s; ActiveRecord::Migration.suppress_messages { <クラス>.new.up }'` で何度でも試せる。確認用データは最後に消す（2026-10-02、PR #246 で先に流してしまい、runner で試し直した）
 
@@ -241,6 +243,9 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] コミットメッセージが Conventional Commits（`feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`）+ 日本語本文。**`style:` など他の type は使わない**（整形だけのコミットも `chore:`）
 - [ ] PR 本文に `Closes #<issue#>` が含まれる
 - [ ] **マージ前に GitHub が `Closes` を認識しているか確かめる**（`gh pr view <PR番号> --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'` が `[]` なら、マージ後に手動で閉じる前提）。マージ後は Issue が閉じたかも確かめ、`OPEN` のままなら手動で閉じる（CLAUDE.md §6。2026-09-30 から GitHub 全体の不具合で Closes のつながりが作られず、PR #222・#224・#226 で自動で閉じなかった）
+- [ ] **CI が `fail` でも、まず中身を見る**。ジョブが実行する機械を待ったまま（queued）取り消されると、テストを 1 つも流さずに `fail` と出る（2026-10-05、文章だけの PR #286 で Backend (Rails test) が 15 分 queued → cancelled）
+  - 見分け方：`gh run view <run番号> --json jobs -q '.jobs[] | {name, conclusion, steps: (.steps | length)}'` で `conclusion` が `cancelled`・`steps` が `0`
+  - 直し方：コードは変えず `gh run rerun <run番号> --failed` でやり直す。`failure`（テストが落ちた）なら `gh run view <run番号> --log-failed` で原因を見る
 - [ ] PR テンプレ（`.github/pull_request_template.md`）に沿っている
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
 - [ ] 1 PR = 1 トピック。複数トピックを混ぜていない
@@ -258,7 +263,8 @@ cd infra && terraform fmt -check && terraform validate
 ### コマンドを書くときの注意（このプロジェクトのシェルは zsh）
 
 - **`path` という名前の変数を使わない**。zsh では `path` がコマンドを探す場所（`PATH`）と結び付いているので、`while read verb path` などと書くと、その中で `sed` などが「command not found」になる（2026-10-04）。`route` などほかの名前にする
-- `grep --include=*.vue` のような `*` は**引用符で囲む**（`--include='*.vue'`）。囲まないと zsh が先に展開しようとして「no matches found」で止まる
+- `grep --include=*.vue` のような `*` は**引用符で囲む**（`--include='*.vue'`）。囲まないと zsh が先に展開しようとして「no matches found」で止まる（2026-10-05 にも同じ失敗をした。grep を書いたら `*` の周りを見直す）
+- 探す文字に `` ` ``（バッククォート）を入れるときは、模様を**一重引用符**で囲む。二重引用符の中の `` `q` `` はコマンドとして実行され、「command not found: q」になって模様が壊れる（2026-10-05）
 - 削除（`rm`）を含むコマンドは許可されないことがある。ほかの処理とつなげず、分けて実行する。プロジェクトの外（`~/Downloads` など）のファイルを消すときは、ユーザーにお願いする
 
 ## 関連
