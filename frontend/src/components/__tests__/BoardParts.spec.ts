@@ -5,7 +5,7 @@ import BoardHeader from '../BoardHeader.vue'
 import BoardFilters from '../BoardFilters.vue'
 import KanbanColumn from '../KanbanColumn.vue'
 import BookCard from '../BookCard.vue'
-import type { Book } from '../../types/book'
+import type { Book, RatingFilter } from '../../types/book'
 import type { User } from '../../types/auth'
 import type { BoardView } from '../../types/view'
 
@@ -102,8 +102,15 @@ describe('BoardFilters', () => {
     vi.useRealTimers()
   })
 
-  const mountFilters = (keyword = '', genre = '' as const, tag = '') =>
-    mount(BoardFilters, { props: { keyword, genre, tag, tagOptions: ['歴史', '宗教'] } })
+  const mountFilters = (
+    keyword = '',
+    genre = '' as const,
+    tag = '',
+    rating = '' as '' | RatingFilter,
+  ) =>
+    mount(BoardFilters, {
+      props: { keyword, genre, tag, rating, tagOptions: ['歴史', '宗教'] },
+    })
 
   it('ジャンルを選ぶとすぐ change、キーワードは入力が落ち着いてから change', async () => {
     vi.useFakeTimers()
@@ -149,6 +156,31 @@ describe('BoardFilters', () => {
       .findAll('option')
       .map((o) => o.text())
     expect(options.slice(-3)).toEqual(['実用・暮らし', 'IT・技術', 'その他・未分類'])
+  })
+
+  it('評価は「すべて」と「★いくつ以上」「未評価」から選べ、選ぶとすぐ change', async () => {
+    const wrapper = mountFilters()
+    const select = wrapper.findAll('select')[2]
+    expect(select.element.closest('label')?.textContent).toContain('評価')
+    expect(select.findAll('option').map((o) => o.text())).toEqual([
+      'すべて',
+      '★★★★★',
+      '★★★★ 以上',
+      '★★★ 以上',
+      '★★ 以上',
+      '★ 以上',
+      '未評価',
+    ])
+
+    await select.setValue('4')
+    expect(wrapper.emitted('update:rating')).toEqual([['4']])
+    expect(wrapper.emitted('change')).toHaveLength(1)
+  })
+
+  it('評価だけで絞り込んでいても「クリア」を出し、評価の欄を強調する', () => {
+    const wrapper = mountFilters('', '', '', 'unrated')
+    expect(wrapper.find('.clear-btn').exists()).toBe(true)
+    expect(wrapper.findAll('select')[2].classes()).toContain('active')
   })
 
   it('絞り込みに使っている欄だけ強調する（active）', () => {

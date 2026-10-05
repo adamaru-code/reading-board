@@ -57,6 +57,33 @@ module Api
       assert_equal [ hit.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
     end
 
+    test "index は rating で絞り込める（1〜5 はその★以上、unrated は未評価、ほかの値は絞り込まない）" do
+      five = @owner.books.create!(title: "★5", rating: 5)
+      four = @owner.books.create!(title: "★4", rating: 4)
+      three = @owner.books.create!(title: "★3", rating: 3)
+      zero = @owner.books.create!(title: "★0", rating: 0)
+      ids_for = ->(rating) do
+        get api_books_url, params: { rating: rating }
+        assert_response :success
+        JSON.parse(response.body)["items"].map { |b| b["id"] }
+      end
+
+      four_or_more = ids_for.("4")
+      assert_includes four_or_more, five.id
+      assert_includes four_or_more, four.id
+      assert_includes four_or_more, @book.id # fixture は ★4
+      assert_not_includes four_or_more, three.id
+      assert_not_includes four_or_more, zero.id
+      assert_equal [ five.id ], ids_for.("5")
+      unrated = ids_for.("unrated")
+      assert_includes unrated, zero.id
+      assert_includes unrated, books(:want_to_read_sample).id # fixture は未評価（nil）
+      assert_not_includes unrated, three.id
+      assert_not_includes unrated, @book.id
+      assert_includes ids_for.("9"), three.id # 範囲外は無視
+      assert_includes ids_for.("abc"), three.id
+    end
+
     test "index は genre で絞り込める" do
       target = @owner.books.create!(title: "教養本", genre: :liberal_arts)
       get api_books_url, params: { genre: "liberal_arts" }
