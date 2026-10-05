@@ -54,6 +54,7 @@ grep -rn "includes(\|=== " frontend/src --include='*.vue' --include='*.ts' | gre
   - Ruby：`name.to_s.unicode_normalize(:nfkc).strip`（タグは `Tag.normalize_name`）
   - JavaScript：`name.normalize('NFKC').trim()`（`TagInput.vue`）
   - **バックエンドとフロントの両方で同じ方法**にする（フロントだけだと API・CSV から入る値がそろわない）
+  - **「数字以外を消す」処理の前にも NFKC をかける**。`gsub(/[^0-9Xx]/, "")` は全角の「９７８…」を数字と見なさず全部消すので、全角で書いた ISBN が空になっていた（`OpenbdClient.normalize`。2026-10-05、PR #282）。ISBN・電話番号・郵便番号などの欄を作るときは、テストに全角数字を入れる
 - **Rails の `normalizes`** をモデルに書く：保存するときだけでなく、`find_by(name:)` / `where(name:)` で探すときも同じようにそろえる（`Tag`・`HiddenTag`）
 - **NFKC でもそろわない違い**（大文字・小文字、ひらがな・カタカナ、濁点）は、DB が同じとみなす。アプリ側では「DB で探した**レコード**で重複を除く」（`cleaned.map { find_or_create_by }.uniq`）。文字列で `uniq` しない
 - **レコードが無い文字列どうしをアプリで比べるしかない**とき（CSV の行どうしなど）は、DB に `WEIGHT_STRING(? COLLATE utf8mb4_0900_ai_ci)`（MySQL が比べるときに使う重み）を出させ、それをキーにして比べる。重みが同じなら DB の `=` でも同じ（`BookCsvImporter#comparison_keys`）
