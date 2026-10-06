@@ -246,6 +246,14 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] **CI が `fail` でも、まず中身を見る**。ジョブが実行する機械を待ったまま（queued）取り消されると、テストを 1 つも流さずに `fail` と出る（2026-10-05、文章だけの PR #286 で Backend (Rails test) が 15 分 queued → cancelled）
   - 見分け方：`gh run view <run番号> --json jobs -q '.jobs[] | {name, conclusion, steps: (.steps | length)}'` で `conclusion` が `cancelled`・`steps` が `0`
   - 直し方：コードは変えず `gh run rerun <run番号> --failed` でやり直す。`failure`（テストが落ちた）なら `gh run view <run番号> --log-failed` で原因を見る
+- [ ] **CI が 5 分以上 queued のままなら、GitHub の状況を確かめてユーザーに伝える**（待つだけにしない。2026-10-05、障害を伝えないまま待ち続け、ユーザーに「時間かかりすぎではないですか？」と聞かれた）
+  ```bash
+  curl -s https://www.githubstatus.com/api/v2/components.json | python3 -c "import json,sys; [print(c['name'], c['status']) for c in json.load(sys.stdin)['components'] if 'Actions' in c['name']]"
+  ```
+  `operational` 以外（`degraded_performance`・`major_outage` など）なら、GitHub 側の障害で順番待ちになっていると伝える。古い run が順番を取っていたら `gh run cancel <run番号>` で外す
+- [ ] **やり直しても障害で取り消され続けるときは、同じ確認を手元で流し、マージしてよいかユーザーに聞く**（`.github/workflows/ci.yml` と同じコマンド。勝手にマージしない。2026-10-06、PR #286 の Terraform）
+  - Terraform：`cd infra && terraform fmt -check -recursive && terraform validate`（版は ci.yml と同じか `terraform version` で確かめる。手元の `infra/.terraform` は AWS 用に初期化済みなので **`terraform init` はしない**）
+  - 了承を得たら、取り消された理由と手元の結果を PR にコメントで残してからマージする（`gh pr comment <PR番号> --body "…"`）
 - [ ] PR テンプレ（`.github/pull_request_template.md`）に沿っている
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
 - [ ] 1 PR = 1 トピック。複数トピックを混ぜていない
