@@ -123,7 +123,7 @@ export interface FetchCoversResult {
   not_found: number
   last_id: number
   remaining: number
-  stopped: 'limited' | 'no_key' | 'error' | null
+  stopped: 'limited' | 'rate_limited' | 'no_key' | 'error' | null
   message: string | null // 止まったときに見せる文
 }
 

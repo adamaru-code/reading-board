@@ -236,7 +236,7 @@ sequenceDiagram
 | CSV 書き出し | S7 CSV | GET /api/books/export | 自分の本を tags・status_events と一緒に SELECT（登録順）し、`BookCsvExporter` で BOM 付き CSV にして `send_data` |
 | CSV 読み込み | S7 CSV | POST /api/books/import { csv, dry_run } | `BookCsvImporter` が行を検査（エラーがあれば何も INSERT せず 422）→ 自分の本の ISBN・タイトル＋著者と照らして重複を飛ばす（タイトル＋著者は `WEIGHT_STRING` で DB の照合順序と同じ比べ方）→ 本番は 1 トランザクションで books・book_tags（タグは find_or_create）・book_status_events を INSERT（CSV の日付で履歴を作り直す） |
 | タグの管理 | S7 タグ | GET /api/tags、PATCH /api/tags/rename { from, to }、DELETE /api/tags/remove?name= | `MyTags`：自分の本の book_tags だけを付け替える（UPDATE tag_id。両方付いた本は DELETE）・外す（DELETE）。`tags` の名前は書き換えない（全ユーザーで共有のため）。誰も使わなくなった tags と、自分の本で使われなくなった hidden_tags を DELETE |
-| 表紙のまとめて取得 | S7 表紙 | GET /api/books/missing_covers、POST /api/books/fetch_covers { after_id } | `BookCoverFetcher`：ISBN があって cover_url が空の自分の本を id 順に 10 冊 SELECT → 1 冊ずつ Google Books に問い合わせ（`GoogleBooksClient.lookup`）→ 見つかれば books UPDATE（cover_url）。上限（429・403 の上限の理由）・鍵なし・失敗なら止める。画面が last_id を after_id にして繰り返す（1 回のリクエストを短くするため） |
+| 表紙のまとめて取得 | S7 表紙 | GET /api/books/missing_covers、POST /api/books/fetch_covers { after_id } | `BookCoverFetcher`：ISBN があって cover_url が空の自分の本を id 順に 10 冊 SELECT → 1 冊ずつ、間を 0.6 秒空けて Google Books に問い合わせ（`GoogleBooksClient.lookup`。1 分 100 回の上限を超えないため）→ 見つかれば books UPDATE（cover_url）。上限（429・403。本文の「per day」で 1 日か 1 分かを見分ける）・鍵なし・失敗なら止める。画面が last_id を after_id にして繰り返す（1 回のリクエストを短くするため） |
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行（IP ごとに 3 分 10 回まで、超過は 429） |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |

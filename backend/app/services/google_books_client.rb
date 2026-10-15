@@ -11,10 +11,13 @@ class GoogleBooksClient
   COVER_HOSTS = %w[books.google.com books.googleusercontent.com].freeze
   OPEN_TIMEOUT = 3
   READ_TIMEOUT = 5
-  # 403 のうち、1 日の回数などの上限に当たったことを表す理由（それ以外の 403 は鍵の間違いなど）
+  # 回数の上限に当たったことを表す理由（それ以外の 403 は鍵の間違いなど）。
+  # 1 日の上限（Queries per day）と 1 分の上限（Queries per minute per user）は、どちらも 429 や
+  # rateLimitExceeded で返ることがあるので、本文の「per day」で 1 日の上限かどうかを見分ける
   LIMIT_REASONS = %w[dailyLimitExceeded rateLimitExceeded userRateLimitExceeded quotaExceeded].freeze
 
-  # status：:found（url あり）/ :not_found（該当なし・画像なし）/ :limited（Google の回数の上限）/
+  # status：:found（url あり）/ :not_found（該当なし・画像なし）/ :limited（1 日の回数の上限）/
+  #         :rate_limited（1 分の回数の上限。少し待てば続けられる）/
   #         :no_key（鍵が無い）/ :error（鍵の間違い・タイムアウトなど、ほかの失敗）
   Result = Struct.new(:status, :url)
 
@@ -44,15 +47,24 @@ class GoogleBooksClient
     Result.new(:error, nil)
   end
 
-  # 429、または 403 で理由が上限なら :limited。ほかは :error
+  # 回数の上限なら :limited（1 日）か :rate_limited（1 分）。ほかは :error
   def self.failure_status(response)
-    return :limited if response.is_a?(Net::HTTPTooManyRequests)
-    return :error unless response.is_a?(Net::HTTPForbidden)
+    too_many = response.is_a?(Net::HTTPTooManyRequests)
+    return :error unless too_many || response.is_a?(Net::HTTPForbidden)
 
-    reasons = Array(JSON.parse(response.body.to_s).dig("error", "errors")).map { |e| e["reason"] }
-    (reasons & LIMIT_REASONS).any? ? :limited : :error
+    error = parse_error(response.body)
+    reasons = Array(error["errors"]).map { |e| e["reason"] }
+    return :error unless too_many || (reasons & LIMIT_REASONS).any?
+
+    daily = reasons.include?("dailyLimitExceeded") || error["message"].to_s.match?(/per day/i)
+    daily ? :limited : :rate_limited
+  end
+
+  # エラー応答の本文の error（{ "message" => ..., "errors" => [{ "reason" => ... }] }）。読めなければ空
+  def self.parse_error(body)
+    JSON.parse(body.to_s)["error"] || {}
   rescue JSON::ParserError
-    :error
+    {}
   end
 
   # Google は http:// の URL を返すことがあるので https:// にそろえる（ページは https で開くため）

@@ -30,7 +30,7 @@ class BookCoverFetcherTest < ActiveSupport::TestCase
     miss = @user.books.create!(title: "見つからない", isbn: isbn(2))
     result = nil
     with_lookup(isbn(1) => :found, isbn(2) => :not_found) do
-      result = BookCoverFetcher.new(@user).call
+      result = BookCoverFetcher.new(@user, interval: 0).call
     end
     assert_equal 1, result.updated
     assert_equal 1, result.not_found
@@ -46,7 +46,7 @@ class BookCoverFetcherTest < ActiveSupport::TestCase
     @user.books.create!(title: "ISBN なし")
     users(:owner).books.create!(title: "他人の本", isbn: isbn(3))
 
-    fetcher = BookCoverFetcher.new(@user)
+    fetcher = BookCoverFetcher.new(@user, interval: 0)
     assert_equal [ target.id ], fetcher.targets.pluck(:id)
     asked = with_lookup(isbn(1) => :found) { fetcher.call }
     assert_equal [ isbn(1) ], asked
@@ -58,7 +58,7 @@ class BookCoverFetcherTest < ActiveSupport::TestCase
     @user.books.create!(title: "3", isbn: isbn(3))
     result = nil
     asked = with_lookup(isbn(1) => :found, isbn(2) => :limited, isbn(3) => :found) do
-      result = BookCoverFetcher.new(@user).call
+      result = BookCoverFetcher.new(@user, interval: 0).call
     end
     assert_equal [ isbn(1), isbn(2) ], asked # 3 冊目は問い合わせない
     assert_equal "limited", result.stopped
@@ -67,14 +67,31 @@ class BookCoverFetcherTest < ActiveSupport::TestCase
     assert_equal 2, result.remaining # 止めた本も残りに数える
   end
 
+  test "問い合わせの間を interval 秒空ける（1 冊目の前は空けない）" do
+    3.times { |i| @user.books.create!(title: "本#{i}", isbn: isbn(i)) }
+    fetcher = BookCoverFetcher.new(@user, interval: 0.6)
+    slept = []
+    fetcher.define_singleton_method(:sleep) { |seconds| slept << seconds }
+    with_lookup(isbn(0) => :not_found, isbn(1) => :not_found, isbn(2) => :not_found) { fetcher.call }
+    assert_equal [ 0.6, 0.6 ], slept
+  end
+
+  test "1 分の上限でも止めて rate_limited を返す" do
+    @user.books.create!(title: "1", isbn: isbn(1))
+    result = nil
+    with_lookup(isbn(1) => :rate_limited) { result = BookCoverFetcher.new(@user, interval: 0).call }
+    assert_equal "rate_limited", result.stopped
+    assert_equal 1, result.remaining
+  end
+
   test "1 回は BATCH_SIZE 冊まで。after_id から続けられる" do
     books = Array.new(BookCoverFetcher::BATCH_SIZE + 2) { |i| @user.books.create!(title: "本#{i}", isbn: isbn(i)) }
     statuses = books.to_h { |b| [ b.isbn, :not_found ] }
     first = nil
     second = nil
     with_lookup(statuses) do
-      first = BookCoverFetcher.new(@user).call
-      second = BookCoverFetcher.new(@user).call(after_id: first.last_id)
+      first = BookCoverFetcher.new(@user, interval: 0).call
+      second = BookCoverFetcher.new(@user, interval: 0).call(after_id: first.last_id)
     end
     assert_equal BookCoverFetcher::BATCH_SIZE, first.not_found
     assert_equal books[BookCoverFetcher::BATCH_SIZE - 1].id, first.last_id
