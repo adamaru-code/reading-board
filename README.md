@@ -59,8 +59,11 @@ npm run dev
 表紙は Google Books から取得する。API キー（`GOOGLE_BOOKS_API_KEY`）が無くてもアプリは動く（表紙が出ないだけ）。
 毎回鍵を入れなくて済むよう、Git に入らない mise の個人用設定（`backend/mise.local.toml`）に置く。
 
+1 の `read -s` の行は、**1 行まるごと貼り付けて Enter** を押す（鍵はまだ貼らない）。「鍵を貼り付けて Enter（画面には表示されません）:」と出てから、鍵を貼り付けて Enter を押す。`read -s` の後ろに鍵を書くと、鍵が画面と入力の記録に残ってしまう。
+3 の `cd backend` で、信頼する前の設定ファイルについて `mise ERROR … are not trusted` と出ることがあるが、続く `mise trust` で `mise trusted …` と出れば問題ない。
+
 ```bash
-# 1. 鍵を画面に出さずに読み込む（Google Cloud の「認証情報」でコピーした鍵を貼り付けて Enter）
+# 1. 鍵を画面に出さずに読み込む（この行を貼って Enter → 案内が出たら、Google Cloud の「認証情報」でコピーした鍵を貼り付けて Enter）
 read -s "GOOGLE_BOOKS_API_KEY?鍵を貼り付けて Enter（画面には表示されません）: " && export GOOGLE_BOOKS_API_KEY && echo ""
 # 2. mise の個人用設定に書く（.gitignore 済み）
 printf '[env]\nGOOGLE_BOOKS_API_KEY = "%s"\n' "$GOOGLE_BOOKS_API_KEY" > backend/mise.local.toml
