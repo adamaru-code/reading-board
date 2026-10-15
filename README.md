@@ -12,6 +12,7 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 - カラムごとのページング（20 件＋「もっと見る」）、読了本を 1 冊 1 行で並べる読了一覧（`/read`）
 - 統計（`/stats`）：今年・今月・これまでの読了冊数、月ごと・ジャンル別のグラフ（年を切り替えられる）
 - CSV 書き出し・読み込み（アカウント画面）：自分の本を CSV で保存し、CSV からまとめて登録
+- 表紙のまとめて取得（アカウント画面）：ISBN があって表紙が無い本に、Google Books の表紙をまとめて付ける
 - ログイン、招待制の新規登録、パスワード変更・管理者発行の再設定リンク・アカウント削除
 
 詳細は [docs/requirements.md](docs/requirements.md) と [docs/functional-requirements.md](docs/functional-requirements.md)。

@@ -11,6 +11,7 @@ import type {
   BookStats,
   BookImportPreview,
   BookImportResult,
+  FetchCoversResult,
 } from '../types/book'
 
 // GET /api/books （絞り込み＋並び替え＋ページング。1ページ分を返す）
@@ -88,6 +89,20 @@ export function importBooks(
   dryRun: boolean,
 ): Promise<BookImportPreview | BookImportResult> {
   return request('/books/import', { method: 'POST', body: { csv, dry_run: dryRun } })
+}
+
+// GET /api/books/missing_covers （ISBN があって表紙が無い本の冊数）
+export async function countMissingCovers(): Promise<number> {
+  const { count } = await request<{ count: number }>('/books/missing_covers')
+  return count
+}
+
+// POST /api/books/fetch_covers （after_id より後の本に、表紙を最大 10 冊付ける）
+export function fetchCovers(afterId: number): Promise<FetchCoversResult> {
+  return request<FetchCoversResult>('/books/fetch_covers', {
+    method: 'POST',
+    body: { after_id: afterId },
+  })
 }
 
 // PATCH /api/books/reorder （渡した id 順に position を保存）

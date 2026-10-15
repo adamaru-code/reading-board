@@ -116,6 +116,17 @@ export interface BookImportResult {
   skipped: BookImportSkipped[]
 }
 
+// 表紙のまとめて取得（POST /api/books/fetch_covers）の 1 回分の結果。
+// last_id を次の after_id に渡し、remaining が 0 か stopped になるまで繰り返す
+export interface FetchCoversResult {
+  updated: number
+  not_found: number
+  last_id: number
+  remaining: number
+  stopped: 'limited' | 'rate_limited' | 'no_key' | 'error' | null
+  message: string | null // 止まったときに見せる文
+}
+
 // 評価の絞り込み：'1'〜'5' はその★以上、'unrated' は未評価
 export type RatingFilter = '1' | '2' | '3' | '4' | '5' | 'unrated'
 // 絞り込みの選択肢（上から順に表示）
