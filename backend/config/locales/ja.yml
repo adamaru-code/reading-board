@@ -77,6 +77,11 @@ ja:
         new_name_too_long: 新しい名前は %{count} 文字以内にしてください
         same_name: 今と同じ名前です
         spelling_admin_only: 書き方（大文字・小文字、ひらがな・カタカナ、濁点・半濁点など）だけの変更は、管理者だけができます
+      # 表紙のまとめて取得（BookCoverFetcher）で止まったとき。count は残りの冊数
+      fetch_covers:
+        limited: Google の 1 日の回数の上限に達したので止めました。残り %{count} 冊は、明日以降にもう一度押してください
+        no_key: 表紙を取得するための設定（Google Books の API キー）がありません。管理者に知らせてください
+        error: Google Books に問い合わせられなかったので止めました。残り %{count} 冊は、時間をおいてもう一度押してください
       # CSV 読み込み（BookCsvImporter）。行のエラーは「%{line} 行目：…」の形で返す
       csv_import:
         row: "%{line} 行目：%{message}"

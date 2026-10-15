@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import AccountModal from '../AccountModal.vue'
 import * as passwordApi from '../../api/password'
 import * as registrationApi from '../../api/registration'
+import * as booksApi from '../../api/books'
 import { ApiError } from '../../api/http'
 
 async function fill(current: string, password: string, confirmation: string) {
@@ -118,11 +119,11 @@ describe('AccountModal（アカウント削除）', () => {
 })
 
 describe('AccountModal（CSV）', () => {
-  it('タブは「パスワード変更｜CSV｜タグ｜アカウント削除」の順', () => {
+  it('タブは「パスワード変更｜CSV｜タグ｜表紙｜アカウント削除」の順', () => {
     const tabs = mount(AccountModal)
       .findAll('[role="tab"]')
       .map((t) => t.text())
-    expect(tabs).toEqual(['パスワード変更', 'CSV', 'タグ', 'アカウント削除'])
+    expect(tabs).toEqual(['パスワード変更', 'CSV', 'タグ', '表紙', 'アカウント削除'])
   })
 
   it('「CSV」で書き出しのリンク（/api/books/export）と読み込みを出し、取り込んだら imported を伝える', async () => {
@@ -139,5 +140,21 @@ describe('AccountModal（CSV）', () => {
 
     wrapper.findComponent({ name: 'CsvPanel' }).vm.$emit('imported')
     expect(wrapper.emitted('imported')).toHaveLength(1)
+  })
+})
+
+describe('AccountModal（表紙）', () => {
+  it('「表紙」で CoversPanel を出し、表紙を付けたら covers-updated を伝える', async () => {
+    vi.spyOn(booksApi, 'countMissingCovers').mockResolvedValue(0)
+    const wrapper = mount(AccountModal)
+    await wrapper
+      .findAll('[role="tab"]')
+      .find((t) => t.text() === '表紙')!
+      .trigger('click')
+    const panel = wrapper.findComponent({ name: 'CoversPanel' })
+    expect(panel.exists()).toBe(true)
+
+    panel.vm.$emit('updated')
+    expect(wrapper.emitted('covers-updated')).toHaveLength(1)
   })
 })

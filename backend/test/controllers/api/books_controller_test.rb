@@ -644,5 +644,60 @@ module Api
       get stats_api_books_url
       assert_response :unauthorized
     end
+
+    # GoogleBooksClient.lookup を差し替える（ISBN → :found / :not_found / :limited など）
+    def stub_google_lookup(statuses)
+      original = GoogleBooksClient.method(:lookup)
+      GoogleBooksClient.define_singleton_method(:lookup) do |isbn, **|
+        status = statuses.fetch(isbn)
+        GoogleBooksClient::Result.new(status, status == :found ? "https://books.google.com/books/content?id=x" : nil)
+      end
+      yield
+    ensure
+      GoogleBooksClient.define_singleton_method(:lookup, original)
+    end
+
+    test "missing_covers は ISBN があって表紙が無い自分の本の冊数を返す" do
+      get missing_covers_api_books_url
+      base = JSON.parse(response.body)["count"] # fixture の本の分
+      @owner.books.create!(title: "表紙なし", isbn: "9784000000001")
+      users(:other).books.create!(title: "他人の本", isbn: "9784000000002")
+      get missing_covers_api_books_url
+      assert_response :success
+      assert_equal base + 1, JSON.parse(response.body)["count"]
+    end
+
+    test "fetch_covers は表紙を付け、続きの after_id と残りを返す" do
+      book = @owner.books.create!(title: "表紙なし", isbn: "9784000000001")
+      after_id = book.id - 1
+      stub_google_lookup("9784000000001" => :found) do
+        post fetch_covers_api_books_url, params: { after_id: after_id }, as: :json
+      end
+      assert_response :success
+      body = JSON.parse(response.body)
+      assert_equal 1, body["updated"]
+      assert_equal book.id, body["last_id"]
+      assert_nil body["stopped"]
+      assert_nil body["message"]
+      assert_equal "https://books.google.com/books/content?id=x", book.reload.cover_url
+    end
+
+    test "fetch_covers は上限で止まったら理由と残りの冊数を知らせる" do
+      book = @owner.books.create!(title: "表紙なし", isbn: "9784000000001")
+      stub_google_lookup("9784000000001" => :limited) do
+        post fetch_covers_api_books_url, params: { after_id: book.id - 1 }, as: :json
+      end
+      body = JSON.parse(response.body)
+      assert_equal "limited", body["stopped"]
+      assert_equal "Google の 1 日の回数の上限に達したので止めました。残り 1 冊は、明日以降にもう一度押してください", body["message"]
+    end
+
+    test "missing_covers・fetch_covers は未ログインだと 401" do
+      delete api_session_url
+      get missing_covers_api_books_url
+      assert_response :unauthorized
+      post fetch_covers_api_books_url, as: :json
+      assert_response :unauthorized
+    end
   end
 end

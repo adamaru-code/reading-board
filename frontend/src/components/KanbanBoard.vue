@@ -424,6 +424,7 @@ function onBookDeleted() {
       @unauthorized="emit('logout')"
       @deleted="emit('logout')"
       @imported="onImported"
+      @covers-updated="loadBooks(true)"
       @tags-changed="onTagsChanged"
     />
 

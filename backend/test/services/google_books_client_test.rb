@@ -79,4 +79,52 @@ class GoogleBooksClientTest < ActiveSupport::TestCase
       assert_nil GoogleBooksClient.cover_url("9784873115658", api_key: "wrong-key")
     end
   end
+
+  # 本文つきのエラー応答を作る（403 の理由を読むため）
+  def error_response(klass, code, reason = nil)
+    response = klass.new("1.1", code, "Error")
+    json = reason ? { error: { errors: [ { reason: reason } ] } }.to_json : ""
+    response.define_singleton_method(:body) { json }
+    response
+  end
+
+  test "lookup は見つからなかった理由を返す（見つかった・該当なし・鍵なし）" do
+    found = ok_response(volume_with_thumbnail("https://books.google.com/books/content?id=abc"))
+    with_http_start(->(*_args, **_options, &_block) { found }) do
+      result = GoogleBooksClient.lookup("9784873115658", api_key: "test-key")
+      assert_equal :found, result.status
+      assert_equal "https://books.google.com/books/content?id=abc", result.url
+    end
+    not_found = ok_response({ totalItems: 0 })
+    with_http_start(->(*_args, **_options, &_block) { not_found }) do
+      assert_equal :not_found, GoogleBooksClient.lookup("9784101010014", api_key: "test-key").status
+    end
+    assert_equal :no_key, GoogleBooksClient.lookup("9784873115658", api_key: nil).status
+  end
+
+  test "lookup は 429 と、上限が理由の 403 を :limited にする" do
+    [
+      error_response(Net::HTTPTooManyRequests, "429"),
+      error_response(Net::HTTPForbidden, "403", "dailyLimitExceeded"),
+      error_response(Net::HTTPForbidden, "403", "rateLimitExceeded")
+    ].each do |response|
+      with_http_start(->(*_args, **_options, &_block) { response }) do
+        assert_equal :limited, GoogleBooksClient.lookup("9784873115658", api_key: "test-key").status, response.code
+      end
+    end
+  end
+
+  test "lookup は鍵の間違いの 403・本文の無い 403・タイムアウトを :error にする" do
+    [
+      error_response(Net::HTTPForbidden, "403", "keyInvalid"),
+      error_response(Net::HTTPForbidden, "403")
+    ].each do |response|
+      with_http_start(->(*_args, **_options, &_block) { response }) do
+        assert_equal :error, GoogleBooksClient.lookup("9784873115658", api_key: "test-key").status
+      end
+    end
+    with_http_start(->(*_args, **_options, &_block) { raise Net::ReadTimeout }) do
+      assert_equal :error, GoogleBooksClient.lookup("9784873115658", api_key: "test-key").status
+    end
+  end
 end

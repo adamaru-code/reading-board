@@ -106,6 +106,22 @@ module Api
       render json: { count_key => result.to_create, skipped: result.skipped }
     end
 
+    # GET /api/books/missing_covers
+    # ISBN があって表紙が無い自分の本の冊数（アカウント画面の「表紙」で、取得する前に見せる）
+    def missing_covers
+      render json: { count: BookCoverFetcher.new(current_user).targets.count }
+    end
+
+    # POST /api/books/fetch_covers { after_id }
+    # 表紙をまとめて付ける（最大 BookCoverFetcher::BATCH_SIZE 冊）。画面は last_id を after_id に渡して、残りが 0 か止まるまで繰り返す。
+    # 止まったとき（Google の上限・鍵なし・失敗）は stopped と、使う人に見せる message を返す
+    def fetch_covers
+      result = BookCoverFetcher.new(current_user).call(after_id: params[:after_id].to_i)
+      render json: result.to_h.merge(
+        message: result.stopped && I18n.t("api.errors.fetch_covers.#{result.stopped}", count: result.remaining)
+      )
+    end
+
     # GET /api/books/lookup?isbn=
     # openBD を照会し、フォーム自動入力用に書誌情報を返す
     def lookup
