@@ -131,4 +131,71 @@ class GoogleBooksClientTest < ActiveSupport::TestCase
       assert_equal :error, GoogleBooksClient.lookup("9784873115658", api_key: "test-key").status
     end
   end
+
+  # 問い合わせごとに順に応答を返し、問い合わせた URL を記録する
+  def sequence(responses, requested)
+    queue = responses.dup
+    lambda do |*_args, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:get) { |path| requested << path; nil }
+      block.call(http)
+      queue.shift
+    end
+  end
+
+  def volume(isbn13, thumbnail)
+    { volumeInfo: { industryIdentifiers: [ { type: "ISBN_13", identifier: isbn13 } ], imageLinks: { thumbnail: thumbnail } } }
+  end
+
+  test "isbn: で 0 冊なら、題名＋著者で探し、ISBN が一致する本の表紙だけを使う" do
+    requested = []
+    other = volume("9784000000001", "http://books.google.com/other")
+    same = volume("9784873115658", "http://books.google.com/readable")
+    responses = [ ok_response({ totalItems: 0 }), ok_response({ items: [ other, same ] }) ]
+    result = nil
+    with_http_start(sequence(responses, requested)) do
+      result = GoogleBooksClient.lookup("9784873115658", title: "リーダブルコード", author: "Dustin Boswell",
+                                                          api_key: "test-key", pause: 0)
+    end
+    assert_equal :found, result.status
+    assert_equal "https://books.google.com/readable", result.url
+    assert_includes requested[1], "q=%E3%83%AA" # 2 回目は題名で探す（isbn: ではない）
+    assert_includes requested[1], "Dustin+Boswell"
+    assert_not_includes requested[1], "isbn%3A"
+  end
+
+  test "題名で探しても ISBN が一致する本が無ければ :not_found（別の本の表紙は使わない）" do
+    other = volume("9784000000001", "http://books.google.com/other")
+    responses = [ ok_response({ totalItems: 0 }), ok_response({ items: [ other ] }) ]
+    with_http_start(sequence(responses, [])) do
+      result = GoogleBooksClient.lookup("9784873115658", title: "リーダブルコード", api_key: "test-key", pause: 0)
+      assert_equal :not_found, result.status
+      assert_nil result.url
+    end
+  end
+
+  test "isbn: で見つかれば題名では探さない。題名が無ければ予備の検索はしない" do
+    requested = []
+    found = ok_response(volume_with_thumbnail("https://books.google.com/books/content?id=abc"))
+    with_http_start(sequence([ found ], requested)) do
+      GoogleBooksClient.lookup("9784873115658", title: "リーダブルコード", api_key: "test-key", pause: 0)
+    end
+    assert_equal 1, requested.size
+
+    requested = []
+    with_http_start(sequence([ ok_response({ totalItems: 0 }) ], requested)) do
+      assert_equal :not_found, GoogleBooksClient.lookup("9784873115658", api_key: "test-key", pause: 0).status
+    end
+    assert_equal 1, requested.size
+  end
+
+  test "予備の検索で上限に当たったら、その理由を返す" do
+    per_minute = Net::HTTPTooManyRequests.new("1.1", "429", "Too Many Requests")
+    per_minute.define_singleton_method(:body) { "" }
+    responses = [ ok_response({ totalItems: 0 }), per_minute ]
+    with_http_start(sequence(responses, [])) do
+      assert_equal :rate_limited,
+        GoogleBooksClient.lookup("9784873115658", title: "リーダブルコード", api_key: "test-key", pause: 0).status
+    end
+  end
 end

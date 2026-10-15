@@ -4,7 +4,8 @@
 # - 見つからなかった本は数えて先へ進む。次に押したときはもう一度探す（列は増やさない）
 # - Google の回数の上限・鍵なし・失敗のときは、残りも同じ理由で失敗するので、そこで止める（止めた本は数えない）
 # - Google の 1 分の上限（Queries per minute per user＝100 回。2026-10-15 に管理画面で確認）を超えないよう、
-#   問い合わせの間を INTERVAL 秒空ける（10 冊で約 6 秒。1 回のリクエストの待ち時間の上限より十分短い）
+#   本と本の間を INTERVAL 秒空ける。1 冊で 2 回問い合わせるとき（題名で探す予備。GoogleBooksClient.lookup）は、
+#   その間も GoogleBooksClient::FALLBACK_PAUSE 秒空く（10 冊で最大 20 秒ほど。1 回のリクエストの待ち時間の上限より短い）
 class BookCoverFetcher
   BATCH_SIZE = 10
   INTERVAL = 0.6
@@ -32,7 +33,7 @@ class BookCoverFetcher
 
     targets.where("books.id > ?", last_id).limit(BATCH_SIZE).each_with_index do |book, i|
       sleep(@interval) if i.positive? && @interval.positive?
-      result = GoogleBooksClient.lookup(book.isbn)
+      result = GoogleBooksClient.lookup(book.isbn, title: book.title, author: book.author)
       case result.status
       when :found
         book.update!(cover_url: result.url)

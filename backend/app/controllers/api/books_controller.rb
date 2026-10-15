@@ -137,8 +137,8 @@ module Api
         title: info && info[:title],
         author: info && info[:author],
         media_type: OpenbdClient.media_type_for(isbn),
-        # 表紙は Google Books から（鍵が無い・画像が無いときは nil）
-        cover_url: GoogleBooksClient.cover_url(isbn)
+        # 表紙は Google Books から（鍵が無い・画像が無いときは nil）。題名・著者は ISBN で見つからないときの予備の探し方に使う
+        cover_url: GoogleBooksClient.cover_url(isbn, title: info && info[:title], author: info && info[:author])
       }
     end
 

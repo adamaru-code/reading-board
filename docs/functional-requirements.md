@@ -139,7 +139,7 @@ UC9 招待して登録してもらう:
 | GET | `/api/books/export` | 自分の本をすべて CSV で返す（`text/csv`・添付ファイル `reading-board-books-YYYYMMDD.csv`。日付は日本時間の今日。登録順）。列は F21 | 200 / 401 |
 | POST | `/api/books/import` | CSV の本をまとめて登録（F22）。`{ csv: "CSV の文字", dry_run: true\|false }`。dry_run は登録せず `{ to_create, skipped: [{ line, title }] }`、本番は 1 つのトランザクションで登録して `{ created, skipped }` | 200 / 422（間違った行。`errors` に「3 行目：…」） / 401 |
 | GET | `/api/books/missing_covers` | ISBN があって表紙が無い自分の本の冊数 `{ count }`（F19） | 200 / 401 |
-| POST | `/api/books/fetch_covers` | `{ after_id }` より後の、ISBN があって表紙が無い自分の本に、Google Books の表紙を最大 10 冊付ける（id 順。Google の 1 分の上限 100 回を超えないよう、問い合わせの間を 0.6 秒空ける）。返り値は `updated` / `not_found` / `last_id`（次の after_id）/ `remaining`（残りの冊数）/ `stopped`（`null` か `limited`＝Google の 1 日の上限・`rate_limited`＝1 分の上限・`no_key`・`error`。止まったら残りは問い合わせない）/ `message`（止まったときに見せる文）。画面は残りが 0 か止まるまで繰り返す | 200 / 401 |
+| POST | `/api/books/fetch_covers` | `{ after_id }` より後の、ISBN があって表紙が無い自分の本に、Google Books の表紙を最大 10 冊付ける（id 順。探し方は下の `cover_url` と同じで 1 冊に最大 2 回問い合わせる。Google の 1 分の上限 100 回を超えないよう、問い合わせの間を 0.6 秒空ける）。返り値は `updated` / `not_found` / `last_id`（次の after_id）/ `remaining`（残りの冊数）/ `stopped`（`null` か `limited`＝Google の 1 日の上限・`rate_limited`＝1 分の上限・`no_key`・`error`。止まったら残りは問い合わせない）/ `message`（止まったときに見せる文）。画面は残りが 0 か止まるまで繰り返す | 200 / 401 |
 | GET | `/api/books/lookup?isbn=<code>` | ISBN/JAN から書誌（openBD）と表紙の URL（Google Books）を取得。返り値は `isbn` / `found` / `title` / `author` / `media_type` / `cover_url` | 200 / 422（不正な ISBN） |
 
 - 不正な enum 値（例：`status: "flying"`）は検証エラーの 422。`book` キーが無いなどリクエストの形が違う場合は 400。
@@ -147,6 +147,7 @@ UC9 招待して登録してもらう:
 - **タグ提案**の計算はクライアント側で行う（`frontend/src/lib/tagSuggestions.ts`。提案用の API は無い）。辞書の候補に加え、自分の本に付いているタグ（一覧 API から集計）を候補にし、入力中の文字で絞り込む。隠したタグ（§3.2）は除く。
 - `lookup` は該当なしでも 200 で `found: false` を返す（手入力にフォールバック）。openBD の通信失敗・タイムアウト（接続 3 秒・読み取り 5 秒）も `found: false`。
 - `cover_url`：Google Books（Books API）の表紙画像（https）。API キー（環境変数 `GOOGLE_BOOKS_API_KEY`）が無い・画像が無い・失敗（タイムアウトは同じく 3 秒 / 5 秒）のときは `null`（表紙なしで動く）。openBD は表紙を持たない本が多く、国立国会図書館の書影 API は 2026-03-31 に終了したため Google Books を使う。
+  - 探し方：まず `isbn:番号` で探し、無ければ題名＋著者（openBD の書誌、まとめて取得では本の題名・著者）で普通に検索して、上位 20 冊のうち **ISBN（ISBN_13 / ISBN_10）が一致する本の表紙だけ**を使う（別の本の表紙は付けない）。2026-09 末ごろから Google は `isbn:` などの指定付きの検索で 0 件を返す不具合があり（普通の検索は動く。Google の Issue Tracker #569300353）、その間の予備。版の多い本（「こころ」など）は見つからないことがある。Google が直れば 1 回目で見つかる
 
 ### 3.2 タグ候補の設定
 

@@ -99,4 +99,18 @@ class BookCoverFetcherTest < ActiveSupport::TestCase
     assert_equal 2, second.not_found
     assert_equal 0, second.remaining
   end
+
+  test "題名と著者も渡す（isbn: で見つからないときの予備の探し方に使う）" do
+    @user.books.create!(title: "リーダブルコード", author: "Dustin Boswell", isbn: isbn(1))
+    received = nil
+    original = GoogleBooksClient.method(:lookup)
+    GoogleBooksClient.define_singleton_method(:lookup) do |isbn, **options|
+      received = options.merge(isbn: isbn)
+      GoogleBooksClient::Result.new(:not_found, nil)
+    end
+    BookCoverFetcher.new(@user, interval: 0).call
+    assert_equal({ isbn: isbn(1), title: "リーダブルコード", author: "Dustin Boswell" }, received)
+  ensure
+    GoogleBooksClient.define_singleton_method(:lookup, original)
+  end
 end
