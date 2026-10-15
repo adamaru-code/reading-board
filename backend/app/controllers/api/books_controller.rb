@@ -20,7 +20,7 @@ module Api
     }.freeze
 
     # GET /api/books
-    # status・genre（enum キー）・q（タイトルまたは著者の部分一致）・author（著者の部分一致）・tag（名称）・
+    # status・genre（enum キー）・q（タイトル・著者・メモのどれかの部分一致）・author（著者の部分一致）・tag（名称）・
     # rating（1〜5＝その★以上 / unrated＝未評価）で絞り込める。併用は AND。
     # sort（SORT_EXPRESSIONS のキー）/ dir（asc|desc）で並び替え、page または offset ＋ per_page で分割する。
     def index
@@ -30,7 +30,7 @@ module Api
       books = filter_by_rating(books, params[:rating])
       if params[:q].present?
         pattern = like_pattern(params[:q])
-        books = books.where("title LIKE ? OR author LIKE ?", pattern, pattern)
+        books = books.where("title LIKE ? OR author LIKE ? OR memo LIKE ?", pattern, pattern, pattern)
       end
       books = books.where("author LIKE ?", like_pattern(params[:author])) if params[:author].present?
       # タグは名称で完全一致。includes と二重 JOIN しないよう id サブクエリで絞る

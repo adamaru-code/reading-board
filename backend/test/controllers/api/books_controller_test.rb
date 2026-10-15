@@ -48,6 +48,19 @@ module Api
       assert_equal [ @book.id ], JSON.parse(response.body)["items"].map { |b| b["id"] }
     end
 
+    test "index の q はメモの部分一致でも絞り込める（全角・半角の違いは同じとみなす）" do
+      hit = @owner.books.create!(title: "設計の本", memo: "第3章のDDDが良かった")
+      miss = @owner.books.create!(title: "別の本", memo: "第4章が良かった")
+      ids_for = ->(q) do
+        get api_books_url, params: { q: q }
+        JSON.parse(response.body)["items"].map { |b| b["id"] }
+      end
+
+      assert_equal [ hit.id ], ids_for.("第3章")
+      assert_equal [ hit.id ], ids_for.("ｄｄｄ") # 全角・小文字でも当たる
+      assert_not_includes ids_for.("第3章"), miss.id
+    end
+
     test "index の q と author は % や _ を文字として扱う（何にでも一致しない）" do
       hit = @owner.books.create!(title: "100%の本", author: "a_b")
       get api_books_url, params: { q: "%" }
