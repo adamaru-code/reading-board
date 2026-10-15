@@ -126,7 +126,7 @@ describe('BoardFilters', () => {
     expect(wrapper.emitted('change')).toHaveLength(2)
   })
 
-  it('先頭に「絞り込み：」を出してまとまりと結び、文字の欄は「キーワード」（タイトル・著者）', () => {
+  it('先頭に「絞り込み：」を出してまとまりと結び、文字の欄は「キーワード」（タイトル・著者・メモ）', () => {
     const wrapper = mountFilters()
     const group = wrapper.find('[role="group"]')
     const heading = wrapper.find('.filters-heading')
@@ -135,8 +135,8 @@ describe('BoardFilters', () => {
 
     const input = wrapper.find('input[type="search"]')
     expect(input.element.closest('label')?.textContent).toContain('キーワード')
-    expect(input.attributes('placeholder')).toBe('タイトル・著者')
-    expect(input.attributes('aria-label')).toBe('タイトル・著者で絞り込み')
+    expect(input.attributes('placeholder')).toBe('タイトル・著者・メモ')
+    expect(input.attributes('aria-label')).toBe('タイトル・著者・メモで絞り込み')
   })
 
   it('条件があるときだけ「クリア」を出し、押すと clear', async () => {

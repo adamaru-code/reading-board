@@ -128,7 +128,7 @@ export const RATING_FILTER_OPTIONS: { value: RatingFilter; label: string }[] = [
   { value: 'unrated', label: '未評価' },
 ]
 
-// 一覧の絞り込み条件（互いに AND。q はタイトルまたは著者の部分一致、author は著者の部分一致、genre/tag は完全一致）
+// 一覧の絞り込み条件（互いに AND。q はタイトル・著者・メモのどれかの部分一致、author は著者の部分一致、genre/tag は完全一致）
 export interface BookListParams {
   status?: BookStatus
   genre?: BookGenre

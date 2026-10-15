@@ -3,7 +3,7 @@ import { computed, useId } from 'vue'
 import { BOOK_GENRES, GENRE_LABELS, RATING_FILTER_OPTIONS } from '../types/book'
 import type { BookGenre, RatingFilter } from '../types/book'
 
-// 絞り込み（キーワード＝タイトルまたは著者・ジャンル・タグ・評価）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。
+// 絞り込み（キーワード＝タイトル・著者・メモ・ジャンル・タグ・評価）。絞り込み中は、使っている欄と「✕ クリア」を濃紺グレーで目立たせる。
 // 値は v-model:keyword / v-model:genre / v-model:tag / v-model:rating。
 // 条件が変わったら change（キーワードは入力が落ち着いてから）、「クリア」で clear を親に伝える
 const keyword = defineModel<string>('keyword', { required: true })
@@ -42,8 +42,8 @@ function onKeywordInput() {
         type="search"
         class="filter-keyword"
         :class="{ active: keyword.trim() !== '' }"
-        placeholder="タイトル・著者"
-        aria-label="タイトル・著者で絞り込み"
+        placeholder="タイトル・著者・メモ"
+        aria-label="タイトル・著者・メモで絞り込み"
         @input="onKeywordInput"
       />
     </label>
