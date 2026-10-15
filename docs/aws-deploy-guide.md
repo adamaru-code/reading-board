@@ -456,7 +456,7 @@ terraform -chdir=/Users/ada/RaiseTech/reading-board/infra output -raw admin_pass
 
 本番でも表紙を出すには、Google Books の API キーを **SSM Parameter Store**（秘密の値の保管庫）に 1 回だけ登録します。登録しなくてもアプリは動きます（表紙が出ないだけ）。**AWS を止めても消えない**ので、2 回目からは不要です。
 
-1. 鍵を画面に出さずに読み込みます（`鍵を貼り付けて Enter` と出たら、Google Cloud の「認証情報」でコピーした鍵を貼り付けて Enter）。
+1. 鍵を画面に出さずに読み込みます。下のコマンドを**1 行まるごと**貼り付けて Enter を押し（鍵はまだ貼らない）、`鍵を貼り付けて Enter` と出てから、Google Cloud の「認証情報」でコピーした鍵を貼り付けて Enter を押します。`read -s` の後ろに鍵を書くと、鍵が画面と入力の記録に残ってしまいます（2026-10-15 に起きた。そのときの片付けは ui-check-steps スキル）。
 
 ```bash
 read -s "GOOGLE_BOOKS_API_KEY?鍵を貼り付けて Enter（画面には表示されません）: " && export GOOGLE_BOOKS_API_KEY && echo "" && echo "読み込みました（${#GOOGLE_BOOKS_API_KEY} 文字）"
