@@ -92,6 +92,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
     - **中身の確認**：版の確認を外して実行し、警告なしなら原因は版だけ：`cd backend && bundle exec brakeman --no-pager -q --exit-on-warn --exit-on-error`
     - **直し方**：`bundle update brakeman --conservative`（ほかの gem は変えない。`Gemfile.lock` の 1 行だけ）を**別の Issue・PR で先にマージ**し、作業中のブランチに `git merge main` で取り込んで CI をやり直す（作業の PR に関係ない変更を混ぜない。#232）
   - 脆弱性の情報は日々更新される。CI で毎回実行し、見つかったら小さな PR で直す
+    - **関係ない PR の CI が、新しく公開された脆弱性で落ちる**ことがある（2026-10-29、画面だけの PR #298 で bundler-audit が crass・net-ssh で失敗）。見分け方：`gh run view <run番号> --log-failed` に `Name:` `Version:` `Solution: update to …` が出る。直し方は Brakeman と同じ：その gem だけ `bundle update <gem> --conservative` を**別の Issue・PR**（#300）で先にマージ → 作業中のブランチに `git merge origin/main` → CI をやり直す。手元の Rails は起動し直すまで古い版のまま動く
 - [ ] テストが通る（`bin/rails test` または RSpec）
 - [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
 - [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
@@ -101,6 +102,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **一覧・絞り込みのテストの期待値は、fixture（`test/fixtures/*.yml` の初期データ）の本も数に入れる**。作った本だけで `assert_equal [ five.id, four.id ]` と書いたら、fixture の ★4 の本（`readable_code`）も当たって落ちた。`assert_includes` / `assert_not_includes` で「入る本・入らない本」を確かめ、fixture の本もどちらかに入れる（`books_controller_test.rb` の rating。2026-10-05、PR #284）
 - [ ] **不具合を直したら、足したテストを直す前のコードで流し、落ちることを確かめる**（落ちないテストは不具合を見つけられない）：`git stash push <直したファイル>` → `bin/rails test <テスト>` → `git stash pop`（2026-10-05、PR #282 で 3 件落ちることを確認）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
+- [ ] `bin/rails runner` で確認用データを作るときは、**途中で止まっても半端に残らないように**、`ActiveRecord::Base.transaction do … end` で包むか、止まったらまず何ができたかを読み直す。`ENV.fetch("PWFILE")` を渡し忘れ、アカウントと本は作られたのにパスワードの保存だけ失敗した（2026-10-29）
 - [ ] **データを直すマイグレーション**は、`db:migrate` の前に**確認用データ（直す対象・直さない対象・重なる場合）を作ってから**試す。流した後でも `bin/rails runner 'require Rails.root.join("db/migrate/<ファイル>").to_s; ActiveRecord::Migration.suppress_messages { <クラス>.new.up }'` で何度でも試せる。確認用データは最後に消す（2026-10-02、PR #246 で先に流してしまい、runner で試し直した）
 
 ---
@@ -141,6 +143,9 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] 同じ値・同じ見た目を複数の部品に書いていない（定数は `src/lib/`（例：`PASSWORD_MIN_LENGTH`）、繰り返す見た目は共通部品へ）。モーダルの CSS の重複は既知の課題（#159）
 - [ ] 見出しと行など、**文字の大きさが違う要素どうしで列をそろえる**ときは、列の幅を `em`（その要素の文字の大きさが基準）ではなく `rem` や `px` の**共通の値**（CSS 変数など）にし、両方で同じものを使う。`em` だと文字の小さい見出しの列が狭くなり、見出しが値からずれる（例：`ReadList.vue` の `--read-columns`。PR #211 で発生）。この種のずれは jsdom のテストでは見つからないので、画面で確認する（ui-check-steps）
 - [ ] **一覧の高さを低く切らない**（`max-height` で中だけスクロールさせる場合）。Mac はスクロールバーがふだん隠れていて、続きがあると気づけない。画面の高さに合わせて伸ばし（`60vh` など）、切れるときは次の行が半分見えるようにする（タグの管理で 320px にして「確認用A が無い」と言われた。2026-10-04、PR #270）
+- [ ] **スマホの幅（375px・390px）とタブレット（768px）でも撮って確かめる**（要件 3.5）。横スクロールが 0 でも、ヘッダが画面の半分を占める・文字が途中で折れる・ボタンがはみ出す、は数では分からない（2026-10-29 に初めて確かめて 5 つ見つかった。撮り方は [ui-check-steps](../ui-check-steps/SKILL.md) §4）
+- [ ] **グリッドの列の幅を直したら、空の値・長い値の行も撮り直す**。読了一覧のスマホの 2 行目で著者に最低幅を付けたら、著者の無い行でジャンルがつぶれて「雑誌」と重なった → 入りきらないものは折り返す（`display: flex; flex-wrap: wrap`）、中身の無い所は `:empty { display: none }` で詰める（2026-10-29、PR #298）
+- [ ] **並びを組み替えたら（スマホ用に部品を分けるなど）、パソコンの見た目が変わっていないかを数で比べる**：直す前（`git stash push frontend`。読み込み直しに数秒待つ）と後で、部品の左端・上端を `getBoundingClientRect()` で出して比べる。画像のファイルの比較（`cmp`）は撮るたびに違うので使わない。`display: contents` で箱を外したら、間隔（`gap`）が変わりやすい（PR #298 で 16px → 24px になり、`order` と `margin-left: -8px` で戻した）
 - [ ] 1 部品が大きくなりすぎていない（目安 300 行。`KanbanBoard.vue`・`BookFormModal.vue` の分割は既知の課題（#159））
 
 ### 2.6 Lint / テスト / 型チェック / Build
