@@ -31,6 +31,19 @@ lsof -i :5173
    - `ps -p <PID> -o command=` でプロセスの素性を確認できる
 4. **Vite が「Port 5173 is in use, trying another one...」と 5174 等にフォールバックした** → 即座に停止し、5173 を空けてからやり直す。
 
+## 起動後チェック：Mac の中だけで待ち受けているか
+
+起動したら、3 つとも **Mac の中（`127.0.0.1` / `localhost` / `[::1]`）だけ**で待ち受けているかを確かめる。`*:` や `0.0.0.0:` なら、同じ Wi-Fi のほかの機械からつながる。
+
+```bash
+lsof -i :3000 -i :5173 -i :3306 -sTCP:LISTEN -n -P | awk 'NR > 1 {print $1, $9}'
+```
+
+- OK の例：`ruby 127.0.0.1:3000`・`node [::1]:5173`・`com.docke 127.0.0.1:3306`
+- `*:3306` と出たら、`docker-compose.yml` の `ports` が `"127.0.0.1:3306:3306"` になっているか見る（古い書き方のまま作ったコンテナは `docker compose up -d` で作り直すと新しい設定になる。データは消えない）
+- **カフェなど家以外の Wi-Fi** で作業するときは、使わないサーバーは止める。作業を終えるときは、Rails・Vite（Ctrl+C）だけでなく **MySQL（`docker compose stop`）まで**止まったかを確かめる（Ctrl+C では MySQL は止まらない）
+- 2026-10-29、カフェの Wi-Fi で MySQL が `*:3306`（root のパスワードは開発用の `password`）のまま動いていた → `127.0.0.1` に限った（#303）。Mac のファイアウォールもオフだったので、ユーザーに「システム設定 → ネットワーク → ファイアウォール」をオンにしてもらう
+
 ## なぜこのルールがあるか
 
 - フロントの Vite プロキシは `/api → http://localhost:3000`（[frontend/vite.config.ts](../../../frontend/vite.config.ts)）。ブラウザから見て同一オリジンで API を叩くため、開発では CORS 設定は不要（[backend/config/initializers/cors.rb](../../../backend/config/initializers/cors.rb) は未構成）。
