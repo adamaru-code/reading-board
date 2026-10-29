@@ -97,6 +97,45 @@ describe('BoardHeader', () => {
   })
 })
 
+describe('BoardHeader（スマホの「絞り込み ▼」）', () => {
+  it('押すと絞り込みを開き（aria-expanded・open）、もう一度押すと閉じる', async () => {
+    const { wrapper } = await mountHeader()
+    const toggle = wrapper.find('.filters-toggle')
+    const panel = wrapper.find('.header-filters')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(toggle.attributes('aria-controls')).toBe(panel.attributes('id'))
+    expect(toggle.text()).toContain('▼')
+
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    expect(panel.classes()).toContain('open')
+    expect(toggle.text()).toContain('▲')
+
+    await toggle.trigger('click')
+    expect(panel.classes()).not.toContain('open')
+  })
+
+  it('使っている絞り込みの数をボタンに出し、0 なら出さない', async () => {
+    const { wrapper } = await mountHeader()
+    expect(wrapper.find('.filters-count').exists()).toBe(false)
+    expect(wrapper.find('.filters-toggle').classes()).not.toContain('active')
+
+    await wrapper.setProps({ activeFilters: 2 })
+    expect(wrapper.find('.filters-count').text()).toBe('2')
+    expect(wrapper.find('.filters-toggle').classes()).toContain('active')
+  })
+
+  it('統計画面では「絞り込み ▼」を出さない', async () => {
+    const { wrapper } = await mountHeader(owner, 'stats')
+    expect(wrapper.find('.filters-toggle').exists()).toBe(false)
+  })
+
+  it('「＋ 本を追加」は、スマホで隠す「本を」を別の部品にしても、文字は今までどおり', async () => {
+    const { wrapper } = await mountHeader()
+    expect(wrapper.find('.add-btn').text().replace(/\s+/g, ' ')).toBe('＋ 本を追加')
+  })
+})
+
 describe('BoardFilters', () => {
   afterEach(() => {
     vi.useRealTimers()

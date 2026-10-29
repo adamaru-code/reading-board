@@ -255,8 +255,10 @@ async function onSubmit() {
 </template>
 
 <style scoped>
+/* 狭い画面ではタブの文字を途中で折らず、入りきらないタブを 2 段目に並べる（2026-10-29） */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--border);
@@ -269,6 +271,7 @@ async function onSubmit() {
   font: inherit;
   font-size: 13px;
   color: var(--text-sub);
+  white-space: nowrap;
   cursor: pointer;
 }
 .tab[aria-selected='true'] {

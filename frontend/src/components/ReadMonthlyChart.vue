@@ -102,13 +102,21 @@ const months = computed(() =>
 .month.future .bar {
   display: none;
 }
+/* 「10月」などを途中で折らない（幅 375px だと 1 か月分の列は 18px ほど） */
 .month-label {
   margin-top: 3px;
   font-size: 11px;
   color: var(--text-sub);
+  white-space: nowrap;
 }
 .month.current .month-label {
   color: var(--col-read-strong);
   font-weight: 700;
+}
+@media (max-width: 640px) {
+  .month-label,
+  .count {
+    font-size: 10px;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { listAllBooks, updateBook, reorderBooks, getBookStats } from '../api/books'
 import { logout } from '../api/session'
 import { listHiddenTags } from '../api/hiddenTags'
@@ -128,6 +128,12 @@ async function loadHiddenTags() {
     // 取得できなくても候補がすべて出るだけなので、ボード表示は妨げない
   }
 }
+// 使っている絞り込みの数（スマホのヘッダの「絞り込み 2 ▼」に出す）
+const activeFilterCount = computed(() => {
+  const used = [filters.keyword.trim(), filters.genre, filters.tag, filters.rating]
+  return used.filter((value) => value !== '').length
+})
+
 function activeParams(): BookListParams {
   const params: BookListParams = {}
   if (filters.genre !== '') params.genre = filters.genre
@@ -333,6 +339,7 @@ function onBookDeleted() {
     <BoardHeader
       :user="user"
       :view="view"
+      :active-filters="activeFilterCount"
       @add="openAdd"
       @admin="adminModalOpen = true"
       @account="accountModalOpen = true"

@@ -318,38 +318,31 @@ function durationText(days: number | null): string {
   .row-head {
     display: none;
   }
+  /* 2 行目（著者・ジャンル・雑誌・★・読了日・日数）は、入りきらないものを次の行へ折り返す。
+     列の幅を取り合うと、著者が「夏…」になったり、ジャンルがつぶれて「雑誌」と重なったりした（2026-10-29） */
   .row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto auto auto auto;
-    grid-template-areas:
-      'title title title title title title'
-      'author genre media stars date days';
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 10px;
     row-gap: 2px;
   }
-  .row-media,
-  .row-stars,
-  .row-date {
-    text-align: left;
-  }
   .row-title {
-    grid-area: title;
+    flex-basis: 100%;
   }
   .row-author {
-    grid-area: author;
+    max-width: 100%;
   }
-  .row-genre {
-    grid-area: genre;
-  }
-  .row-media {
-    grid-area: media;
-  }
-  .row-stars {
-    grid-area: stars;
-  }
-  .row-date {
-    grid-area: date;
-  }
+  .row-genre,
+  .row-media,
+  .row-stars,
+  .row-date,
   .row-days {
-    grid-area: days;
+    flex: none;
+  }
+  /* 中身の無いもの（著者なし・書籍の形態・日数なし）は詰める（間隔だけが残らないように） */
+  .row > :empty {
+    display: none;
   }
 }
 </style>
