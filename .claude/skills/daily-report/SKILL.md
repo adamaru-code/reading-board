@@ -99,7 +99,7 @@ grep -rn "<キーワード>" .claude/skills/ CLAUDE.md docs/aws-deploy-guide.md
 ~~~
 
 - 再発防止の表・サーバーの止め方・コマンドは、日報のコードブロックの**外**に普通の Markdown で書く（日報に混ぜない）
-- サーバーについて書くときは、**書く直前に** `lsof -i :3000 -sTCP:LISTEN`・`lsof -i :5173 -sTCP:LISTEN`・`lsof -i :3306 -sTCP:LISTEN` で確かめ、**動いているものだけ**止め方（Rails・Vite は Ctrl+C、MySQL は `docker compose stop`）を書く。前の返事の「動いたままです」を流用しない（2026-10-01、確かめずに書いて、実際は止まっていた。CLAUDE.md §9）
+- サーバーについて書くときは、**書く直前に** `lsof -i :3000 -sTCP:LISTEN`・`lsof -i :5173 -sTCP:LISTEN`・`lsof -i :3306 -sTCP:LISTEN` で確かめ、**動いているものだけ**止め方（Rails・Vite は Ctrl+C、MySQL は `docker compose stop`）を書く。**Rails・Vite を Ctrl+C で止めても MySQL は Docker で動き続ける**ので、止め方には `docker compose stop` も必ず入れ、ユーザーが「止めた」と言ったら 3 つとも止まったかを確かめる（2026-10-29、MySQL だけ動いたままだった。カフェの Wi-Fi だった）。前の返事の「動いたままです」を流用しない（2026-10-01、確かめずに書いて、実際は止まっていた。CLAUDE.md §9）
 
 ## 関連
 

@@ -37,7 +37,7 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 エディタは VS Code / Cursor を想定。リポジトリを開くと右下に**おすすめの拡張機能**（Terraform・Vue・Ruby LSP・ESLint・Prettier・日本語化）の案内が出るので、インストールするとファイルが色分けされる（一覧は [.vscode/extensions.json](.vscode/extensions.json)。拡張機能画面で `@recommended` と検索しても出る）。
 
 ```bash
-# 1. MySQL(Docker) を起動
+# 1. MySQL(Docker) を起動（Mac の中 127.0.0.1:3306 だけで待ち受ける。家以外の Wi-Fi では使い終わったら docker compose stop）
 docker compose up -d
 
 # 2. バックエンド（Rails API, :3000）

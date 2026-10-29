@@ -69,6 +69,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 ### 1.6 セキュリティ / 設定
 
+- [ ] **開発用のサーバー・DB は Mac の中だけで待ち受ける**：docker の `ports` は `"127.0.0.1:<port>:<port>"` と書く（`"3306:3306"` はすべての入り口）、Vite の `server.host: true` や `rails server -b 0.0.0.0` を使わない。家以外の Wi-Fi でほかの機械からつながる（2026-10-29、#303。確かめ方は [enforce-default-ports](../enforce-default-ports/SKILL.md)）
 - [ ] 秘密情報（DB パスワード・APIキー）を**コードに直書きしない**（`Rails.application.credentials` または環境変数）
 - [ ] **CORS**：開発は Vite プロキシで同一オリジンのため未構成でよい。もし有効化するなら**許可オリジンを限定**（ワイルドカード `*` 禁止。本番で別オリジンにする場合は本番ドメインのみ）
 - [ ] `config/database.yml` の接続情報は環境変数化されている
