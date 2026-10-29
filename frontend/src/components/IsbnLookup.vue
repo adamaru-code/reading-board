@@ -182,12 +182,15 @@ onBeforeUnmount(stopScan)
   padding: 8px 12px;
   white-space: nowrap;
 }
+/* 狭い画面（スマホ・表紙欄）では入力欄がつぶれないよう、入りきらないボタンを次の行に回す（2026-10-29） */
 .isbn-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .isbn-row input {
-  flex: 1;
+  flex: 1 1 10em;
+  min-width: 0;
 }
 .btn-ghost {
   background: var(--surface);

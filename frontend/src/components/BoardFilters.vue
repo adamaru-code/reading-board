@@ -137,4 +137,35 @@ function onKeywordInput() {
   font-weight: 600;
   padding: 5px 7px;
 }
+/* スマホの幅（640px 以下）：ヘッダの「絞り込み ▼」で開いたときに、キーワードを 1 行、ほかを 2 列で並べる
+   （見出し「絞り込み：」はボタンと重なるので隠す。BoardHeader.vue） */
+@media (max-width: 640px) {
+  .board-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+    padding-top: 4px;
+  }
+  .filters-heading {
+    display: none;
+  }
+  .filter-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+  .filter-field:first-of-type {
+    grid-column: 1 / -1;
+  }
+  .filter-keyword,
+  .filter-field select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .clear-btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
 </style>
