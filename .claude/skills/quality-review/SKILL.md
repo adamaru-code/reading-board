@@ -46,6 +46,10 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 - [ ] **複数レコードを更新する処理は `ActiveRecord::Base.transaction` で囲む**か、reorder のように **1 本の SQL（`update_all` ＋ CASE 式）**にまとめる
 - [ ] 途中失敗で DB が中間状態にならないことを担保
+- [ ] **たくさんの行をまとめて書き込む処理（CSV 読み込みなど）は、1 件ずつ `create!` しない**。1 件ごとにコールバック・タグの find_or_create・関連の INSERT が走り、問い合わせが件数の何倍にもなる（CSV 1,000 冊で約 7,800 回・23 秒 → `insert_all` でまとめて 0.34 秒。2026-11-01、PR #308）。`insert_all` はコールバックを通らないので、`after_create` でしていたこと（状態の履歴など）は自分で作る。MySQL は書き込んだ行の id を返さないので、書き込む前の `maximum(:id)` より後を、重ならないキー（タイトル＋著者など）で引き当てる
+  - テストで守る：`ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { … }` で問い合わせの回数を数え、「60 件で 25 回未満」のように**件数に比例しない**ことを確かめる（直す前のコードで落ちることも確かめる）
+  - 本番は **CloudFront が返事を 30 秒まで**しか待たず、POST は超えるとやり直さずに 504 を返す（画面はエラーなのに、サーバーでは処理が進んで書き込まれる）。手元で 10 秒を超える処理は、本番では危ない（本番はサーバーが小さく、DB が別の機械）
+- [ ] **データの量が増えたときの速さ**（要件 3.1：1,000 冊）は、確認用アカウントに件数を入れて実測する：`bin/rails runner` で 1,000 件（状態・タグ・日付をばらす。transaction で包む）→ API は curl で各 5 回の中央値（`-w '%{time_total}'`）、画面は playwright-core で「本が出るまで」を測る（`networkidle` は 0.5 秒の静けさを待つ分だけ長く出る）。重い操作（CSV 読み込み・書き出し）も忘れずに測る。終わったらアカウントと確認用タグを消す（2026-11-01）
 - [ ] **`transaction do … end` の中で `return` しない**（Rails の版によって、途中で抜けたときに確定するか取り消すかの扱いが変わってきた）。断る条件の確認はトランザクションの前に済ませ、中では結果を変数に入れて、ブロックの外で返す（`MyTags#rename`。2026-10-04）
 
 ### 1.4 例外ハンドリング / エラーレスポンス
@@ -263,6 +267,7 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] **やり直しても障害で取り消され続けるときは、同じ確認を手元で流し、マージしてよいかユーザーに聞く**（`.github/workflows/ci.yml` と同じコマンド。勝手にマージしない。2026-10-06、PR #286 の Terraform）
   - Terraform：`cd infra && terraform fmt -check -recursive && terraform validate`（版は ci.yml と同じか `terraform version` で確かめる。手元の `infra/.terraform` は AWS 用に初期化済みなので **`terraform init` はしない**）
   - 了承を得たら、取り消された理由と手元の結果を PR にコメントで残してからマージする（`gh pr comment <PR番号> --body "…"`）
+- [ ] **PR 本文に書くテストの件数などの数字は、その PR のブランチで流した結果を書く**（main や別のブランチで流した数を書かない。2026-11-01、PR #307 に別のブランチの「199 runs」を書き、実際は 198 だった）
 - [ ] PR テンプレ（`.github/pull_request_template.md`）に沿っている
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
 - [ ] 1 PR = 1 トピック。複数トピックを混ぜていない
@@ -279,13 +284,13 @@ cd infra && terraform fmt -check && terraform validate
 
 ### コマンドを書くときの注意（このプロジェクトのシェルは zsh）
 
-- **`path` という名前の変数を使わない**。zsh では `path` がコマンドを探す場所（`PATH`）と結び付いているので、`while read verb path` などと書くと、その中で `sed` などが「command not found」になる（2026-10-04）。`route` などほかの名前にする
+- **`path` という名前の変数を使わない**。zsh では `path` がコマンドを探す場所（`PATH`）と結び付いているので、`while read verb path` などと書くと、その中で `sed` などが「command not found」になる（2026-10-04）。`route` などほかの名前にする **2026-11-01 にも、計測のスクリプトで `local name=$1 path=$2` と書いて同じ失敗をした**（curl・sort・wc が見つからなくなり、測った値が全部 0 ms）。zsh の関数の引数を受ける変数は `url` `target` などにする
 - `grep --include=*.vue` のような `*` は**引用符で囲む**（`--include='*.vue'`）。囲まないと zsh が先に展開しようとして「no matches found」で止まる（2026-10-05 にも同じ失敗をした。grep を書いたら `*` の周りを見直す）
 - 探す文字に `` ` ``（バッククォート）を入れるときは、模様を**一重引用符**で囲む。二重引用符の中の `` `q` `` はコマンドとして実行され、「command not found: q」になって模様が壊れる（2026-10-05）
 - Mac の `sed` で `sed: RE error: illegal byte sequence` と出たら、日本語などをバイトのまま読む **`LC_ALL=C`** を付ける（`LC_ALL=C sed -i '' '/AIza/d' ~/.zsh_history`）。zsh の履歴ファイルは日本語を独自の形で保存しているので、そのままでは読めない。止まったときはファイルは変わっていない（2026-10-15）
 - こちらのシェルの `grep` は shell function（`type grep` で分かる）で、日本語まじりのファイルを**読み飛ばして 0 件**と答えることがある。「無いこと」を数えるときは `/usr/bin/grep -a -c` を使い、あるはずの言葉（`cd ` など）も一緒に数えて、読めていることを確かめる（2026-10-15、履歴の鍵の確認）
 - Rails が環境変数（鍵など）を読めているかは、`ps eww` では確かめられない（Mac はほかのプロセスの環境変数を見せない。`PATH` も 0 件）。`cd backend && mise exec -- bin/rails runner 'puts ENV["GOOGLE_BOOKS_API_KEY"].present?'` で値を出さずに確かめ、必要なら 1 回だけ実際に問い合わせる（2026-10-15）
-- 削除（`rm`）を含むコマンドは許可されないことがある。ほかの処理とつなげず、分けて実行する。プロジェクトの外（`~/Downloads` など）のファイルを消すときは、ユーザーにお願いする
+- 削除（`rm`）を含むコマンドは許可されないことがある。ほかの処理とつなげず、分けて実行する（2026-11-01 にも、長いコマンドの途中に `rm -f` を入れて全体が許可されなかった。上書きで済むファイルは rm しない）。プロジェクトの外（`~/Downloads` など）のファイルを消すときは、ユーザーにお願いする
 
 ## 関連
 
