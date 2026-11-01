@@ -177,20 +177,60 @@ class BookCsvImporter
     value.to_s.split(BookCsvExporter::TAG_SEPARATOR)
   end
 
+  # 本・タグのつながり・状態の履歴を、それぞれまとめて書き込む（insert_all）。
+  # 1 冊ずつ create! すると 1 冊に約 8 回問い合わせ、1,000 冊で 23 秒かかって、本番の待ち時間の上限
+  # （CloudFront は 30 秒）を超えるおそれがあった（2026-11-01、#305）。検査は plan_rows で済んでいる。
+  # insert_all はコールバック（作成時に今日の履歴を付ける Book#record_status_event）を通らないので、履歴はここで作る
   def create_books(plans)
     Book.transaction do
-      plans.each do |plan|
-        book = @user.books.create!(plan[:attrs].merge(tag_names: plan[:tag_names]))
-        restore_status_events(book, plan[:dates]) if plan[:dates].any?
+      before_id = Book.maximum(:id).to_i
+      rows = plans.map do |plan|
+        Book.new(plan[:attrs].merge(user: @user)).attributes_for_database.except("id", "created_at", "updated_at")
       end
+      Book.insert_all!(rows)
+      # 書き込んだ本の id を、タイトル＋著者で引き当てる（CSV の中で同じタイトル＋著者は重複として飛ばしてあるので 1 冊に決まる）
+      ids = @user.books.where("books.id > ?", before_id).pluck(:title, :author, :id)
+                  .to_h { |title, author, id| [ [ title, author ], id ] }
+      book_ids = plans.map { |plan| ids.fetch([ plan[:attrs][:title], plan[:attrs][:author] ]) }
+      insert_book_tags(plans, book_ids)
+      insert_status_events(plans, book_ids)
     end
   end
 
-  # 作成時に付いた「今日」の履歴を、CSV の日付で作り直す。今の状態の日付が CSV に無ければ今日のまま残す
-  def restore_status_events(book, dates)
-    book.status_events.delete_all
-    dates.each { |status, occurred_on| book.status_events.create!(status: status, occurred_on: occurred_on) }
-    book.status_events.create!(status: book.status, occurred_on: Date.current) unless dates.key?(book.status)
+  # タグは Book#tag_names= と同じく書き方をそろえ（Tag.normalize_name）、DB が同じとみなす名前（大文字・小文字など）は
+  # 1 つのタグにする。無いタグだけをまとめて作り、本とのつながりもまとめて書き込む
+  def insert_book_tags(plans, book_ids)
+    names_per_book = plans.map { |plan| plan[:tag_names].map { |name| Tag.normalize_name(name) }.reject(&:blank?) }
+    names = names_per_book.flatten.uniq
+    return if names.empty?
+
+    tag_ids = tag_ids_by_key(names)
+    if (missing = names.reject { |name| tag_ids.key?(@keys.fetch(name)) }.uniq { |name| @keys.fetch(name) }).any?
+      Tag.insert_all(missing.map { |name| { name: name } }) # ほかの人が同時に作っていたら飛ばす（name は UNIQUE）
+      tag_ids = tag_ids_by_key(names)
+    end
+    rows = names_per_book.zip(book_ids).flat_map do |book_names, book_id|
+      book_names.map { |name| tag_ids.fetch(@keys.fetch(name)) }.uniq.map { |tag_id| { book_id: book_id, tag_id: tag_id } }
+    end
+    BookTag.insert_all!(rows) if rows.any?
+  end
+
+  # 今あるタグを { 比較用のキー => id } で返す（@keys に名前ごとのキーを入れておく）
+  def tag_ids_by_key(names)
+    existing = Tag.where(name: names).pluck(:name, :id)
+    @keys = comparison_keys(names + existing.map(&:first))
+    existing.to_h { |name, id| [ @keys.fetch(name), id ] }
+  end
+
+  # CSV の日付で状態の履歴を作る。今の状態の日付が CSV に無ければ今日（1 冊ずつ作っていたときと同じ）
+  def insert_status_events(plans, book_ids)
+    today = Date.current
+    rows = plans.zip(book_ids).flat_map do |plan, book_id|
+      dates = plan[:dates].dup
+      dates[plan[:attrs][:status]] ||= today
+      dates.map { |status, occurred_on| { book_id: book_id, status: Book.statuses.fetch(status), occurred_on: occurred_on } }
+    end
+    BookStatusEvent.insert_all!(rows)
   end
 
   def failure(*errors)

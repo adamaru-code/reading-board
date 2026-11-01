@@ -138,4 +138,31 @@ class BookCsvImporterTest < ActiveSupport::TestCase
     result = import(BookCsvExporter::BOM + csv([ "BOM の本" ]))
     assert result.ok, result.errors.inspect
   end
+
+  test "まとめて書き込むので、問い合わせの回数は冊数に比例して増えない（1,000 冊で 23 秒かかっていた。#305）" do
+    rows = Array.new(60) { |i| [ "本#{i}", "著者#{i}", "読了", nil, nil, "4", "タグ#{i % 5}、共通", nil, nil, "2026-01-01", "2026-01-02", "2026-01-10" ] }
+    queries = 0
+    counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:sql].match?(/\A\s*(BEGIN|COMMIT|SAVEPOINT|RELEASE)/i) }
+    result = nil
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { result = import(csv(*rows)) }
+    assert result.ok, result.errors.inspect
+    assert_equal 60, @other.books.count
+    assert_operator queries, :<, 25 # 1 冊ずつ作っていたころは 60 冊で約 470 回
+    book = @other.books.includes(:tags, :status_events).find_by!(title: "本7")
+    assert_equal [ "タグ2", "共通" ].sort, book.tag_names.sort
+    assert_equal [ [ "want_to_read", Date.new(2026, 1, 1) ], [ "reading", Date.new(2026, 1, 2) ], [ "read", Date.new(2026, 1, 10) ] ],
+      book.status_events.sort_by(&:occurred_on).map { |e| [ e.status, e.occurred_on ] }
+  end
+
+  test "すでにあるタグと大文字・小文字だけ違う名前は今のタグを使い、CSV の中の「ＩＴ」と「it」は 1 つのタグにする" do
+    ruby = Tag.create!(name: "Ruby")
+    before = Tag.count
+    result = import(csv([ "本A", nil, nil, nil, nil, nil, "ruby、ＩＴ" ], [ "本B", nil, nil, nil, nil, nil, "it" ]))
+    assert result.ok, result.errors.inspect
+    a = @other.books.find_by!(title: "本A")
+    b = @other.books.find_by!(title: "本B")
+    assert_includes a.tags, ruby
+    assert_equal 1, Tag.count - before # 「IT」だけが増える（ruby は今の Ruby、it は IT と同じ）
+    assert_equal a.tags.where.not(id: ruby.id).to_a, b.tags.to_a
+  end
 end
