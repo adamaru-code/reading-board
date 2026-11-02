@@ -150,6 +150,19 @@ GitHub 側が直るまで、そして直ったあとも念のため、**マー�
 
    `OPEN` のままなら手動で閉じる（`gh issue close <issue#> --comment "#<PR番号> でマージ済み（自動で閉じなかったため手動で閉じる）"`）
 
+
+### Dependabot の PR
+
+Dependabot（`.github/dependabot.yml`）が、部品の新しい版や弱点を毎週月曜に調べ、更新の PR を作る（作り手 `app/dependabot`）。弱点が見つかったときは、すぐに直す PR も作る（security updates）。この PR は**例外として Issue を立てない**（PR 本文に変更点が書かれている）。
+
+1. 一覧：`gh pr list --author app/dependabot`
+2. **CI が 4 つとも通ったか**と、**何がどの版からどの版に変わるか**（PR 本文の表）を見て、ユーザーに伝える
+   - minor・patch（`1.2.3 → 1.2.4` / `1.3.0`）：CI が通れば squash merge してよい
+   - **major（`1.x → 2.0`）や Rails・Vue・Vite 本体**：作りが変わることがあるので、変更点を説明して**ユーザーと相談**してから
+3. **1 つずつ**マージする（同時にいくつもマージすると `Gemfile.lock` などがぶつかる。Dependabot が自動で作り直すのを待つ）
+4. マージしたら、手元も合わせる：`git pull` → `cd backend && bundle install` / `cd frontend && npm install` → 動いている Rails・Vite は起動し直す
+5. 作業中のブランチの CI が、関係ない部品の弱点で落ちたときは、まず Dependabot の PR が来ていないか見る（来ていれば、それを先にマージして `git merge origin/main`）
+
 ---
 
 ## 7. 自動的に守るために
