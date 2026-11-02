@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, useId, onMounted, onBeforeUnmount } from 'vue'
+import { trapTab } from '../lib/focusTrap'
 
 // モーダルの外枠（暗い背景・白い枠・見出し）。中身はスロットに入れる。
 // 背景クリックで close。Esc でも close（closeOnEsc=false で無効。入力中のフォームを誤って閉じないため）
@@ -13,10 +14,12 @@ const emit = defineEmits<{ close: [] }>()
 const titleId = useId()
 const dialogEl = ref<HTMLElement | null>(null)
 
-// Esc は画面全体で受ける（開いた直後はフォーカスがヘッダーのボタンに残っていることがあるため）。
-// 中の確認ダイアログ（ConfirmDialog）は自分の Esc を stop するので、ここまで届かない
+// Esc・Tab は画面全体で受ける（開いた直後はフォーカスがヘッダーのボタンに残っていることがあるため）。
+// Tab は枠の中だけを回り、後ろの画面へは出ない。
+// 中の確認ダイアログ（ConfirmDialog）は自分の Esc・Tab を stop するので、ここまで届かない
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && props.closeOnEsc) emit('close')
+  if (dialogEl.value && trapTab(event, dialogEl.value)) event.preventDefault()
 }
 
 // 開いたらフォーカスを枠へ移し、閉じたら開く前の場所（開いたボタンなど）へ戻す

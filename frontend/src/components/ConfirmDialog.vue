@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // 確認ダイアログ（削除など、取り消せない操作の前に出す）。
 // 誤操作を防ぐため、開いた時点のフォーカスは「キャンセル」。Esc・背景クリックもキャンセル扱い
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { trapTab } from '../lib/focusTrap'
 
 withDefaults(
   defineProps<{
@@ -20,12 +21,37 @@ withDefaults(
 const emit = defineEmits<{ confirm: []; cancel: [] }>()
 
 const cancelButton = ref<HTMLButtonElement | null>(null)
-onMounted(() => cancelButton.value?.focus())
+const dialogEl = ref<HTMLElement | null>(null)
+// 閉じたら開く前の場所（「削除」ボタンなど）へフォーカスを戻す。
+// ただし後ろのモーダルも一緒に閉じて、そちらが戻し先へ移したあと（body 以外にある）なら何もしない
+let previouslyFocused: HTMLElement | null = null
+onMounted(() => {
+  previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  cancelButton.value?.focus()
+})
+onUnmounted(() => {
+  const active = document.activeElement
+  if (previouslyFocused?.isConnected && (!active || active === document.body)) {
+    previouslyFocused.focus()
+  }
+})
+// Tab はこの枠の中だけを回す。後ろのモーダル（BaseModal）の Tab 処理まで届かないよう stop する
+function onKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !dialogEl.value) return
+  event.stopPropagation()
+  if (trapTab(event, dialogEl.value)) event.preventDefault()
+}
 </script>
 
 <template>
-  <div class="confirm-overlay" @click.self="emit('cancel')" @keydown.esc.stop="emit('cancel')">
+  <div
+    class="confirm-overlay"
+    @click.self="emit('cancel')"
+    @keydown.esc.stop="emit('cancel')"
+    @keydown="onKeydown"
+  >
     <div
+      ref="dialogEl"
       class="confirm"
       role="alertdialog"
       aria-modal="true"
