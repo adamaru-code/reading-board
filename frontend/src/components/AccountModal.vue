@@ -5,6 +5,7 @@ import { deleteAccount } from '../api/registration'
 import { ApiError } from '../api/http'
 import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from '../lib/password'
 import BaseModal from './BaseModal.vue'
+import BaseTabs from './BaseTabs.vue'
 import CsvPanel from './CsvPanel.vue'
 import TagsPanel from './TagsPanel.vue'
 import CoversPanel from './CoversPanel.vue'
@@ -19,7 +20,14 @@ const emit = defineEmits<{
 }>()
 
 // パスワード変更 / CSV（書き出し・読み込み。CsvPanel.vue）/ タグ（TagsPanel.vue）/ 表紙（CoversPanel.vue）/ アカウント削除 の切り替え
-const tab = ref<'password' | 'csv' | 'tags' | 'covers' | 'delete'>('password')
+const TABS = [
+  { key: 'password', label: 'パスワード変更' },
+  { key: 'csv', label: 'CSV' },
+  { key: 'tags', label: 'タグ' },
+  { key: 'covers', label: '表紙' },
+  { key: 'delete', label: 'アカウント削除' },
+] as const
+const tab = ref<(typeof TABS)[number]['key']>('password')
 
 const currentPassword = ref('')
 const password = ref('')
@@ -94,192 +102,128 @@ async function onSubmit() {
 <template>
   <!-- 幅 460px：パソコンでタブ 5 つが 1 段に収まるように（400px だと文字の形によって 2 段になった。#311） -->
   <BaseModal title="アカウント" :max-width="460" @close="emit('close')">
-    <div class="tabs" role="tablist">
-      <button
-        type="button"
-        role="tab"
-        class="tab"
-        :aria-selected="tab === 'password'"
-        @click="tab = 'password'"
-      >
-        パスワード変更
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="tab"
-        :aria-selected="tab === 'csv'"
-        @click="tab = 'csv'"
-      >
-        CSV
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="tab"
-        :aria-selected="tab === 'tags'"
-        @click="tab = 'tags'"
-      >
-        タグ
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="tab"
-        :aria-selected="tab === 'covers'"
-        @click="tab = 'covers'"
-      >
-        表紙
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="tab"
-        :aria-selected="tab === 'delete'"
-        @click="tab = 'delete'"
-      >
-        アカウント削除
-      </button>
-    </div>
+    <BaseTabs v-model="tab" :tabs="TABS">
+      <CsvPanel
+        v-if="tab === 'csv'"
+        @close="emit('close')"
+        @imported="emit('imported')"
+        @unauthorized="emit('unauthorized')"
+      />
 
-    <CsvPanel
-      v-if="tab === 'csv'"
-      @close="emit('close')"
-      @imported="emit('imported')"
-      @unauthorized="emit('unauthorized')"
-    />
+      <TagsPanel
+        v-else-if="tab === 'tags'"
+        @close="emit('close')"
+        @changed="emit('tags-changed')"
+        @unauthorized="emit('unauthorized')"
+      />
 
-    <TagsPanel
-      v-else-if="tab === 'tags'"
-      @close="emit('close')"
-      @changed="emit('tags-changed')"
-      @unauthorized="emit('unauthorized')"
-    />
+      <CoversPanel
+        v-else-if="tab === 'covers'"
+        @close="emit('close')"
+        @updated="emit('covers-updated')"
+        @unauthorized="emit('unauthorized')"
+      />
 
-    <CoversPanel
-      v-else-if="tab === 'covers'"
-      @close="emit('close')"
-      @updated="emit('covers-updated')"
-      @unauthorized="emit('unauthorized')"
-    />
+      <form v-else-if="tab === 'delete'" class="delete-form" @submit.prevent="onDelete">
+        <ul v-if="deleteErrors.length" class="form-errors" role="alert">
+          <li v-for="(msg, i) in deleteErrors" :key="i">{{ msg }}</li>
+        </ul>
 
-    <form v-else-if="tab === 'delete'" class="delete-form" @submit.prevent="onDelete">
-      <ul v-if="deleteErrors.length" class="form-errors" role="alert">
-        <li v-for="(msg, i) in deleteErrors" :key="i">{{ msg }}</li>
-      </ul>
+        <p class="delete-warning">
+          アカウントを削除すると、登録した本・メモ・タグの紐づけがすべて削除され、元に戻せません。
+        </p>
 
-      <p class="delete-warning">
-        アカウントを削除すると、登録した本・メモ・タグの紐づけがすべて削除され、元に戻せません。
-      </p>
+        <label class="field">
+          <span class="field-label">現在のパスワード</span>
+          <input
+            v-model="deletePassword"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+        </label>
 
-      <label class="field">
-        <span class="field-label">現在のパスワード</span>
-        <input v-model="deletePassword" type="password" autocomplete="current-password" required />
-      </label>
+        <label class="confirm-check">
+          <input v-model="deleteConfirmed" type="checkbox" />
+          すべてのデータが削除されることを理解しました
+        </label>
 
-      <label class="confirm-check">
-        <input v-model="deleteConfirmed" type="checkbox" />
-        すべてのデータが削除されることを理解しました
-      </label>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" :disabled="deleting" @click="emit('close')">
+            キャンセル
+          </button>
+          <button type="submit" class="btn btn-danger" :disabled="deleting || !deleteConfirmed">
+            {{ deleting ? '削除中…' : 'アカウントを削除' }}
+          </button>
+        </div>
+      </form>
 
-      <div class="modal-actions">
-        <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost" :disabled="deleting" @click="emit('close')">
-          キャンセル
-        </button>
-        <button type="submit" class="btn btn-danger" :disabled="deleting || !deleteConfirmed">
-          {{ deleting ? '削除中…' : 'アカウントを削除' }}
-        </button>
-      </div>
-    </form>
+      <template v-else-if="done">
+        <p class="done-message" role="status">
+          パスワードを変更しました。他の端末ではログアウトされています。
+        </p>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-primary" @click="emit('close')">閉じる</button>
+        </div>
+      </template>
 
-    <template v-else-if="done">
-      <p class="done-message" role="status">
-        パスワードを変更しました。他の端末ではログアウトされています。
-      </p>
-      <div class="modal-actions">
-        <span class="spacer"></span>
-        <button type="button" class="btn btn-primary" @click="emit('close')">閉じる</button>
-      </div>
-    </template>
+      <form v-else @submit.prevent="onSubmit">
+        <ul v-if="errors.length" class="form-errors" role="alert">
+          <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
+        </ul>
 
-    <form v-else @submit.prevent="onSubmit">
-      <ul v-if="errors.length" class="form-errors" role="alert">
-        <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
-      </ul>
+        <label class="field">
+          <span class="field-label">現在のパスワード</span>
+          <input
+            v-model="currentPassword"
+            type="password"
+            autocomplete="current-password"
+            required
+            autofocus
+          />
+        </label>
 
-      <label class="field">
-        <span class="field-label">現在のパスワード</span>
-        <input
-          v-model="currentPassword"
-          type="password"
-          autocomplete="current-password"
-          required
-          autofocus
-        />
-      </label>
+        <label class="field">
+          <span class="field-label">新しいパスワード（{{ MIN_LENGTH }} 文字以上）</span>
+          <input
+            v-model="password"
+            type="password"
+            autocomplete="new-password"
+            :minlength="MIN_LENGTH"
+            required
+          />
+        </label>
 
-      <label class="field">
-        <span class="field-label">新しいパスワード（{{ MIN_LENGTH }} 文字以上）</span>
-        <input
-          v-model="password"
-          type="password"
-          autocomplete="new-password"
-          :minlength="MIN_LENGTH"
-          required
-        />
-      </label>
+        <label class="field">
+          <span class="field-label">新しいパスワード（確認）</span>
+          <input
+            v-model="passwordConfirmation"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+        </label>
 
-      <label class="field">
-        <span class="field-label">新しいパスワード（確認）</span>
-        <input
-          v-model="passwordConfirmation"
-          type="password"
-          autocomplete="new-password"
-          required
-        />
-      </label>
+        <p v-if="clientError" class="field-hint">{{ clientError }}</p>
 
-      <p v-if="clientError" class="field-hint">{{ clientError }}</p>
-
-      <div class="modal-actions">
-        <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost" :disabled="submitting" @click="emit('close')">
-          キャンセル
-        </button>
-        <button type="submit" class="btn btn-primary" :disabled="submitting || !!clientError">
-          {{ submitting ? '変更中…' : '変更する' }}
-        </button>
-      </div>
-    </form>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" :disabled="submitting" @click="emit('close')">
+            キャンセル
+          </button>
+          <button type="submit" class="btn btn-primary" :disabled="submitting || !!clientError">
+            {{ submitting ? '変更中…' : '変更する' }}
+          </button>
+        </div>
+      </form>
+    </BaseTabs>
   </BaseModal>
 </template>
 
 <style scoped>
 /* 狭い画面ではタブの文字を途中で折らず、入りきらないタブを 2 段目に並べる（2026-10-29） */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.tab {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--text-sub);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.tab[aria-selected='true'] {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-  font-weight: 600;
-}
 .delete-warning {
   margin: 0 0 14px;
   font-size: 13px;
