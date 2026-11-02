@@ -1,5 +1,6 @@
 # 部品（gem・npm・GitHub Actions・Terraform・Docker）の新しい版と弱点を、Dependabot に毎週調べてもらい、更新の PR を作ってもらう。
 # minor と patch は種類ごとに 1 つの PR にまとめ、major（作りが変わることがある）は別の PR にする。
+# patterns: ["*"] だけだと major もまとめに入るので、どのグループにも update-types を付ける（#334）
 # PR の扱い（Issue は立てない・CI を確かめて squash merge・major は相談）は CLAUDE.md「Dependabot の PR」（2026-11-02、#315）
 version: 2
 updates:
@@ -43,6 +44,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: terraform
     directory: /infra
@@ -56,6 +58,7 @@ updates:
     groups:
       terraform:
         patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: docker
     directory: /backend
