@@ -15,6 +15,7 @@ describe('BaseModal', () => {
     expect(heading.text()).toBe('管理')
     expect(dialog.attributes('aria-labelledby')).toBe(heading.attributes('id'))
     expect(dialog.text()).toContain('中身')
+    wrapper.unmount()
   })
 
   it('背景をクリックすると close、枠の中のクリックでは close しない', async () => {
@@ -25,6 +26,7 @@ describe('BaseModal', () => {
 
     await wrapper.find('.modal-overlay').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
+    wrapper.unmount()
   })
 
   it('フォーカスが外（ヘッダーのボタンなど）にあっても Esc で close。closeOnEsc=false なら close しない', () => {
@@ -50,6 +52,49 @@ describe('BaseModal', () => {
     wrapper.unmount()
     expect(document.activeElement).toBe(opener)
     opener.remove()
+  })
+
+  it('Tab は枠の中だけを回る（最後 → 最初、最初で Shift+Tab → 最後）。外にいたら中へ戻す', () => {
+    const outside = document.createElement('button')
+    document.body.appendChild(outside)
+    const wrapper = mount(BaseModal, {
+      props: { title: 't' },
+      slots: {
+        default:
+          '<input class="first" /><button class="off" disabled>押せない</button><button class="last">閉じる</button>',
+      },
+      attachTo: document.body,
+    })
+    const first = wrapper.find('.first').element as HTMLElement
+    const last = wrapper.find('.last').element as HTMLElement
+    const pressTab = (shiftKey = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey,
+        bubbles: true,
+        cancelable: true,
+      })
+      document.activeElement!.dispatchEvent(event)
+      return event
+    }
+
+    last.focus()
+    expect(pressTab().defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(first)
+
+    expect(pressTab(true).defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(last)
+
+    // 途中の移動はブラウザに任せる
+    first.focus()
+    expect(pressTab().defaultPrevented).toBe(false)
+
+    outside.focus()
+    pressTab()
+    expect(document.activeElement).toBe(first)
+
+    wrapper.unmount()
+    outside.remove()
   })
 
   it('書籍フォームは Esc では閉じない（入力中の内容を守る）', () => {
