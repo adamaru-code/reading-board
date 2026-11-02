@@ -97,6 +97,24 @@ describe('BaseModal', () => {
     outside.remove()
   })
 
+  it('Tab で止まらない部品（tabindex="-1"。選んでいないタブなど）は、回る先に数えない', () => {
+    const wrapper = mount(BaseModal, {
+      props: { title: 't' },
+      slots: {
+        default:
+          '<button class="skip" tabindex="-1">選んでいないタブ</button><button class="first">選んだタブ</button><button class="last">閉じる</button>',
+      },
+      attachTo: document.body,
+    })
+    const last = wrapper.find('.last').element as HTMLElement
+    last.focus()
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }),
+    )
+    expect(document.activeElement).toBe(wrapper.find('.first').element)
+    wrapper.unmount()
+  })
+
   it('書籍フォームは Esc では閉じない（入力中の内容を守る）', () => {
     const wrapper = mount(BookFormModal, { props: { book: null } })
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))

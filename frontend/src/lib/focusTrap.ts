@@ -10,8 +10,11 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
+// tabindex="-1" の部品（選んでいないタブなど）は Tab では止まらないので、回る先に数えない
 function focusables(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE))
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => el.getAttribute('tabindex') !== '-1',
+  )
 }
 
 // Tab を自分で動かしたら true（呼び出し側はブラウザ標準の移動を止める）
