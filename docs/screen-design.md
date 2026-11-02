@@ -7,6 +7,7 @@
 関連：[機能要件](functional-requirements.md) / [データベース設計](database-design.md) / [技術スタック](tech-stack.md)
 
 対象デバイス: PC 優先。スマホ/タブレットではレスポンシブに再配置する（非機能要件は [要件定義書](requirements.md) 参照）。
+日本語の文は、言葉のまとまり（文節）で折り返す（`style.css` の `word-break: auto-phrase`。Chrome 119 以降で効き、Safari・Firefox は 1 文字ずつ折り返す）。区切りは Chrome が機械学習で決めるので、まれに言葉の途中で折れる。そのときは言い回しを変える（例：CSV 読み込みの説明「間違った行」→「誤りのある行」。2026-11-02、#313）。
 
 画面の見た目・操作感は [`prototype/`](../prototype/)（HTML/CSS/JS のモック）を出発点とし、本書は現在の実装（`frontend/src/components/`）に合わせて記述する。
 

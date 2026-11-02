@@ -92,7 +92,7 @@ async function onImport() {
         と同じ見出しにしてください（タイトルは必須）。
       </p>
       <p class="csv-text csv-sub">
-        すでにある本（同じ ISBN、または同じタイトルと著者）は飛ばします。間違った行が 1
+        すでにある本（同じ ISBN、または同じタイトルと著者）は飛ばします。誤りのある行が 1
         行でもあれば、何も取り込みません。表紙はあとで「表紙」タブからまとめて取得できます。
       </p>
       <label :for="fileInputId" class="file-label">CSV ファイルを選ぶ</label>
