@@ -75,7 +75,7 @@ describe('BookFormModal の削除', () => {
 
 describe('BookFormModal のタグの入力忘れ', () => {
   const tagInput = (wrapper: ReturnType<typeof mount>) =>
-    wrapper.find('input[placeholder="タグを入力して Enter"]')
+    wrapper.find('input[placeholder="入力して Enter"]')
 
   it('Enter を押さずに保存しても、タグ欄に残った文字をタグとして保存する', async () => {
     const spy = vi.spyOn(booksApi, 'createBook').mockResolvedValue(book)

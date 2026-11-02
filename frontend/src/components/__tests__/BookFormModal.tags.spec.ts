@@ -10,7 +10,7 @@ describe('BookFormModal のタグ候補', () => {
   it('「タグ」の見出しと入力欄が label で結ばれている（読み上げで「タグ」と読まれる）', () => {
     const wrapper = mount(BookFormModal, { props: { book: null } })
     const label = wrapper.findAll('label').find((l) => l.text() === 'タグ')!
-    const input = wrapper.find('input[placeholder="タグを入力して Enter"]')
+    const input = wrapper.find('input[placeholder="入力して Enter"]')
     expect(label.attributes('for')).toBe(input.attributes('id'))
   })
 
@@ -21,7 +21,7 @@ describe('BookFormModal のタグ候補', () => {
 
   it('タグ欄に文字を打つと候補が絞り込まれ、選ぶと追加されて入力欄が空になる', async () => {
     const wrapper = mount(BookFormModal, { props: { book: null, knownTags: ['仕事', '読書会'] } })
-    const input = wrapper.find('input[placeholder="タグを入力して Enter"]')
+    const input = wrapper.find('input[placeholder="入力して Enter"]')
 
     await input.setValue('読書')
     expect(chips(wrapper)).toEqual(['読書会'])
@@ -35,7 +35,7 @@ describe('BookFormModal のタグ候補', () => {
 
   it('打ったタグは全角英数字・半角カナを半角・全角にそろえ、そろえて同じになるタグは 2 つ付けない', async () => {
     const wrapper = mount(BookFormModal, { props: { book: null } })
-    const input = wrapper.find('input[placeholder="タグを入力して Enter"]')
+    const input = wrapper.find('input[placeholder="入力して Enter"]')
     for (const name of ['２０２６年', 'ｶﾅ', '2026年']) {
       await input.setValue(name)
       await input.trigger('keydown', { key: 'Enter' })

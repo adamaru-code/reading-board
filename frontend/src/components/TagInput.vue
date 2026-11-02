@@ -113,11 +113,12 @@ async function onUnhideSuggestion(tag: HiddenTag) {
         </button>
       </span>
     </div>
+    <!-- 薄い字（placeholder）に「タグ」を入れない。読み上げソフトが名前のあとに読むので「タグ タグを…」と重なる -->
     <input
       :id="inputId"
       v-model="tagInput"
       type="text"
-      placeholder="タグを入力して Enter"
+      placeholder="入力して Enter"
       @keydown.enter.prevent="addTag"
       @keydown.,.prevent="addTag"
     />
