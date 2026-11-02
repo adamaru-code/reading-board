@@ -23,6 +23,10 @@ module Backend
     #
     # アプリの「今日」・時刻は日本時間（状態の日付 occurred_on・読了冊数の今年/今月）。DB に保存する時刻は UTC のまま
     config.time_zone = "Tokyo"
+
+    # 画像の縮小・切り抜き（Active Storage の variant）は使わない（表紙は URL だけ保存）。
+    # image_processing を外したので、起動時の「gem を入れて」の警告を出さないよう無効にする（#338）
+    config.active_storage.variant_processor = :disabled
     # config.eager_load_paths << Rails.root.join("extras")
 
     # Only loads a smaller set of middleware suitable for API only apps.
