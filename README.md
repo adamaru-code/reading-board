@@ -3,6 +3,18 @@
 読みたい / 読書中 / 読了 の 3 カラムで書籍を視覚的に管理する、Trello 風のカンバンボードアプリ。
 RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL** のフルスタック構成で開発する。
 
+## 画面
+
+ボード：カードをドラッグして状態（読みたい・読書中・読了）を変える。上の欄でキーワード・ジャンル・タグ・評価を絞り込む。
+
+![ボード画面：読みたい・読書中・読了の 3 列に本のカードが並ぶ](docs/images/board.png)
+
+統計：今年・今月・これまでの読了冊数と、月ごと・ジャンル別のグラフ。
+
+![統計画面：読了冊数と、月ごとの棒グラフ、ジャンル別の横棒グラフ](docs/images/stats.png)
+
+（撮影用のアカウントと見本の本で撮影。表紙の画像は写していない）
+
 ## 主要機能
 
 - 書籍の登録・表示・編集・削除（CRUD）。ISBN 入力・バーコード読取で書誌を自動入力（openBD）、表紙画像も表示（Google Books）
@@ -27,6 +39,40 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 | API 通信 | REST API（JSON） |
 | テスト・lint | minitest・RuboCop・Brakeman・bundler-audit / vitest・ESLint・Prettier |
 | インフラ | AWS（EC2 ＋ RDS ＋ CloudFront）/ Terraform（[infra/README.md](infra/README.md)） |
+
+## 構成
+
+画面（Vue の SPA）は `/api/*` を呼ぶだけで、開発では Vite、本番では nginx が Rails に転送する。どちらもブラウザから見て同じオリジンなので、CORS の設定は要らない。
+
+```mermaid
+flowchart LR
+    subgraph dev["開発（Mac）"]
+        direction LR
+        B1["ブラウザ"] -->|"画面・/api/*"| Vite["Vite :5173<br/>Vue 3 SPA"]
+        Vite -->|"/api/* を転送"| R1["Rails API :3000"]
+        R1 --> M1[("MySQL 8 :3306<br/>Docker")]
+    end
+
+    subgraph prod["本番（AWS・Terraform）"]
+        direction LR
+        B2["ブラウザ"] -->|"HTTPS"| CF["CloudFront"]
+        CF -->|"HTTP"| EC2["EC2<br/>nginx：画面を配信・/api を転送<br/>Rails API（Docker）"]
+        EC2 --> RDS[("RDS MySQL 8<br/>プライベートサブネット")]
+        SSM["SSM Parameter Store<br/>パスワード・鍵"] -.->|"起動時に読む"| EC2
+    end
+
+    subgraph ext["外部 API"]
+        direction TB
+        OpenBD["openBD<br/>ISBN で書誌"]
+        GB["Google Books API<br/>表紙の URL"]
+    end
+
+    R1 --> ext
+    EC2 --> ext
+```
+
+- 書誌（タイトル・著者）と表紙の URL は Rails が外部 API から取る。表紙の画像そのものは、保存した URL からブラウザが Google から読み込む
+- AWS は使うときだけ作り、使い終わったら消す（データは RDS のスナップショットで引き継ぐ）。詳しくは [docs/infrastructure.md](docs/infrastructure.md)・[docs/aws-deploy-guide.md](docs/aws-deploy-guide.md)、画面遷移やデータの流れは [docs/basic-design.md](docs/basic-design.md)
 
 ## ローカル起動手順
 
