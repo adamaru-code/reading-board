@@ -151,6 +151,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **スマホの幅（375px・390px）とタブレット（768px）でも撮って確かめる**（要件 3.5）。横スクロールが 0 でも、ヘッダが画面の半分を占める・文字が途中で折れる・ボタンがはみ出す、は数では分からない（2026-10-29 に初めて確かめて 5 つ見つかった。撮り方は [ui-check-steps](../ui-check-steps/SKILL.md) §4）
 - [ ] **グリッドの列の幅を直したら、空の値・長い値の行も撮り直す**。読了一覧のスマホの 2 行目で著者に最低幅を付けたら、著者の無い行でジャンルがつぶれて「雑誌」と重なった → 入りきらないものは折り返す（`display: flex; flex-wrap: wrap`）、中身の無い所は `:empty { display: none }` で詰める（2026-10-29、PR #298）
 - [ ] **並びを組み替えたら（スマホ用に部品を分けるなど）、パソコンの見た目が変わっていないかを数で比べる**：直す前（`git stash push frontend`。読み込み直しに数秒待つ）と後で、部品の左端・上端を `getBoundingClientRect()` で出して比べる。画像のファイルの比較（`cmp`）は撮るたびに違うので使わない。`display: contents` で箱を外したら、間隔（`gap`）が変わりやすい（PR #298 で 16px → 24px になり、`order` と `margin-left: -8px` で戻した）
+- [ ] **日本語の折り返しは `word-break: auto-phrase`（`style.css` の body。Chrome 119+）で言葉のまとまりごとにしているが、Chrome の区切り（機械学習）は間違えることがある**（幅 420px で「間／違った」「1／行」と折れた）。説明文を足したら、使う幅（420・375px など）で撮って確かめ、変なところで折れたら CSS ではなく**言い回しを変える**（「誤りのある行」。2026-11-02、PR #314）
 - [ ] 1 部品が大きくなりすぎていない（目安 300 行。`KanbanBoard.vue`・`BookFormModal.vue` の分割は既知の課題（#159））
 
 ### 2.6 Lint / テスト / 型チェック / Build
@@ -272,6 +273,33 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] フォーマッタによる一括変更は **別コミット** に分けている
 - [ ] 1 PR = 1 トピック。複数トピックを混ぜていない
 - [ ] マージは squash + branch 削除（`gh pr merge --squash --delete-branch`）
+- [ ] **ブランチ名の Issue 番号は、`gh issue create` が出した URL の末尾の数字を使う**（予想で書かない。Dependabot の PR も同じ番号の列を使うので、番号は飛ぶ）。間違えたら、push する前なら `git branch -m <正しい名前>` で直せる（2026-11-02、#331 のブランチを 330 で作った）
+- [ ] **CLAUDE.md・スキル（`.claude/`）の書き換えが、自動の安全確認（Self-Modification）で止められることがある**。止められたら回り道をせず、ユーザーに「なぜ止まったか・何を変えたいか」と、変える行をそのまま貼れる形（コードブロック）で渡し、ファイルの開き方（⌘P）・探し方（⌘F）・保存（⌘S）まで書く。貼ってもらったら、こちらでコミットして PR にする（2026-11-02、#329）
+
+### 5.1 Dependabot の PR・アラートを判断するとき
+
+CLAUDE.md「Dependabot の PR」の決まり（minor・patch は CI が通ればマージ、major は相談）に加えて、次を確かめる。
+
+- [ ] **その部品を本当に使っているか、先に `git grep` で調べる**。`rails new` などで最初から入っていて使っていない部品なら、上げずに外す（image_processing。表紙は URL だけ保存していた。2026-11-02、PR #339）
+- [ ] **gem や Docker に入れるソフトを外したら、本番用のイメージを手元でビルドして、本番の設定で起動を確かめる**（テストでは出ない起動時の警告が出る。image_processing を外したら Active Storage が「gem を入れて」と警告 → `config.active_storage.variant_processor = :disabled`）。ポートを開けずに確かめる：
+  ```bash
+  docker build -q -t reading-board-api-check backend
+  docker run --rm -e RAILS_ENV=production -e SECRET_KEY_BASE=dummy -e APP_HOSTS=localhost -e DB_HOST=127.0.0.1 -e DB_USERNAME=x -e DB_PASSWORD=x -e DB_NAME=x reading-board-api-check bin/rails runner 'Rails.application.eager_load!; p Rails.application.call(Rack::MockRequest.env_for("/up", "HTTP_HOST" => "localhost"))[0]'
+  ```
+  確認用のイメージを消す `docker rmi` は許可されないことがある → 消すコマンドをユーザーに渡す
+- [ ] **major の前に、その部品を中で使う道具が新しい版に対応しているかを見る**：`npm view <道具> peerDependencies`（例：TypeScript 7 は typescript-eslint が `typescript <6.1.0` まで・vue-tsc も動かず、#323 の CI が ESLint で落ちた。CI は最初に落ちた所で止まるので、PR のコードを手元で試して残りも確かめる）。未対応なら `dependabot.yml` の `ignore` に足し、**理由と外す条件をコメントに書く**（2026-11-02、PR #343）
+- [ ] **PR のコードを手元で試すときは、コピーで試す**（手元の `node_modules` を上書きしない）。`rm -rf` を含むコマンドは許可されないので、新しいフォルダに取り出す：
+  ```bash
+  git fetch origin <PR のブランチ> && mkdir -p <scratchpad>/pr<番号> && git archive FETCH_HEAD frontend | tar -x -C <scratchpad>/pr<番号>
+  ```
+  Docker（Linux）でビルドするときも同じ（Mac の `node_modules` が Linux 用に置き換わるため）
+- [ ] **@types/node は、動かす Node.js と同じ major にする**。Node.js の版は 3 か所にあるので、上げるときはそろえる：`.github/workflows/ci.yml` の `node-version`・`infra/templates/user_data.sh.tftpl` の `node:<版>-slim`・README の前提（Mac は Homebrew で自動で上がる）。どの版が LTS かは `https://raw.githubusercontent.com/nodejs/Release/main/schedule.json` で確かめる（2026-11-02、Mac 26・CI と本番 24 だった → PR #337）
+- [ ] **`dependabot.yml` の `groups` には必ず `update-types: [minor, patch]` を付ける**。`patterns: ["*"]` だけだと major もまとめの PR に入り、1 つずつ相談できない（2026-11-02、#318 に major 3 つ → PR #335）
+- [ ] **アラートの直った版が新しい major だけで、使う側の部品が古い major を指定しているとき**は、`overrides` で無理に上げない（作り手が試していない組み合わせになる）。開発用の部品だけで、外から入力が届かないなら、理由を書いて閉じる（`dismissed_reason=tolerable_risk`。いつでも開き直せる）。理由は判断の記録として残る（2026-11-02、minimatch #20）
+  ```bash
+  gh api -X PATCH repos/adamaru-code/reading-board/dependabot/alerts/<番号> -f state=dismissed -f dismissed_reason=tolerable_risk -f dismissed_comment="<理由と、どうなったら取り込むか>"
+  ```
+- [ ] `dependabot.yml` を変えたら、マージ後に Dependabot の読み直し（`gh run list` の event が `dynamic` の Update）が全部 `success` になるかを確かめる
 
 ---
 
