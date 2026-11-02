@@ -31,6 +31,13 @@ updates:
     groups:
       frontend-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # TypeScript 7（Go で作り直された版）は、typescript-eslint（ESLint）と vue-tsc（ビルドの型チェック）が
+      # まだ対応しておらず、CI が落ちる（#323・#342）。6 系の minor・patch はこれまでどおり届く。
+      # 外す条件：typescript-eslint の peerDependencies が 7 を含み（typescript-eslint/typescript-eslint#10940）、
+      # vue-tsc でビルドが通る（`npm view typescript-eslint peerDependencies` で確かめる）
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
