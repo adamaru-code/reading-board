@@ -92,7 +92,8 @@ async function onSubmit() {
 </script>
 
 <template>
-  <BaseModal title="アカウント" :max-width="400" @close="emit('close')">
+  <!-- 幅 460px：パソコンでタブ 5 つが 1 段に収まるように（400px だと文字の形によって 2 段になった。#311） -->
+  <BaseModal title="アカウント" :max-width="460" @close="emit('close')">
     <div class="tabs" role="tablist">
       <button
         type="button"
