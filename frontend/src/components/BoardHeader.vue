@@ -25,7 +25,7 @@ const filtersId = useId()
        スマホ：header-bar（タイトル・＋ 追加・絞り込み ▼ と、開いた絞り込み）を上に固定し、header-sub は下に流す -->
   <header class="app-header">
     <div class="header-bar">
-      <h1 class="app-title">📚 読書管理ボード</h1>
+      <h1 class="app-title"><span aria-hidden="true">📚</span> 読書管理ボード</h1>
       <button type="button" class="add-btn" @click="emit('add')">
         ＋ <span class="add-long">本を</span>追加
       </button>

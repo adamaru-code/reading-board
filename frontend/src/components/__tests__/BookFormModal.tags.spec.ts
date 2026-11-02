@@ -7,6 +7,13 @@ const chips = (wrapper: ReturnType<typeof mount>) =>
   wrapper.findAll('.tag-suggest-chip').map((c) => c.text().trim())
 
 describe('BookFormModal のタグ候補', () => {
+  it('「タグ」の見出しと入力欄が label で結ばれている（読み上げで「タグ」と読まれる）', () => {
+    const wrapper = mount(BookFormModal, { props: { book: null } })
+    const label = wrapper.findAll('label').find((l) => l.text() === 'タグ')!
+    const input = wrapper.find('input[placeholder="タグを入力して Enter"]')
+    expect(label.attributes('for')).toBe(input.attributes('id'))
+  })
+
   it('過去に付けたタグを候補に出す', () => {
     const wrapper = mount(BookFormModal, { props: { book: null, knownTags: ['仕事', '読書会'] } })
     expect(chips(wrapper)).toEqual(expect.arrayContaining(['仕事', '読書会']))

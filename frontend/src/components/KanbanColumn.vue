@@ -30,6 +30,8 @@ const emit = defineEmits<{
 }>()
 // 見出しのリンクの吹き出しと、リンクを結ぶ id（読み上げで説明として読まれる）
 const tooltipId = useId()
+// 段（section）の名前を見出しから取る（読み上げで「読みたい、領域」のように伝わる）
+const headingId = useId()
 
 const dragOver = ref(false)
 const sectionEl = ref<HTMLElement | null>(null)
@@ -66,6 +68,7 @@ function onDrop(event: DragEvent) {
   <section
     ref="sectionEl"
     class="column"
+    :aria-labelledby="headingId"
     :class="{ 'drag-over': dragOver }"
     :data-status="status"
     @dragover.prevent="dragOver = true"
@@ -74,22 +77,25 @@ function onDrop(event: DragEvent) {
   >
     <div class="column-header">
       <!-- 説明はブラウザ標準の title（出るまで 1 秒ほど待つ・変えられない）ではなく、自前の吹き出しで 0.2 秒後に出す -->
-      <RouterLink
-        v-if="titleTo"
-        :to="titleTo"
-        class="column-title-link"
-        :aria-describedby="titleLinkLabel ? tooltipId : undefined"
-      >
-        <span class="column-title">{{ title }}</span>
-        <span class="column-count">{{ total }}</span>
-        <span v-if="titleLinkLabel" :id="tooltipId" role="tooltip" class="title-tooltip">
-          {{ titleLinkLabel }}
-        </span>
-      </RouterLink>
-      <template v-else>
-        <span class="column-title">{{ title }}</span>
-        <span class="column-count">{{ total }}</span>
-      </template>
+      <!-- 見出し（h2）にして、読み上げソフトの見出しの一覧から段へ飛べるようにする -->
+      <h2 :id="headingId" class="column-heading">
+        <RouterLink
+          v-if="titleTo"
+          :to="titleTo"
+          class="column-title-link"
+          :aria-describedby="titleLinkLabel ? tooltipId : undefined"
+        >
+          <span class="column-title">{{ title }}</span>
+          <span class="column-count">{{ total }}<span class="visually-hidden">冊</span></span>
+          <span v-if="titleLinkLabel" :id="tooltipId" role="tooltip" class="title-tooltip">
+            {{ titleLinkLabel }}
+          </span>
+        </RouterLink>
+        <template v-else>
+          <span class="column-title">{{ title }}</span>
+          <span class="column-count">{{ total }}<span class="visually-hidden">冊</span></span>
+        </template>
+      </h2>
       <slot name="header-actions" />
     </div>
     <div class="card-list">
@@ -150,6 +156,15 @@ function onDrop(event: DragEvent) {
   align-items: baseline;
   gap: 8px;
   padding: 4px 6px 10px;
+}
+/* 見出し（h2）の既定の大きさ・余白を消し、今までの見た目（題名と件数を横に並べる）のまま */
+.column-heading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 .column-title {
   font-size: 14px;

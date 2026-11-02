@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, useId } from 'vue'
 import type { Book } from '../types/book'
 import { GENRE_LABELS, MEDIA_TYPE_LABELS } from '../types/book'
 
@@ -13,6 +13,12 @@ watch(
     coverBroken.value = false
   },
 )
+
+// 読み上げ用：カードの名前は「〇〇 を編集」（KanbanColumn が付ける）。ジャンル・著者・評価・タグ・日付は説明として結ぶ
+const uid = useId()
+const detailsIds = ['badges', 'author', 'stars', 'tags', 'meta']
+  .map((part) => `${uid}-${part}`)
+  .join(' ')
 
 // 評価（1〜5）を ★ の on/off 配列に変換。未評価は表示しない。
 const stars = () => {
@@ -37,7 +43,11 @@ const columnDate = () => {
 
 <template>
   <!-- 表紙があれば左に 60×86 で出す（見本ページで比べて決めた案 B）。無ければ今までどおりのカード -->
-  <article class="card" :class="{ 'has-cover': book.cover_url && !coverBroken }">
+  <article
+    class="card"
+    :class="{ 'has-cover': book.cover_url && !coverBroken }"
+    :aria-describedby="detailsIds"
+  >
     <img
       v-if="book.cover_url && !coverBroken"
       :src="book.cover_url"
@@ -48,7 +58,7 @@ const columnDate = () => {
       @error="coverBroken = true"
     />
     <div class="card-body">
-      <div class="card-badges">
+      <div :id="`${uid}-badges`" class="card-badges">
         <span class="genre-badge" :class="`genre-${book.genre}`">{{
           GENRE_LABELS[book.genre]
         }}</span>
@@ -57,14 +67,25 @@ const columnDate = () => {
         </span>
       </div>
       <div class="card-title">{{ book.title }}</div>
-      <div v-if="book.author" class="card-author">{{ book.author }}</div>
-      <div v-if="book.rating" class="card-stars" :aria-label="`評価 ${book.rating} / 5`">
+      <div v-if="book.author" :id="`${uid}-author`" class="card-author">{{ book.author }}</div>
+      <div
+        v-if="book.rating"
+        :id="`${uid}-stars`"
+        class="card-stars"
+        role="img"
+        :aria-label="`評価 ${book.rating} / 5`"
+      >
         <span v-for="(on, i) in stars()" :key="i" :class="on ? 'on' : 'off'">★</span>
       </div>
-      <div v-if="book.tags.length" class="card-tags">
-        <span v-for="tag in book.tags" :key="tag" class="tag-chip">{{ tag }}</span>
+      <div v-if="book.tags.length" :id="`${uid}-tags`" class="card-tags">
+        <!-- 読み上げ用に「タグ」と、タグの間の「、」を入れる（無いと「名作再読」のようにつながって読まれる） -->
+        <span class="visually-hidden">タグ </span>
+        <template v-for="(tag, i) in book.tags" :key="tag">
+          <span v-if="i > 0" class="visually-hidden">、</span>
+          <span class="tag-chip">{{ tag }}</span>
+        </template>
       </div>
-      <div v-if="columnDate() || book.duration_days !== null" class="card-meta">
+      <div v-if="columnDate() || book.duration_days !== null" :id="`${uid}-meta`" class="card-meta">
         <span v-if="columnDate()">{{ columnDate()!.label }} {{ columnDate()!.on }}</span>
         <span v-if="book.status === 'read' && book.duration_days !== null" class="duration">
           {{ book.duration_days === 0 ? '当日に読了' : `${book.duration_days}日で読了` }}

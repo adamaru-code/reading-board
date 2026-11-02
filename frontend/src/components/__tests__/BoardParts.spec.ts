@@ -6,6 +6,7 @@ import BoardFilters from '../BoardFilters.vue'
 import KanbanColumn from '../KanbanColumn.vue'
 import BookCard from '../BookCard.vue'
 import type { Book, RatingFilter } from '../../types/book'
+import { describedText } from './describedText'
 import type { User } from '../../types/auth'
 import type { BoardView } from '../../types/view'
 
@@ -252,10 +253,19 @@ describe('KanbanColumn', () => {
   it('見出し・件数・カードを出し、カードを押すと open', async () => {
     const wrapper = mountColumn()
     expect(wrapper.find('.column-title').text()).toBe('読みたい')
-    expect(wrapper.find('.column-count').text()).toBe('5')
+    // 「冊」は画面に見せない読み上げ用の文字
+    expect(wrapper.find('.column-count').text()).toBe('5冊')
 
     await wrapper.findAll('.card')[1].trigger('click')
     expect(wrapper.emitted('open')).toEqual([[items[1]]])
+  })
+
+  it('段の題名は見出し（h2）で、段（section）の名前になる', () => {
+    const wrapper = mountColumn()
+    const heading = wrapper.find('h2')
+    expect(heading.find('.column-title').text()).toBe('読みたい')
+    expect(heading.find('.column-count .visually-hidden').text()).toBe('冊')
+    expect(wrapper.find('section').attributes('aria-labelledby')).toBe(heading.attributes('id'))
   })
 
   it('本が無ければ「まだありません」、絞り込んで 0 件なら「当てはまる本はありません」', () => {
@@ -298,7 +308,8 @@ describe('KanbanColumn', () => {
     })
     const link = wrapper.find('.column-title-link')
     expect(link.find('.column-title').text()).toBe('読了')
-    expect(link.find('.column-count').text()).toBe('2')
+    expect(link.find('.column-count').text()).toBe('2冊')
+    expect(wrapper.find('h2').element.contains(link.element)).toBe(true)
     // 説明はブラウザ標準の title ではなく自前の吹き出し（リンクと aria-describedby で結ぶ）
     expect(link.attributes('title')).toBeUndefined()
     const tooltip = link.find('[role="tooltip"]')
@@ -336,6 +347,24 @@ describe('BookCard', () => {
     started_on: '2026-09-20',
     finished_on: '2026-09-20',
     duration_days: duration,
+  })
+
+  it('読み上げでは、ジャンル・著者・評価・タグ・日付を説明として読む（★は「評価 4 / 5」）', () => {
+    const book: Book = {
+      ...makeBook(1, 'こころ'),
+      author: '夏目 漱石',
+      genre: 'classic_novel',
+      rating: 4,
+      tags: ['名作', '再読'],
+      registered_on: '2026-09-01',
+    }
+    const wrapper = mount(BookCard, { props: { book } })
+    expect(describedText(wrapper.find('.card').element, wrapper.element)).toBe(
+      '古典・名作小説 / 夏目 漱石 / 評価 4 / 5 / タグ 名作、再読 / 登録 2026-09-01',
+    )
+    // 著者・評価・タグの無い本は、その部分を読まない
+    const plain = mount(BookCard, { props: { book: makeBook(2, '題名だけ') } })
+    expect(describedText(plain.find('.card').element, plain.element)).toBe('その他・未分類')
   })
 
   it('読了までの日数を「N日で読了」、開始日と読了日が同じなら「当日に読了」と出す', () => {

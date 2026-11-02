@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ReadList from '../ReadList.vue'
+import { describedText } from './describedText'
 import type { Book } from '../../types/book'
 
 function makeBook(id: number, overrides: Partial<Book> = {}): Book {
@@ -85,14 +86,32 @@ describe('ReadList（読了一覧）', () => {
     expect(row.find('.row-author').text()).toBe('夏目 漱石')
     expect(row.find('.genre-badge').text()).toBe('古典・名作小説')
     expect(row.findAll('.row-stars .on')).toHaveLength(4)
-    expect(row.find('.row-date').text()).toBe('2026-09-20')
-    expect(row.find('.row-days').text()).toBe('10日')
+    // 「読了日」「で読了」は画面に見せない読み上げ用の文字（visually-hidden）
+    expect(row.find('.row-date').text()).toBe('読了日 2026-09-20')
+    expect(row.find('.row-days').text()).toBe('10日で読了')
+    expect(row.findAll('.visually-hidden').map((s) => s.text())).toEqual(['読了日', 'で読了'])
+  })
+
+  it('読み上げでは、行の名前「〇〇 を編集」のあとに、著者から日数までを説明として読む', () => {
+    const wrapper = mountList([
+      makeBook(1, { title: 'こころ', author: '夏目 漱石', rating: 4, media_type: 'magazine' }),
+      makeBook(2, { author: null, duration_days: null }),
+    ])
+    const [first, second] = wrapper.findAll('.row')
+    expect(first!.attributes('aria-label')).toBe('こころ を編集')
+    expect(describedText(first!.element, wrapper.element)).toBe(
+      '夏目 漱石 / 古典・名作小説 / 雑誌 / 評価 4 / 5 / 読了日 2026-09-20 / 10日で読了',
+    )
+    // 著者・日数の無い本は、その部分を読まない（空の文字は飛ばされる）
+    expect(describedText(second!.element, wrapper.element)).toBe(
+      '古典・名作小説 / 未評価 / 読了日 2026-09-20',
+    )
   })
 
   it('開始日と読了日が同じ本の日数は「当日」、未評価の本の評価は「—」', () => {
     const wrapper = mountList([makeBook(1, { duration_days: 0, rating: null })])
     const row = wrapper.find('.row')
-    expect(row.find('.row-days').text()).toBe('当日')
+    expect(row.find('.row-days').text()).toBe('当日で読了')
     expect(row.find('.row-stars').text()).toBe('—')
     expect(row.find('.row-stars').attributes('aria-label')).toBe('未評価')
   })
