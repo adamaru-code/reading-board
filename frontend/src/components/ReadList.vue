@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import type { Book, BookStats } from '../types/book'
 import { GENRE_LABELS, MEDIA_TYPE_LABELS } from '../types/book'
 import { READ_LIST_PAGE_SIZE } from '../composables/useKanbanColumns'
@@ -48,6 +48,16 @@ function stars(rating: number | null): boolean[] {
 }
 
 // 所要日数の表示。開始日と読了日が同じ本は「0日」だと読んでいないように見えるので「当日」
+// 読み上げ用：行の名前は「〇〇 を編集」。著者から日数までを説明として結ぶ（列の見出しは読み上げないので、日付・日数に言葉を添える）
+const uid = useId()
+const DETAIL_PARTS = ['author', 'genre', 'media', 'stars', 'date', 'days'] as const
+function detailId(book: Book, part: (typeof DETAIL_PARTS)[number]): string {
+  return `${uid}-${book.id}-${part}`
+}
+function detailsIds(book: Book): string {
+  return DETAIL_PARTS.map((part) => detailId(book, part)).join(' ')
+}
+
 function durationText(days: number | null): string {
   if (days === null) return ''
   return days === 0 ? '当日' : `${days}日`
@@ -83,13 +93,16 @@ function durationText(days: number | null): string {
             role="button"
             tabindex="0"
             :aria-label="`${book.title} を編集`"
+            :aria-describedby="detailsIds(book)"
             @click="emit('open', book)"
             @keydown.enter="emit('open', book)"
             @keydown.space.prevent="emit('open', book)"
           >
             <span class="row-title" :title="book.title">{{ book.title }}</span>
-            <span class="row-author" :title="book.author ?? ''">{{ book.author }}</span>
-            <span class="row-genre">
+            <span :id="detailId(book, 'author')" class="row-author" :title="book.author ?? ''">{{
+              book.author
+            }}</span>
+            <span :id="detailId(book, 'genre')" class="row-genre">
               <span
                 class="genre-badge"
                 :class="`genre-${book.genre}`"
@@ -98,13 +111,15 @@ function durationText(days: number | null): string {
                 {{ GENRE_LABELS[book.genre] }}
               </span>
             </span>
-            <span class="row-media">
+            <span :id="detailId(book, 'media')" class="row-media">
               <span v-if="book.media_type === 'magazine'" class="media-badge">
                 {{ MEDIA_TYPE_LABELS.magazine }}
               </span>
             </span>
             <span
+              :id="detailId(book, 'stars')"
               class="row-stars"
+              role="img"
               :aria-label="book.rating ? `評価 ${book.rating} / 5` : '未評価'"
             >
               <span v-for="(on, n) in stars(book.rating)" :key="n" :class="on ? 'on' : 'off'"
@@ -112,8 +127,13 @@ function durationText(days: number | null): string {
               >
               <span v-if="!book.rating" class="no-rating" aria-hidden="true">—</span>
             </span>
-            <span class="row-date">{{ book.finished_on }}</span>
-            <span class="row-days">{{ durationText(book.duration_days) }}</span>
+            <span :id="detailId(book, 'date')" class="row-date"
+              ><span class="visually-hidden">読了日 </span>{{ book.finished_on }}</span
+            >
+            <span :id="detailId(book, 'days')" class="row-days"
+              >{{ durationText(book.duration_days)
+              }}<span v-if="book.duration_days !== null" class="visually-hidden">で読了</span></span
+            >
           </li>
         </ul>
       </div>

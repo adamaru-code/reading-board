@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, useId } from 'vue'
 import { ApiError } from '../api/http'
 import type { HiddenTag } from '../types/book'
 import { suggestTags, SUGGEST_LIMIT } from '../lib/tagSuggestions'
@@ -17,6 +17,8 @@ const props = withDefaults(defineProps<{ title: string; author: string; knownTag
 const emit = defineEmits<{ error: [messages: string[]] }>()
 
 const tagInput = ref('')
+// 「タグ」の見出しと入力欄を結ぶ（読み上げで「タグ」と読まれるように）
+const inputId = useId()
 
 // タグ名の書き方をそろえる（全角英数字 → 半角、半角カナ → 全角など。バックエンドの Tag.normalize_name と同じ NFKC）
 function normalizeTagName(name: string): string {
@@ -97,7 +99,7 @@ async function onUnhideSuggestion(tag: HiddenTag) {
 
 <template>
   <div class="field">
-    <span class="field-label">タグ</span>
+    <label :for="inputId" class="field-label">タグ</label>
     <div v-if="tags.length" class="tag-list">
       <span v-for="tag in tags" :key="tag" class="tag-chip">
         {{ tag }}
@@ -111,10 +113,12 @@ async function onUnhideSuggestion(tag: HiddenTag) {
         </button>
       </span>
     </div>
+    <!-- 薄い字（placeholder）に「タグ」を入れない。読み上げソフトが名前のあとに読むので「タグ タグを…」と重なる -->
     <input
+      :id="inputId"
       v-model="tagInput"
       type="text"
-      placeholder="タグを入力して Enter"
+      placeholder="入力して Enter"
       @keydown.enter.prevent="addTag"
       @keydown.,.prevent="addTag"
     />
