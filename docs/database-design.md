@@ -186,7 +186,7 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 |---|---|---|---|
 | `id` | bigint | PK, auto | 主キー |
 | `user_id` | bigint | FK → users, NOT NULL | 隠したユーザー（ユーザー削除で一緒に削除） |
-| `name` | string | NOT NULL, 255 文字以内 | タグ名（前後の空白は除いて保存） |
+| `name` | string | NOT NULL, 255 文字以内 | タグ名（本のタグと同じ書き方にそろえて保存：NFKC で全角英数字を半角などにし、前後の空白を除く。`Tag.normalize_name`） |
 | `created_at` / `updated_at` | datetime | NOT NULL | |
 
 - `(user_id, name)` は UNIQUE（同じタグを 2 回隠しても 1 件）。

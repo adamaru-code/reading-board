@@ -125,7 +125,7 @@ erDiagram
     }
 ```
 
-- 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。ISBN と書影（表紙画像）の URL は保存する（書影を付け直せるように。画像そのものは保存せず Google の画像を表示）。書誌（タイトル・著者）は照会で入力を補うだけ。
+- 所要日数（開始→読了）は `book_status_events` から算出し、保存しない。ISBN と書影（表紙画像）の URL は保存する（書影を付け直せるように。画像そのものは保存せず Google の画像を表示）。書誌（タイトル・著者）は照会で入力を補うだけ（本には保存しない）。照会の結果は `isbn_lookups` に取っておき、同じ ISBN では外部に問い合わせない（[データベース設計](database-design.md) §9）。
 - `books` は `user_id` で所有者（`users`）に紐づく（認証は実装済み。§3.1）。
 
 ### 3.1 認証（招待制の複数ユーザー・実装済み）
@@ -237,11 +237,11 @@ sequenceDiagram
 | 編集（評価・メモ・種別・タグ含む） | S4 編集フォーム | PATCH /api/books/:id | UPDATE（+ book_tags 同期） |
 | 削除 | S4 編集フォーム | DELETE /api/books/:id | DELETE |
 | 一覧絞り込み | S1 ヘッダ | GET /api/books?status=&genre=&q=&author=&tag=&rating=&sort=&dir=&page=\|offset=&per_page= | SELECT（AND 条件・ORDER BY・LIMIT/OFFSET） |
-| 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。選べる年・今年・今月・選んだ年（`?year=`）の冊数と月ごとはその日付を Ruby で数え、ジャンル別は選んだ年の本の `GROUP BY genre` で数える（3 クエリ） |
+| 読了冊数 | S8 見出し・S9 統計 | GET /api/books/stats | status=read の本の数（COUNT）と、本ごとの最初の読了日（`GROUP BY book_id` の `MIN(occurred_on)`）。選べる年・今年・今月・選んだ年（`?year=`）の冊数と月ごとはその日付を Ruby で数え、ジャンル別は選んだ年の本の `GROUP BY genre`、よく読んだ著者は `GROUP BY author`（上位 5 人）で数える。前の年（選んだ年の 1 つ前）の冊数と月ごとも同じ日付から数える（4 クエリ） |
 | CSV 書き出し | S7 CSV | GET /api/books/export | 自分の本を tags・status_events と一緒に SELECT（登録順）し、`BookCsvExporter` で BOM 付き CSV にして `send_data` |
 | CSV 読み込み | S7 CSV | POST /api/books/import { csv, dry_run } | `BookCsvImporter` が行を検査（エラーがあれば何も INSERT せず 422）→ 自分の本の ISBN・タイトル＋著者と照らして重複を飛ばす（タイトル＋著者は `WEIGHT_STRING` で DB の照合順序と同じ比べ方）→ 本番は 1 トランザクションで books・tags（無い名前だけ。DB が同じとみなす名前は 1 つに）・book_tags・book_status_events（CSV の日付。今の状態の日付が無ければ今日）を、それぞれ `insert_all` でまとめて INSERT（1 冊ずつ作ると 1 冊に約 8 回問い合わせ、1,000 冊で 23 秒かかったため。まとめると 0.3 秒。#305） |
 | タグの管理 | S7 タグ | GET /api/tags、PATCH /api/tags/rename { from, to }、DELETE /api/tags/remove?name= | `MyTags`：自分の本の book_tags だけを付け替える（UPDATE tag_id。両方付いた本は DELETE）・外す（DELETE）。`tags` の名前は書き換えない（全ユーザーで共有のため）。誰も使わなくなった tags と、自分の本で使われなくなった hidden_tags を DELETE |
-| 表紙のまとめて取得 | S7 表紙 | GET /api/books/missing_covers、POST /api/books/fetch_covers { after_id } | `BookCoverFetcher`：ISBN があって cover_url が空の自分の本を id 順に 10 冊 SELECT → 1 冊ずつ、間を 0.6 秒空けて Google Books に問い合わせ（`GoogleBooksClient.lookup`：`isbn:` で無ければ題名＋著者で探して ISBN が一致する本だけ。1 分 100 回の上限を超えないため）→ 見つかれば books UPDATE（cover_url）。上限（429・403。本文の「per day」で 1 日か 1 分かを見分ける）・鍵なし・失敗なら止める。画面が last_id を after_id にして繰り返す（1 回のリクエストを短くするため） |
+| 表紙のまとめて取得 | S7 表紙 | GET /api/books/missing_covers、POST /api/books/fetch_covers { after_id } | `BookCoverFetcher`：ISBN があって cover_url が空の自分の本を id 順に 10 冊 SELECT → 1 冊ずつ、`isbn_lookups` に取っておいた表紙の結果があればそれを使い、無ければ間を 0.6 秒空けて Google Books に問い合わせて結果を保存（`IsbnLookup` → `GoogleBooksClient.lookup`：`isbn:` で無ければ題名＋著者で探して ISBN が一致する本だけ。1 分 100 回の上限を超えないため）→ 見つかれば books UPDATE（cover_url）。上限（429・403。本文の「per day」で 1 日か 1 分かを見分ける）・鍵なし・失敗なら止める。画面が last_id を after_id にして繰り返す（1 回のリクエストを短くするため） |
 | カラム内並び替え | S1 カラム（D&D） | PATCH /api/books/reorder { ids:[...] } | UPDATE position（渡した id を 0..n-1、同じ status の残りは既存順で n.. に詰める・1 クエリ） |
 | ログイン | ログイン画面 | POST /api/session { email, password } | sessions INSERT ＋ 署名付き httpOnly Cookie 発行（IP ごとに 3 分 10 回まで、超過は 429） |
 | ログアウト | ヘッダ | DELETE /api/session | sessions DELETE ＋ Cookie 削除 |
@@ -267,10 +267,12 @@ sequenceDiagram
     participant G as 書影API(Google Books)
     U->>V: ISBN入力 or バーコード読取
     V->>R: GET /api/books/lookup?isbn=<code>
-    R->>O: GET /v1/get?isbn=<code>（接続 3 秒・読み取り 5 秒で打ち切り）
+    Note over R: isbn_lookups に取っておいた結果があれば、書誌・表紙それぞれ問い合わせずに使う<br/>（見つかった結果は 30 日・見つからなかった結果は 7 日）
+    R->>O: GET /v1/get?isbn=<code>（取っておいた結果が無いときだけ。接続 3 秒・読み取り 5 秒で打ち切り）
     O-->>R: 書誌(タイトル/著者) or null
-    R->>G: GET /books/v1/volumes?q=isbn:<code>&key=…（鍵が無ければ呼ばない。3 秒 / 5 秒で打ち切り）
+    R->>G: GET /books/v1/volumes?q=isbn:<code>&key=…（取っておいた結果が無いときだけ。鍵が無ければ呼ばない。3 秒 / 5 秒で打ち切り）
     G-->>R: 表紙画像の URL or なし
+    Note over R: 見つかった・見つからなかった結果を isbn_lookups に保存（上限・失敗・鍵なしは保存しない）
     R-->>V: 200 { isbn, found, title, author, media_type, cover_url }（不正な ISBN は 422）
     alt 取得成功（found: true）
         V-->>U: タイトル・著者を自動補完 / 形態を自動セット / 表紙があれば表紙欄に表示（保存時に isbn・cover_url も保存）
@@ -287,21 +289,22 @@ sequenceDiagram
 
 | 画面/要素 | 主な構成要素 | 使う API | 備考 |
 |---|---|---|---|
-| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（キーワード/ジャンル/タグ/評価）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&q=&tag=&rating=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
+| S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（キーワード/ジャンル/タグ/評価）、読了の並び替え、カラム内 D&D 並び替え（キーボードは Option ＋ 矢印キー） | GET /api/books?status=&genre=&q=&tag=&rating=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
 | S2 書籍カード | 書影（あれば左に 60×86）、ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作（キーボードは Option ＋ 矢印キー） | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
 | S3 追加フォーム | ISBN/バーコード登録（書誌＋表紙）、タイトル(必須)・著者・ステータス・ジャンル・形態・評価・メモ・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
 | S4 編集フォーム | 表紙欄（ISBN で表紙だけ取得・外す）、全項目入力（種別・タグ含む）、更新/削除/キャンセル | GET /api/books/lookup（表紙欄）、PATCH・DELETE /api/books/:id | 削除は確認の上 |
 | S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
 | S6 管理 | 招待タブ・ユーザータブ | /api/invitations、/api/users、/api/users/:id/password_reset_link | 管理者のみ |
-| S7 アカウント | パスワード変更・CSV（書き出し・読み込み）・タグ・アカウント削除タブ | /api/password、GET /api/books/export、POST /api/books/import、GET /api/tags、PATCH /api/tags/rename、DELETE /api/tags/remove、DELETE /api/registration | 書き出しは CSV ファイルの保存（リンクの `download`）。読み込みはファイルをブラウザで文字にして JSON で送る（dry_run で確認 → 本番） |
+| S7 アカウント | パスワード変更・CSV（書き出し・読み込み）・タグ・表紙・アカウント削除タブ | /api/password、GET /api/books/export、POST /api/books/import、GET /api/tags、PATCH /api/tags/rename、DELETE /api/tags/remove、GET /api/books/missing_covers、POST /api/books/fetch_covers、DELETE /api/registration | 書き出しは CSV ファイルの保存（リンクの `download`）。読み込みはファイルをブラウザで文字にして JSON で送る（dry_run で確認 → 本番） |
 | S8 読了一覧 | 読了（件数）・今年 / 今月の読了冊数・並び替え・列の見出し付きの 2 段の行一覧・もっと見る | GET /api/books?status=read&genre=&q=&tag=&rating=&sort=&dir=&offset=&per_page=、GET /api/books/stats | S1 の読了カラムと同じデータを使う（開いたときに 50 件まで追加で読み込む） |
+| S9 統計 | 今年・今月・これまでの読了冊数、表示する年、月ごとの棒グラフ（前の年と並べて比べる）、ジャンル別・よく読んだ著者の横棒 | GET /api/books/stats?year= | 絞り込みには連動しない。年を選ぶと取り直す |
 
 ---
 
 ## 6. フロントの状態管理方針（概要）
 
-- ボードの書籍は composable `useKanbanColumns`（`frontend/src/composables/`）がカラム（status）ごとに保持する（§4.1）。状態管理ライブラリ（Pinia 等）は使わない。
+- ボードの書籍は composable `useKanbanColumns`（`frontend/src/composables/`）がカラム（status）ごとに保持する（§4.1）。絞り込みの条件とタグの選択肢は `useBoardFilters`、読了冊数の統計は `useBookStats`、カードの移動（ドラッグとキーボード）は `useCardMove` が持つ（どれも `KanbanBoard.vue` から使う。#371）。状態管理ライブラリ（Pinia 等）は使わない。
 - カード移動は**楽観的更新**（先に画面を動かし、API 失敗時はサーバーから取り直して元に戻す）。登録・編集・削除の後は読み込み済み件数を保って取り直す。
 - ログイン中のユーザーは `frontend/src/lib/auth.ts` の `currentUser` で画面をまたいで共有し（§2）、`App.vue` が props でボードへ渡す。API が 401 を返したらログイン画面へ戻す。
-- タグの選択肢・よく使うタグ（全ページを集約）と、タグ候補から隠したタグ（`GET /api/hidden_tags`）は `KanbanBoard.vue` が持ち、書籍フォームへ渡す。
+- タグの選択肢・よく使うタグ（全ページを集約。`useBoardFilters`）と、タグ候補から隠したタグ（`GET /api/hidden_tags`）は `KanbanBoard.vue` が持ち、書籍フォームへ渡す。
 - API クライアントは `frontend/src/api/`（`http.ts` の `request` を基点に、books / hiddenTags / session / registration / invitations / users / password / passwordReset）。エラーは `{ errors: [...] }` を `ApiError` に変換する。
