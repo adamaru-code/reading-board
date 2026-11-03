@@ -5,6 +5,12 @@ export type BookStatus = 'want_to_read' | 'reading' | 'read'
 
 // status の全キー（セレクトの選択肢や絞り込みで使い回す）
 export const BOOK_STATUSES: readonly BookStatus[] = ['want_to_read', 'reading', 'read']
+// 画面に出す名前（ボードの段の見出し・書籍フォームのステータス・読み上げのお知らせ）
+export const STATUS_LABELS: Record<BookStatus, string> = {
+  want_to_read: '読みたい',
+  reading: '読書中',
+  read: '読了',
+}
 
 // 主ジャンル（単一）。Rails 側 enum のキー文字列（docs/database-design.md §3）
 export type BookGenre =

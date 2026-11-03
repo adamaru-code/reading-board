@@ -4,6 +4,7 @@ import { createBook, updateBook, deleteBook } from '../api/books'
 import { ApiError } from '../api/http'
 import {
   BOOK_STATUSES,
+  STATUS_LABELS,
   BOOK_GENRES,
   GENRE_LABELS,
   BOOK_MEDIA_TYPES,
@@ -38,12 +39,6 @@ const emit = defineEmits<{
 }>()
 
 const isEdit = computed(() => props.book !== null)
-
-const STATUS_LABELS: Record<BookStatus, string> = {
-  want_to_read: '読みたい',
-  reading: '読書中',
-  read: '読了',
-}
 
 // フォームの入力値（編集時は既存値で初期化）
 const form = reactive({
