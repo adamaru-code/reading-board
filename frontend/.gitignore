@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# E2E（Playwright）：失敗したときの記録・ログイン状態（Cookie）
+test-results/
+playwright-report/
+e2e/.auth/

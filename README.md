@@ -37,7 +37,7 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 | フロントエンド | Vue 3 + Vite + TypeScript（SPA） |
 | データベース | MySQL 8（ローカルは Docker で起動） |
 | API 通信 | REST API（JSON） |
-| テスト・lint | minitest・RuboCop・Brakeman・bundler-audit / vitest・ESLint・Prettier |
+| テスト・lint | minitest・RuboCop・Brakeman・bundler-audit / vitest・Playwright（E2E）・ESLint・Prettier |
 | インフラ | AWS（EC2 ＋ RDS ＋ CloudFront）/ Terraform（[infra/README.md](infra/README.md)） |
 
 ## 構成
@@ -134,6 +134,19 @@ cd frontend && npm run format    # 見た目の自動整形（Prettier）。確�
 ```
 
 CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terraform の fmt / validate を実行する。backend はまとめて `bin/ci` でも実行できる。
+
+### E2E テスト（Playwright）
+
+本物のブラウザ（入っている Chrome）で、本物のアプリ（Vite → Rails → MySQL）を人と同じように操作して確かめる。確かめる流れは、ログインとログアウト・本の追加 / 編集 / 削除・カードの移動（ドラッグ・Option ＋ 矢印キー）。テストは `frontend/e2e/`。
+
+```bash
+# 先に上の「ローカル起動手順」で MySQL・Rails（3000）・Vite（5173）を起動しておく
+cd frontend && npm run test:e2e
+```
+
+- E2E 専用のアカウント `e2e@example.com` を始める前に作り直し、終わったら本ごと消す（開発用 DB のほかのアカウントには触れない）
+- ログインは 3 分に 10 回までの制限があり、1 回流すとログインを 3 回使う。**続けて流すのは 3 分に 3 回まで**（当たったら「ログインの回数制限に当たりました」で止まる。3 分待つか、Rails を起動し直す）
+- 失敗したときは `frontend/test-results/` に画面の写真と操作の記録が残る。記録は `npx playwright show-trace <trace.zip>` で開ける
 
 ## ディレクトリ構成
 
