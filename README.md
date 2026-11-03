@@ -137,7 +137,7 @@ CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terra
 
 ### E2E テスト（Playwright）
 
-本物のブラウザ（入っている Chrome）で、本物のアプリ（Vite → Rails → MySQL）を人と同じように操作して確かめる。確かめる流れは、ログインとログアウト・本の追加 / 編集 / 削除・カードの移動（ドラッグ・Option ＋ 矢印キー）。テストは `frontend/e2e/`。
+本物のブラウザ（入っている Chrome）で、本物のアプリ（Vite → Rails → MySQL）を人と同じように操作して確かめる。確かめる流れは、ログインとログアウト・本の追加 / 編集 / 削除・カードの移動（ドラッグ・Option ＋ 矢印キー）・絞り込み・読了一覧・統計・CSV の書き出しと読み込み。テストは `frontend/e2e/`。
 
 ```bash
 # 先に上の「ローカル起動手順」で MySQL・Rails（3000）・Vite（5173）を起動しておく
