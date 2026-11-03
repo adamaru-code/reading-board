@@ -87,6 +87,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **外部 API が「0 件」を返したら、まずこちらの問題か外部の不具合かを切り分ける**：同じ鍵で普通の検索（題名など）を試す・有名な本でも 0 件か見る・開発者の掲示板を「サービス名＋症状＋年」で検索する（Google Books は 2026-09 末から `isbn:` `intitle:` など指定付きの検索だけ 0 件。HTTP 200 で `totalItems: 0`）。問い合わせは回数の枠を使うので、1 回ずつ数を決めて試す
 - [ ] **外部の不具合で止まったら、「直るまで待つ」を勧める前に、まだ動く使い方で回避できないか試す**。回避するときは結果を必ず確かめる（Google Books は題名＋著者で普通に検索し、ISBN が一致する本の表紙だけを使う。番号だけで検索すると別の本が返るので使わない）。「明日まで延期」と提案して「直っていない可能性が高いので再考して」と言われた（2026-10-15、PR #294）
 
+- [ ] **外部 API の結果を取っておく（キャッシュ）ときは、「見つからない」と「失敗（つながらない・上限・鍵なし）」を分けて返す**。分けないと、つながらなかっただけの結果を「見つからない」として何日も使い続ける。OpenbdClient は見つからない・失敗をどちらも nil で返していたので、`lookup` で `:found` / `:not_found` / `:error` を返すようにしてから取っておいた（`IsbnLookup`。見つかった 30 日・見つからない 7 日・失敗は取っておかない。2026-11-03、PR #375）
+
 ### 1.7 Lint / テスト
 
 - [ ] **RuboCop** が通る（`bin/rubocop`。rubocop-rails-omakase。CI の Backend (lint + security) ジョブで実行）
@@ -102,6 +104,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
 - [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
 - [ ] テストに**補助メソッド（`def create_… `など）を足す前に、同じファイルに同じ名前が無いか grep する**。Ruby は後から書いた定義で前のものを上書きするので、引数の違う既存テストが `ArgumentError: unknown keywords` で落ちる（`books_controller_test.rb` の `create_read_book`。2026-10-01、PR #236）
+- [ ] **`travel 31.days { … }` と書かない**。`{ }` は直前の `31.days` に渡り、`travel` は時間を進めるだけで中の処理は動かない（テストは「呼ばれた回数 0」で落ちた）。`travel(31.days) { … }` とかっこを付けるか、`do … end` を使う（2026-11-03、PR #375）
+- [ ] **controller などが呼ぶ外部 API の関数を変えたら、テストの差し替え（`define_singleton_method`）も新しい関数に変える**。古い関数を差し替えたままだと効かず、テストが本物の openBD・Google に問い合わせる（`OpenbdClient.fetch` → `lookup`、`GoogleBooksClient.cover_url` → `lookup`。`grep -rn "define_singleton_method(:<古い関数>" test` で探す。2026-11-03、PR #375）
 - [ ] ユーザーが入力する文字を保存・比較・検索・重複チェックする変更では [text-input-check](../text-input-check/SKILL.md) を確かめる（DB の照合順序は半角・全角・大文字小文字・かなを同じとみなす。2026-10-04、#271）
 - [ ] **「◯◯は入らない・変わらない」を確かめる（否定の）テストでは、その◯◯を必ず用意する**。他人の本を作らずに「他人の本は入らない」と書くと、何も確かめていないのに通る（`export` のテスト。2026-10-04、PR #264 で作ってから確かめ直した）
 - [ ] **一覧・絞り込みのテストの期待値は、fixture（`test/fixtures/*.yml` の初期データ）の本も数に入れる**。作った本だけで `assert_equal [ five.id, four.id ]` と書いたら、fixture の ★4 の本（`readable_code`）も当たって落ちた。`assert_includes` / `assert_not_includes` で「入る本・入らない本」を確かめ、fixture の本もどちらかに入れる（`books_controller_test.rb` の rating。2026-10-05、PR #284）
@@ -160,7 +164,9 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **グリッドの列の幅を直したら、空の値・長い値の行も撮り直す**。読了一覧のスマホの 2 行目で著者に最低幅を付けたら、著者の無い行でジャンルがつぶれて「雑誌」と重なった → 入りきらないものは折り返す（`display: flex; flex-wrap: wrap`）、中身の無い所は `:empty { display: none }` で詰める（2026-10-29、PR #298）
 - [ ] **並びを組み替えたら（スマホ用に部品を分けるなど）、パソコンの見た目が変わっていないかを数で比べる**：直す前（`git stash push frontend`。読み込み直しに数秒待つ）と後で、部品の左端・上端を `getBoundingClientRect()` で出して比べる。画像のファイルの比較（`cmp`）は撮るたびに違うので使わない。`display: contents` で箱を外したら、間隔（`gap`）が変わりやすい（PR #298 で 16px → 24px になり、`order` と `margin-left: -8px` で戻した）
 - [ ] **日本語の折り返しは `word-break: auto-phrase`（`style.css` の body。Chrome 119+）で言葉のまとまりごとにしているが、Chrome の区切り（機械学習）は間違えることがある**（幅 420px で「間／違った」「1／行」と折れた）。説明文を足したら、使う幅（420・375px など）で撮って確かめ、変なところで折れたら CSS ではなく**言い回しを変える**（「誤りのある行」。2026-11-02、PR #314）
-- [ ] 1 部品が大きくなりすぎていない（目安 300 行。`KanbanBoard.vue`・`BookFormModal.vue` の分割は既知の課題（#159））
+- [ ] 1 部品が大きくなりすぎていない（目安 300 行）。大きくなったら、役割ごとに composable（`src/composables/`）へ分ける。分けたあとは E2E で「壊していない」を確かめる（`KanbanBoard.vue` を 534 → 377 行に。useBoardFilters・useBookStats・useCardMove。2026-11-03、PR #371）
+- [ ] **同じクラスの要素を足したら、今ある CSS の選び方が新しい要素にも効かないかを見る**。月ごとのグラフに前の年の棒（`.bar.previous`）を足したら、今月を濃い緑にする `.month.current .bar` が前の年の棒にも効いた → `.bar.now` に限る。jsdom のテストでは色は分からないので、本物の画面で撮るか `getComputedStyle(…).backgroundColor` を出して確かめる（2026-11-03、PR #379）
+- [ ] **グラフに棒・線を足したら、本物の画面で撮って「数字がどれのものか」見分けられるかを見る**。2 本並べた棒の上の数字（選んだ年）が、背の高い灰色の棒（前の年）の数字に見えた → 数字を緑の棒の真上へ `translateX` でずらした（2026-11-03、PR #379）
 
 ### 2.6 Lint / テスト / 型チェック / Build
 
@@ -171,6 +177,13 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **画面全体（`window`）にリスナーを付ける部品（`BaseModal` など）をテストで `mount` したら、必ず `unmount` する**。閉じ忘れると、次のテストのキー操作をそのリスナーが横取りして落ちる（2026-11-03、PR #351）
 - [ ] **テンプレートの先頭にコメントがある部品**（`BookCard.vue` など）は、テストの `wrapper.element` が外側の入れ物になる。`wrapper.find('.card').element` のように中の要素を取る（2026-11-03、PR #353）
 - [ ] 画面に見せない文字（`visually-hidden`）も `.text()` に入る。読み上げ用の言葉を足したら、文字を比べているテストの期待値も直す（2026-11-03、PR #353）
+- [ ] **E2E テスト（Playwright、`frontend/e2e/`）**：本物の Chrome で、本物のアプリ（Vite 5173 → Rails 3000 → MySQL）を操作して確かめる。手元はサーバーを起動して `cd frontend && npm run test:e2e`、CI はジョブ「E2E (Playwright)」で PR ごとに流れる（2026-11-03、#367・#369）
+  - **画面の流れ（ログイン・本の追加 / 編集 / 削除・カードの移動・絞り込み・読了一覧・統計・CSV）を変えたら、E2E を流す**。新しい画面・流れを作ったら E2E にも足す（下準備の本は `support.ts` の `createBook` で API から作る）
+  - E2E 専用のアカウント `e2e@example.com` は global-setup で作り直し、global-teardown で本ごと消す。ログインは auth.setup で 1 回だけ（ログイン状態を使い回す）。**1 回流すとログインを 3 回使うので、続けて流すのは 3 分に 3 回まで**（当たったら「ログインの回数制限に当たりました」で止まる。3 分待つか Rails を起動し直す。CI は毎回新しい Rails なので当たらない）
+  - **CI の E2E が落ちたら**、PR の Checks →「Summary」の Artifacts にある `e2e-results`（画面の写真・操作の記録 trace・rails.log・vite.log）を落として見る。手元の失敗は `frontend/test-results/`（`npx playwright show-trace <trace.zip>`）
+  - **指し方は、開いている画面（`page.getByRole('dialog')`）の中に絞り、ボタンは `exact: true`**。ページ全体で `getByLabel('タイトル')` と探すとボードの上のキーワード欄（「タイトル・著者・メモで絞り込み」）にも、`getByRole('button', { name: '追加' })` はタグ候補のボタン（「〇〇をタグに追加」）にも当たる（strict mode violation。2026-11-03、PR #367）
+  - **こちらで流すときは `| tail` でまとめず、ファイルに書き出す**（`npx playwright test --reporter=list > <scratchpad>/e2e.log 2>&1`）。`| tail` は終わるまで何も出ないので、止まっているのか動いているのか分からない（最初の 1 回は 5 分出ず止めた）。Mac には `timeout` コマンドが無い（exit 127）。長く待つときは Bash の `run_in_background` や Monitor を使う（2026-11-03）
+  - E2E の型チェックは `tsconfig.e2e.json`（`moduleResolution: "bundler"`。`nodenext` だと `import './support'` に拡張子を求められる）。vitest は `src/**/__tests__/*.spec.ts` だけを読むので、`e2e/*.spec.ts` と混ざらない
 - [ ] テンプレートのイベントで、引数を取る関数を `@click="fn"` と書いていない（イベントオブジェクトが第 1 引数に入る。`@click="fn()"` と書く。vue-tsc が検出する）
 
 ### 2.7 標準構成からのずれ（既知・Issue で管理）
