@@ -23,6 +23,16 @@ const currentMonth = computed(() =>
   props.stats?.year === props.today.getFullYear() ? props.today.getMonth() + 1 : undefined,
 )
 
+// 前の年に読了があれば比べる（無ければ今までどおりの見た目。#378）
+const comparing = computed(() => (props.stats?.finished_in_previous_year ?? 0) > 0)
+// 「（＋8 冊）」「（−3 冊）」「（同じ）」
+const difference = computed(() => {
+  if (!props.stats) return ''
+  const diff = props.stats.finished_in_year - props.stats.finished_in_previous_year
+  if (diff === 0) return '同じ'
+  return `${diff > 0 ? '＋' : '−'}${Math.abs(diff)} 冊`
+})
+
 function onYearChange(event: Event) {
   emit('change-year', Number((event.target as HTMLSelectElement).value))
 }
@@ -58,11 +68,16 @@ function onYearChange(event: Event) {
           </select>
         </label>
         <span class="year-count">{{ stats.year }}年の読了 {{ stats.finished_in_year }} 冊</span>
+        <span v-if="comparing" class="previous-count">
+          {{ stats.year - 1 }}年は {{ stats.finished_in_previous_year }} 冊（<b>{{ difference }}</b
+          >）
+        </span>
       </div>
       <ReadMonthlyChart
         :counts="stats.finished_by_month"
         :year="stats.year"
         :current-month="currentMonth"
+        :previous-counts="comparing ? stats.previous_year_by_month : undefined"
       />
       <ReadGenreChart :counts="stats.finished_by_genre" :year="stats.year" />
       <ReadAuthorChart :authors="stats.top_authors" :year="stats.year" />
@@ -130,5 +145,12 @@ function onYearChange(event: Event) {
 .year-count {
   font-size: 13px;
   font-weight: 600;
+}
+.previous-count {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.previous-count b {
+  color: var(--text);
 }
 </style>

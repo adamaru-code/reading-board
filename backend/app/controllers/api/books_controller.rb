@@ -65,6 +65,7 @@ module Api
     # - 今年・今月・これまで（finished_this_year / finished_this_month / finished_total）：year に関係なくいつも同じ
     # - 選んだ年（year。無い・不正なら今年）：その年の冊数・月ごと（1〜12 月の 12 個）・ジャンル別（6 ジャンル、0 冊も含む）・
     #   よく読んだ著者（top_authors：上位 TOP_AUTHORS 人。著者が空の本は数えない。#376）
+    # - 前の年（year の 1 つ前）：冊数（finished_in_previous_year）と月ごと（previous_year_by_month）。比べるため（#378）
     # - years：選べる年（読了した本がある年＋今年、新しい順）
     def stats
       today = Date.current
@@ -72,8 +73,7 @@ module Api
       years = (finished_on.values.map(&:year) + [ today.year ]).uniq.sort.reverse
       year = stats_year(years, today.year)
       in_year = finished_on.select { |_book_id, date| date.year == year }
-      by_month = Array.new(12, 0)
-      in_year.each_value { |date| by_month[date.month - 1] += 1 }
+      in_previous_year = finished_on.values.select { |date| date.year == year - 1 }
       this_year = finished_on.values.select { |date| date.year == today.year }
       render json: {
         finished_total: current_user.books.read.count,
@@ -82,7 +82,9 @@ module Api
         years: years,
         year: year,
         finished_in_year: in_year.size,
-        finished_by_month: by_month,
+        finished_by_month: count_by_month(in_year.values),
+        finished_in_previous_year: in_previous_year.size,
+        previous_year_by_month: count_by_month(in_previous_year),
         finished_by_genre: Book.genres.keys.index_with(0)
           .merge(current_user.books.where(id: in_year.keys).group(:genre).count),
         top_authors: top_authors(in_year.keys)
@@ -241,6 +243,11 @@ module Api
 
     def dry_run?
       ActiveModel::Type::Boolean.new.cast(params[:dry_run]) == true
+    end
+
+    # 統計：読了日を 1〜12 月の 12 個の冊数にする
+    def count_by_month(dates)
+      dates.each_with_object(Array.new(12, 0)) { |date, counts| counts[date.month - 1] += 1 }
     end
 
     # 統計：よく読んだ著者。冊数の多い順、同じ冊数なら著者名の順に上位 TOP_AUTHORS 人
