@@ -32,7 +32,7 @@
 
 - タグは多対多（§5）、状態に入った日付の履歴は別テーブル（§6）で表現する。
 - 所要日数（開始→読了）は §6 のイベントから**算出**し、保存しない。
-- ISBN/JAN は `GET /api/books/lookup` で書誌（openBD）と表紙（Google Books）の照会に使う。書誌はタイトル・著者・形態の自動入力に使うだけで保存しないが、**ISBN と表紙の URL は `books` に保存する**（2026-09-30 追加。画像そのものは保存せず Google の画像を表示する）。
+- ISBN/JAN は `GET /api/books/lookup` で書誌（openBD）と表紙（Google Books）の照会に使う。書誌はタイトル・著者・形態の自動入力に使うだけで `books` には保存しないが、**ISBN と表紙の URL は `books` に保存する**（2026-09-30 追加。画像そのものは保存せず Google の画像を表示する）。照会の結果は、同じ ISBN で問い合わせ直さないよう `isbn_lookups`（§9）に取っておく。
 
 ---
 
@@ -190,3 +190,26 @@ ISBN/JAN 登録時、`978`/`979` 始まりは `book`、`491` 始まり（定期�
 | `created_at` / `updated_at` | datetime | NOT NULL | |
 
 - `(user_id, name)` は UNIQUE（同じタグを 2 回隠しても 1 件）。
+
+## 9. IsbnLookup（ISBN で調べた結果のキャッシュ）
+
+`GET /api/books/lookup` と表紙のまとめて取得で、ISBN で調べた結果（openBD の書誌・Google Books の表紙）を取っておき、同じ ISBN では外部に問い合わせない（2026-11-03 追加、#374）。Google Books の回数の上限（1 日 1,000 回・1 分 100 回）を無駄に使わないため。本番は使うときだけ起動するので、メモリではなく DB に置く。
+
+- 書誌と表紙は、問い合わせる相手も失敗の仕方も違うので、**別々に**結果と調べた時刻を持つ
+- **見つかった結果は 30 日、見つからなかった結果は 7 日**のあいだ使う（相手側にあとで登録されることがあるので、見つからないは短め）。過ぎたら、次に調べたときに問い合わせて上書きする（ISBN ごとに 1 行なので増え続けない）
+- 上限に当たった・つながらなかった・鍵が無い、は取っておかない（次にまた問い合わせる）
+- どのユーザーが調べたかは持たない（書誌・表紙は誰が調べても同じ）。ユーザーを削除しても残る
+
+`isbn_lookups`
+
+| フィールド | 型 | 制約 | 説明 |
+|---|---|---|---|
+| `id` | bigint | PK, auto | 主キー |
+| `isbn` | string(13) | NOT NULL, UNIQUE | 正規化した ISBN（ハイフンなし） |
+| `biblio_status` | string | NULL 可（`found` / `not_found`） | openBD の結果。まだ調べていなければ NULL |
+| `title` / `author` | text | NULL 可 | openBD の書誌（`found` のとき） |
+| `biblio_checked_at` | datetime | NULL 可 | openBD に問い合わせた時刻 |
+| `cover_status` | string | NULL 可（`found` / `not_found`） | Google Books の結果 |
+| `cover_url` | string(500) | NULL 可 | 表紙の URL（`found` のとき） |
+| `cover_checked_at` | datetime | NULL 可 | Google Books に問い合わせた時刻 |
+| `created_at` / `updated_at` | datetime | NOT NULL | |
