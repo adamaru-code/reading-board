@@ -583,6 +583,29 @@ module Api
       end
     end
 
+    test "stats は前の年（選んだ年の 1 つ前）の冊数と月ごとを返す" do
+      travel_to Date.new(2026, 6, 15) do
+        create_finished_book(Date.new(2026, 2, 1))
+        create_finished_book(Date.new(2025, 2, 10))
+        create_finished_book(Date.new(2025, 2, 20))
+        create_finished_book(Date.new(2025, 12, 31))
+        create_finished_book(Date.new(2024, 7, 1))
+        create_finished_book(Date.new(2025, 3, 1), user: users(:other)) # 他人の本
+
+        get stats_api_books_url
+        body = JSON.parse(response.body)
+        assert_equal 3, body["finished_in_previous_year"]
+        assert_equal [ 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ], body["previous_year_by_month"]
+        assert_equal [ 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ], body["finished_by_month"]
+
+        # 2025 年を選ぶと、比べる年は 2024 年
+        get stats_api_books_url, params: { year: 2025 }
+        body = JSON.parse(response.body)
+        assert_equal 1, body["finished_in_previous_year"]
+        assert_equal 1, body["previous_year_by_month"][6]
+      end
+    end
+
     test "stats の今年・今月は日本時間で決める（UTC では前の年の大みそかでも、日本時間の元日なら今年）" do
       travel_to Time.utc(2025, 12, 31, 20, 0) do # 日本時間 2026-01-01 05:00
         @owner.books.create!(title: "元日の朝に読了", status: :read)

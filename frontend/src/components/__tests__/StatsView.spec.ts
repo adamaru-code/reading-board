@@ -14,6 +14,8 @@ const stats: BookStats = {
   finished_in_year: 42,
   finished_this_month: 3,
   finished_by_month: [4, 6, 3, 5, 2, 7, 4, 3, 5, 3, 0, 0],
+  finished_in_previous_year: 0,
+  previous_year_by_month: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   finished_by_genre: {
     classic_novel: 8,
     liberal_arts: 12,
@@ -158,5 +160,44 @@ describe('ReadGenreChart（ジャンル別の読了冊数）', () => {
     const chart = mount(ReadAuthorChart, { props: { authors: [], year: 2026 } })
     expect(chart.find('.empty').text()).toBe('まだありません')
     expect(chart.find('.rows').exists()).toBe(false)
+  })
+
+  it('前の年に読了が無ければ、比べる棒・凡例・前の年の文を出さない（今までどおり）', () => {
+    const wrapper = mount(StatsView, { props: { stats, today } })
+    expect(wrapper.find('.previous-count').exists()).toBe(false)
+    expect(wrapper.find('.legend').exists()).toBe(false)
+    expect(wrapper.findAll('.bar.previous')).toHaveLength(0)
+  })
+
+  it('前の年に読了があれば、左に前の年・右に選んだ年の棒を並べ、合計と差を出す', () => {
+    const previous = [3, 2, 4, 3, 4, 5, 2, 3, 2, 3, 2, 2] // 35 冊
+    const wrapper = mount(StatsView, {
+      props: {
+        stats: { ...stats, finished_in_previous_year: 35, previous_year_by_month: previous },
+        today,
+      },
+    })
+    expect(wrapper.find('.previous-count').text()).toBe('2025年は 35 冊（＋7 冊）')
+    expect(wrapper.find('.legend').text()).toBe('2025年2026年')
+
+    const months = wrapper.findAll('.month')
+    // 左が前の年（灰色）、右が選んだ年（緑）。いちばん多い 7 冊（2026 年 6 月）を 100% にする
+    const june = months[5]!.findAll('.bar')
+    expect(june.map((b) => b.classes().includes('previous'))).toEqual([true, false])
+    expect(june.map((b) => b.attributes('style'))).toEqual(['height: 71%;', 'height: 100%;'])
+    expect(months[5]!.attributes('aria-label')).toBe('6月 7冊（2025年 5冊）')
+    // まだ来ていない 12 月は、前の年の棒だけ（選んだ年の棒は CSS で隠す）
+    expect(months[11]!.attributes('aria-label')).toBe('12月 まだ（2025年 2冊）')
+  })
+
+  it('差が 0 なら「同じ」、減ったら「−」', () => {
+    const same = mount(StatsView, {
+      props: { stats: { ...stats, finished_in_previous_year: 42 }, today },
+    })
+    expect(same.find('.previous-count').text()).toBe('2025年は 42 冊（同じ）')
+    const fewer = mount(StatsView, {
+      props: { stats: { ...stats, finished_in_previous_year: 50 }, today },
+    })
+    expect(fewer.find('.previous-count').text()).toBe('2025年は 50 冊（−8 冊）')
   })
 })

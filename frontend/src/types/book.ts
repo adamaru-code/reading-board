@@ -103,6 +103,8 @@ export interface BookStats {
   year: number // 選んだ年（指定が無い・不正なら今年）
   finished_in_year: number // 選んだ年の冊数
   finished_by_month: number[] // 選んだ年の 1〜12 月（12 個）
+  finished_in_previous_year: number // 前の年（選んだ年の 1 つ前）の冊数
+  previous_year_by_month: number[] // 前の年の 1〜12 月（12 個）
   finished_by_genre: Record<BookGenre, number> // 選んだ年のジャンル別（6 ジャンルすべて）
   top_authors: { author: string; count: number }[] // 選んだ年によく読んだ著者（多い順に最大 5 人）
 }

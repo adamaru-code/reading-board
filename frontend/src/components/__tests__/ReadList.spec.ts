@@ -48,6 +48,8 @@ describe('ReadList（読了一覧）', () => {
           finished_in_year: 12,
           finished_this_month: 3,
           finished_by_month: [1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 0, 0],
+          finished_in_previous_year: 0,
+          previous_year_by_month: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
           finished_by_genre: {
             classic_novel: 12,
             liberal_arts: 0,
