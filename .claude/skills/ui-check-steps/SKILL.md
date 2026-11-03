@@ -93,8 +93,11 @@ http://localhost:5173/register?invite=1s7BacCvP4ZX
   cd backend && bin/rails runner 'Invitation.find_by(code: "1s7BacCvP4ZX")&.destroy'
   ```
 - 見本ページ（色・配置の候補）は scratchpad に HTML を作って `open` で開く。アプリのコードは変えない
+  - **見本の数字は、見せたい違いが出るように選ぶ**。「前の年と比べる」の見本で、2 つの年がたまたま同じ 43 冊になり「（＋0 冊）」と出て、差の見え方が伝わらなかった（2026-11-03、#378）。合計・差・いちばん多い月など、案ごとに比べたい所を `node -e` で先に計算して確かめる
+  - 見本はパソコン（960〜1280px）とスマホ（375px）の幅で撮って、自分で見てから開く（`page.screenshot({ fullPage: true })`）
 - **ログインが要る画面をこちらで撮る**ときは、確認用アカウント（`kakunin@example.com`、パスワードは `SecureRandom` で作って scratchpad のファイルに保存）に owner の本の写しを入れ、scratchpad に `npm install playwright-core`（`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`。Mac の Chrome を `channel: 'chrome'` で使う）で撮る。幅は 375・390・768（スマホ・タブレット）と 1280・1024（パソコン）。はみ出しは `getBoundingClientRect().right > innerWidth` の要素を数える。本のフォームは Esc で閉じないので「キャンセル」「閉じる」を押す。確認後にアカウントを本ごと消す（2026-10-29、PR #298）
   - **ログインは 1 回にして、同じページ（ブラウザ）を使い回す**。撮る・測る道具を何度も動かすたびにログインすると、アプリのログイン回数制限（3 分に 10 回）で 429 になる。なったら 3 分待つ（2026-11-02、PR #314）
+- **README のスクリーンショット**（`docs/images/board.png`・`stats.png`）を撮り直すときは、見本用アカウント `demo@example.com`（画面の右上に出るメール）を作り、見本の本を入れて撮り、撮ったら本ごと消す。幅 1280・高さ 600 の窓で `page.screenshot({ fullPage: true })`・`deviceScaleFactor: 2`（中身の高さで撮れ、下に余白が出ない）。画面を変えた PR では、README の画像と画像の説明（alt）も直す（2026-11-03、PR #379）
 - **配置の案の見本は、本物の画面に CSS を足して撮る**（`page.addStyleTag` と、見本用のボタンを `page.evaluate` で足す）。本物と同じ文字・余白のまま高さを実測できる
 - 配置の案は、高さの数字だけでなく、**スクロールしたときにどうなるか**と、**よくする操作（見る・足す・絞り込む）ごとの使いやすさ**も表にして比べる。ヘッダの見本を出したら「スクロールする時は、上のメニューは見えなくなるのですか？」「ユーザーの使い勝手が良いのはどれでしょうか？」と聞かれ、そこで初めて「1 行だけ固定」の案を足した（2026-10-29、PR #298）
 - 見た目の案は、見た目だけでなく**「1 画面に見える量」などの数字も添えて比べる**（本物と同じ余白・文字の大きさにそろえ、**計算ではなくブラウザで実測する**：見本に測る script を足した写しをヘッドレス Chrome で `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --window-size=1280,900 --virtual-time-budget=2000 --dump-dom file://…` で開き、結果を body の属性に書いて読む。2026-10-03、見込みで「A は約 14 冊」と書いたが実測は 8 冊だった）。例：表紙 44px / 60px は「カードが縦に伸びる」と思い込んで 44px をすすめたが、計算すると多くのカードは高さが同じで、60px に結論が変わった（2026-09-30）
