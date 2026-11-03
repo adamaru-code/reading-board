@@ -134,6 +134,14 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] クリッカブル要素は `button` を使う（`div` の場合は `role` / `tabindex` / `@keydown`）
 - [ ] フォーム要素に `label` が紐付いている
 - [ ] 説明（ツールチップ）を**すぐ出したい**ときは `title` 属性ではなく自前の吹き出しにする。`title` は出るまでの待ち時間をブラウザが決め（Chrome で約 1 秒）、アプリからは変えられない。自前の吹き出しは CSS の `:hover` / `:focus-visible` ＋ `transition-delay: 0.2s`（0 だと通り過ぎただけでちらつく）、`role="tooltip"` を `aria-describedby` で結ぶ。隣の部品に重ならない側に出す（`KanbanColumn.vue` の読了見出し。2026-10-03、PR #260）
+- [ ] **モーダル・タブは共通の部品を使う**：モーダルは `BaseModal.vue`（Tab を枠の中に閉じ込める・Esc・閉じたら開いたボタンへ戻す・開いたら `[autofocus]` へ）、タブは `BaseTabs.vue`（← → / Home / End・選んだタブだけ `tabindex="0"`・`role="tabpanel"`）。自分で書くと、矢印キー・フォーカスの戻し先を忘れやすい（2026-11-03、#351・#355・#357）
+- [ ] **`autofocus` だけに頼らない**：Chrome は、ほかの所（押したボタンなど）にフォーカスがあると `autofocus` を無視する。モーダルの中なら `BaseModal` が移すので `autofocus` を付ければよい（2026-11-03、PR #357）
+- [ ] **お知らせの欄（`role="status"`・`aria-live`）は最初から置いておき、中の文だけを出し入れする**。`<p v-if="msg" role="status">` のように欄ごと作ると、VoiceOver が読まない（2026-11-03、ユーザーが VoiceOver で確認。PR #363）。中にボタン・入力欄があるもの、画面が入れ替わって出るものは、読み上げ用の短い文を `class="visually-hidden"`（`style.css`）の欄に別に置く。`role="alert"`（エラー）は出たときに読まれる
+- [ ] **フォーカスを動かした直後のお知らせ**は、VoiceOver がフォーカス先（「〇〇 を編集」）を先に読み、控えめな `role="status"` を読まない。`aria-live="assertive"` の欄に、フォーカスを移した 0.2 秒あとに入れる（`KanbanBoard.vue` の `announce`。2026-11-03、PR #361）
+- [ ] **`aria-label` は中身をすべて上書きする**。カードのように中に詳細があるものは、名前（「〇〇 を編集」）だけを `aria-label` にし、詳細は `aria-describedby` で結ぶ（`BookCard.vue`）。ふつうの `div`・`span` の `aria-label` は効かないので、★の評価のような図は `role="img"` を付ける（2026-11-03、PR #353）。テストでは `__tests__/describedText.ts` で説明の文を組み立てて確かめる
+- [ ] **ラベルと薄い字（placeholder）に同じ言葉を入れない**。読み上げソフトは名前のあとに placeholder も読むので「タグ タグを入力して Enter」と重なる（2026-11-03、PR #353）
+- [ ] **ドラッグでしかできない操作を作らない**（キーボードの代わりを用意する。カードは Option ＋ 矢印キー、`lib/keyboardMove.ts`。2026-11-03、PR #361）
+- [ ] **色だけで違いを伝えない**：★の塗りと空は形でも分ける（★ / ☆）。図・枠線は白との差 3 以上、文字は 4.5 以上。計算は `node -e` で相対輝度から出す（2026-11-03、PR #359 で空の ☆ と入力欄の枠線を `#8590a2`＝3.23 に）
 
 ### 2.4 エラー / ローディング表現
 
@@ -160,6 +168,9 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] `npm run build`（`vue-tsc` の型チェック含む）が成功
 - [ ] `npm run lint`（ESLint：eslint-plugin-vue ＋ @vue/eslint-config-typescript ＋ @vitest/eslint-plugin。create-vue と同じ構成）が 0 件
 - [ ] `npm run format:check`（Prettier：セミコロンなし・シングルクォート・100 文字）が通る。崩れていれば `npm run format`
+- [ ] **画面全体（`window`）にリスナーを付ける部品（`BaseModal` など）をテストで `mount` したら、必ず `unmount` する**。閉じ忘れると、次のテストのキー操作をそのリスナーが横取りして落ちる（2026-11-03、PR #351）
+- [ ] **テンプレートの先頭にコメントがある部品**（`BookCard.vue` など）は、テストの `wrapper.element` が外側の入れ物になる。`wrapper.find('.card').element` のように中の要素を取る（2026-11-03、PR #353）
+- [ ] 画面に見せない文字（`visually-hidden`）も `.text()` に入る。読み上げ用の言葉を足したら、文字を比べているテストの期待値も直す（2026-11-03、PR #353）
 - [ ] テンプレートのイベントで、引数を取る関数を `@click="fn"` と書いていない（イベントオブジェクトが第 1 引数に入る。`@click="fn()"` と書く。vue-tsc が検出する）
 
 ### 2.7 標準構成からのずれ（既知・Issue で管理）
