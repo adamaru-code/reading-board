@@ -20,9 +20,9 @@
 | 外部サービス | openBD（書誌：タイトル・著者）／Google Books の Books API（書影：表紙画像の URL） | どちらも無料。openBD は鍵なし。Google Books は無料の API キー（開発は `backend/mise.local.toml`、本番は SSM）。表紙は openBD に無い本が多く、国立国会図書館の書影 API は 2026-03-31 に終了したため Google Books にした。どちらもバックエンドから呼び、鍵を画面側に出さない |
 | 認証 | Rails 8 標準の `has_secure_password`（bcrypt）＋セッション Cookie | 追加 gem なしで実装でき、パスワード再設定トークン・回数制限（`rate_limit`）も標準機能で賄える |
 | CSV 書き出し | Ruby の `csv`（Gemfile に明記） | Ruby 3.3 では標準添付だが 3.4 で外れるため Gemfile に書く。BOM 付き UTF-8 にして Excel でも文字化けしないようにする |
-| テスト | minitest（backend）/ vitest ＋ @vue/test-utils（frontend）/ Playwright（E2E） | Rails / Vite の標準的な選択。E2E は本物のブラウザ（入っている Chrome）で、本物のアプリをつないで確かめる（手元で `npm run test:e2e`。CI はまだ） |
+| テスト | minitest（backend）/ vitest ＋ @vue/test-utils（frontend）/ Playwright（E2E） | Rails / Vite の標準的な選択。E2E は本物のブラウザ（入っている Chrome）で、本物のアプリをつないで確かめる（手元で `npm run test:e2e`。CI でも PR ごとに実行） |
 | lint・静的検査 | RuboCop（rubocop-rails-omakase）・Brakeman・bundler-audit / ESLint ＋ Prettier | Rails 8・create-vue の標準構成。書き方の揺れとセキュリティ上の問題を自動で検出 |
-| CI | GitHub Actions | backend（テスト・lint・セキュリティ）・frontend（lint・テスト・ビルド）・Terraform（fmt・validate） |
+| CI | GitHub Actions | backend（テスト・lint・セキュリティ）・frontend（lint・テスト・ビルド）・E2E（Playwright）・Terraform（fmt・validate） |
 | インフラ | AWS（EC2 ＋ RDS ＋ CloudFront）/ Terraform | 学習用に使うときだけ起動。構成・費用は [インフラ設計](infrastructure.md) |
 
 ---
@@ -45,7 +45,7 @@
 | `npm run build` | `vue-tsc -b`（型チェック）→ `vite build`（バンドル） | 本番ビルド。成果物は `frontend/dist/` に出力 |
 | `npm run preview` | ビルド成果物をローカル配信 | 本番ビルドの動作確認 |
 | `npm test` | vitest でテストを実行 | 開発・CI |
-| `npm run test:e2e` | Playwright で E2E テストを実行（MySQL・Rails・Vite を先に起動しておく） | 開発 |
+| `npm run test:e2e` | Playwright で E2E テストを実行（MySQL・Rails・Vite を先に起動しておく） | 開発・CI |
 | `npm run lint` | ESLint で書き方をチェック（`lint:fix` で自動修正） | 開発・CI |
 | `npm run format` | Prettier で整形（`format:check` は確認のみ） | 開発・CI（CI は確認のみ） |
 

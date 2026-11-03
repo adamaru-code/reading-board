@@ -133,7 +133,7 @@ cd frontend && npm run lint      # 書き方チェック（ESLint）
 cd frontend && npm run format    # 見た目の自動整形（Prettier）。確認だけなら npm run format:check
 ```
 
-CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terraform の fmt / validate を実行する。backend はまとめて `bin/ci` でも実行できる。
+CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terraform の fmt / validate・下の E2E テストを実行する（ジョブは 5 つ）。backend はまとめて `bin/ci` でも実行できる。
 
 ### E2E テスト（Playwright）
 
@@ -147,6 +147,7 @@ cd frontend && npm run test:e2e
 - E2E 専用のアカウント `e2e@example.com` を始める前に作り直し、終わったら本ごと消す（開発用 DB のほかのアカウントには触れない）
 - ログインは 3 分に 10 回までの制限があり、1 回流すとログインを 3 回使う。**続けて流すのは 3 分に 3 回まで**（当たったら「ログインの回数制限に当たりました」で止まる。3 分待つか、Rails を起動し直す）
 - 失敗したときは `frontend/test-results/` に画面の写真と操作の記録が残る。記録は `npx playwright show-trace <trace.zip>` で開ける
+- CI でも PR ごとに流れる（ジョブ「E2E (Playwright)」。CI の機械の中で MySQL・Rails・Vite を起動する）。失敗したら、PR の Checks →「Summary」の Artifacts にある `e2e-results`（写真・記録・Rails と Vite のログ）を落として見る
 
 ## ディレクトリ構成
 
