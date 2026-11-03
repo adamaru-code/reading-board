@@ -1,21 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { listAllBooks, updateBook, reorderBooks, getBookStats } from '../api/books'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { logout } from '../api/session'
 import { listHiddenTags } from '../api/hiddenTags'
 import { ApiError } from '../api/http'
-import { BOOK_STATUSES } from '../types/book'
-import type {
-  Book,
-  BookStatus,
-  BookGenre,
-  BookListParams,
-  BookSortKey,
-  RatingFilter,
-  SortDir,
-  HiddenTag,
-  BookStats,
-} from '../types/book'
+import { BOOK_STATUSES, STATUS_LABELS } from '../types/book'
+import type { Book, BookStatus, BookSortKey, SortDir, HiddenTag } from '../types/book'
 import type { BoardView } from '../types/view'
 import type { User } from '../types/auth'
 import BoardHeader from './BoardHeader.vue'
@@ -28,19 +17,15 @@ import BookFormModal from './BookFormModal.vue'
 import AccountModal from './AccountModal.vue'
 import AdminModal from './AdminModal.vue'
 import { useKanbanColumns, READ_LIST_PAGE_SIZE } from '../composables/useKanbanColumns'
-import { keyboardMoveTarget, type MoveDirection } from '../lib/keyboardMove'
+import { useBoardFilters } from '../composables/useBoardFilters'
+import { useBookStats } from '../composables/useBookStats'
+import { useCardMove } from '../composables/useCardMove'
 
-// view：board＝3 カラムのボード（/）、read＝読了一覧（/read）。
-// どちらもこの部品が受け持ち、ヘッダ・絞り込み・モーダル・読み込み済みの本を共有する（切り替えても条件が残る）
+// view：board＝3 カラムのボード（/）、read＝読了一覧（/read）、stats＝統計（/stats）。
+// どれもこの部品が受け持ち、ヘッダ・絞り込み・モーダル・読み込み済みの本を共有する（切り替えても条件が残る）。
+// 絞り込み・統計・カードの移動は composables/ に分けてある（#370）
 const props = withDefaults(defineProps<{ user: User; view?: BoardView }>(), { view: 'board' })
 const emit = defineEmits<{ logout: [] }>()
-
-// カラムの見出しラベル
-const COLUMN_LABELS: Record<BookStatus, string> = {
-  want_to_read: '読みたい',
-  reading: '読書中',
-  read: '読了',
-}
 
 // 操作中に 401 になったらログイン画面へ戻す
 function handleAuthError(e: unknown): boolean {
@@ -66,42 +51,38 @@ const adminModalOpen = ref(false)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-// ---------- 絞り込み ----------
-const filters = reactive<{
-  genre: '' | BookGenre
-  keyword: string
-  tag: string
-  rating: '' | RatingFilter
-}>({
-  genre: '',
-  keyword: '',
-  tag: '',
-  rating: '',
-})
-// タグ選択肢は絞り込みで痩せないよう、未絞り込みの一覧から集める
-const tagOptions = ref<string[]>([])
-// 自分が付けたタグをよく使う順に（書籍フォームのタグ候補に使う）
-const frequentTags = ref<string[]>([])
+// ---------- 絞り込み・タグ ----------
+const {
+  filters,
+  tagOptions,
+  frequentTags,
+  activeFilterCount,
+  activeParams,
+  resetFilters,
+  loadTagOptions,
+} = useBoardFilters()
+
+function clearFilters() {
+  resetFilters()
+  loadBooks()
+}
+
 // タグ候補から隠したタグ（書籍フォームで隠す・戻すと更新される）
 const hiddenTags = ref<HiddenTag[]>([])
 
-// 読了冊数（読了一覧の見出しと統計画面に出す。そのどちらかを開いているときだけ取る）
-const stats = ref<BookStats | null>(null)
-const statsFailed = ref(false)
-// 統計画面で選んだ年（未選択なら今年。保存・削除のあとも選んだ年のまま取り直す）
-const statsYear = ref<number | undefined>(undefined)
-
-async function loadStats() {
-  if (props.view === 'board') return
+async function loadHiddenTags() {
   try {
-    stats.value = await getBookStats(statsYear.value)
-    statsFailed.value = false
-  } catch (e) {
-    if (handleAuthError(e)) return
-    // 読了一覧では冊数が出ないだけ（一覧の表示は妨げない）。統計画面ではお知らせを出す
-    statsFailed.value = true
+    hiddenTags.value = await listHiddenTags()
+  } catch {
+    // 取得できなくても候補がすべて出るだけなので、ボード表示は妨げない
   }
 }
+
+// ---------- 統計（読了一覧の見出し・統計画面。そのどちらかを開いているときだけ取る） ----------
+const { stats, statsFailed, loadStats, changeStatsYear } = useBookStats(
+  () => props.view !== 'board',
+  handleAuthError,
+)
 
 // CSV で本を取り込んだら、ボード・タグの選択肢・統計を取り直す
 function onImported() {
@@ -117,56 +98,7 @@ function onTagsChanged() {
   loadHiddenTags()
 }
 
-function onStatsYearChange(year: number) {
-  statsYear.value = year
-  loadStats()
-}
-
-async function loadHiddenTags() {
-  try {
-    hiddenTags.value = await listHiddenTags()
-  } catch {
-    // 取得できなくても候補がすべて出るだけなので、ボード表示は妨げない
-  }
-}
-// 使っている絞り込みの数（スマホのヘッダの「絞り込み 2 ▼」に出す）
-const activeFilterCount = computed(() => {
-  const used = [filters.keyword.trim(), filters.genre, filters.tag, filters.rating]
-  return used.filter((value) => value !== '').length
-})
-
-function activeParams(): BookListParams {
-  const params: BookListParams = {}
-  if (filters.genre !== '') params.genre = filters.genre
-  if (filters.keyword.trim() !== '') params.q = filters.keyword.trim()
-  if (filters.tag !== '') params.tag = filters.tag
-  if (filters.rating !== '') params.rating = filters.rating
-  return params
-}
-
-function clearFilters() {
-  filters.genre = ''
-  filters.keyword = ''
-  filters.tag = ''
-  filters.rating = ''
-  loadBooks()
-}
-
-async function loadTagOptions() {
-  try {
-    const all = await listAllBooks()
-    const counts = new Map<string, number>()
-    for (const tag of all.flatMap((b) => b.tags)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
-    tagOptions.value = [...counts.keys()].sort()
-    frequentTags.value = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'))
-      .map(([tag]) => tag)
-  } catch {
-    // タグ選択肢の取得失敗はボード表示を妨げないので黙って諦める
-  }
-}
-
-// ---------- 読了本の並び替え（ボードの読了カラムと読了一覧で共通） ----------
+// ---------- 本の一覧（読了本の並び替えは、ボードの読了カラムと読了一覧で共通） ----------
 const readSort = reactive<{ key: BookSortKey; dir: SortDir }>({
   key: 'finished_on',
   dir: 'desc',
@@ -226,7 +158,7 @@ onMounted(() => {
   loadStats()
 })
 
-// ボード → 読了一覧に切り替えたとき
+// ボード → 読了一覧・統計に切り替えたとき
 watch(
   () => props.view,
   () => {
@@ -245,108 +177,19 @@ watch(readSort, async () => {
   }
 })
 
-// ---------- ドラッグ&ドロップでのステータス更新 ----------
-const draggingId = ref<number | null>(null)
-
-function onDragStart(event: DragEvent, book: Book) {
-  draggingId.value = book.id
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', String(book.id))
-  }
-}
-
-// ドラッグ直後に発火する click を抑止するためのフラグ
-let justDragged = false
-
-function onDragEnd() {
-  draggingId.value = null
-  justDragged = true
-  setTimeout(() => {
-    justDragged = false
-  }, 0)
-}
-
-// index：落とされたカラム内の位置（KanbanColumn が移動中のカードを除いて数える）
-async function onDrop(status: BookStatus, index: number) {
-  const id = draggingId.value
-  draggingId.value = null
-  if (id === null) return
-
-  const book = findBook(id)
-  if (!book) return
-  await moveTo(book, status, index)
-}
-
-// ---------- キーボード（Option ＋ 矢印キー）での並び替え・段の移動 ----------
-// 結果は画面に出さない読み上げ用のお知らせ（aria-live）で伝える。
-// お知らせの場所は最初から置いておく（後から出した aria-live の欄は読まれないことがある）
-const moveMessage = ref('')
-const ANNOUNCE_DELAY_MS = 200
-let announceTimer: ReturnType<typeof setTimeout> | undefined
-onBeforeUnmount(() => clearTimeout(announceTimer))
-
-async function onCardMove(book: Book, direction: MoveDirection) {
-  const items = columns[book.status].items
-  const target = keyboardMoveTarget(
-    book.status,
-    items.findIndex((b) => b.id === book.id),
-    items.length,
-    direction,
-  )
-  if ('blocked' in target) {
-    announce(target.blocked)
-    return
-  }
-  const moved = await moveTo(book, target.status, target.index)
-  if (!moved) return
-  // 並び替えでカードの部品が置き直されるとフォーカスが外れるので、同じ本のカードへ戻す（続けて動かせるように）
-  await nextTick()
-  document.querySelector<HTMLElement>(`.card[data-book-id="${book.id}"]`)?.focus()
-  const position =
-    target.status === 'read' ? '' : ` の ${columns[target.status].items.indexOf(book) + 1} 番目`
-  announce(`「${book.title}」を ${COLUMN_LABELS[target.status]}${position}に移しました`)
-}
-
-// 同じ文を続けて伝えても読まれるよう、一度空にしてから入れる。
-// フォーカスをカードへ戻すと VoiceOver はまず「〇〇 を編集」を読むので、少し待ってから入れ、
-// すぐ読む欄（aria-live="assertive"）で割り込ませる（控えめな role="status" だと読まれなかった。#360 の画面確認）
-function announce(message: string) {
-  moveMessage.value = ''
-  clearTimeout(announceTimer)
-  announceTimer = setTimeout(() => {
-    moveMessage.value = message
-  }, ANNOUNCE_DELAY_MS)
-}
-
-// ドラッグ・キーボード共通：本を status の段の index 番目へ移し、サーバーへ保存する。移せたら true
-async function moveTo(book: Book, status: BookStatus, index: number): Promise<boolean> {
-  const id = book.id
-  const statusChanged = book.status !== status
-  // 読了カラムはキー（読了日など）で並べるため手動並び替えの対象外
-  const sortedByKey = status === 'read'
-  if (sortedByKey && !statusChanged) return false
-
-  // 楽観的更新：カードを移して status と position をローカルに反映（失敗時はサーバーから再取得）。
-  // reorder には読み込み済みの分だけ渡す（残りはサーバーが既存順で後ろに詰める）
-  const targetIds = moveBook(book, status, index)
-
-  try {
-    if (statusChanged) await updateBook(id, { status })
-    if (sortedByKey) {
-      await reloadColumn(status, true) // キー順の正しい位置に置き直す
-    } else {
-      await reorderBooks(targetIds)
-    }
-  } catch (e) {
-    if (handleAuthError(e)) return false
-    error.value =
-      e instanceof ApiError ? e.message : '並び替えに失敗しました。時間をおいて再度お試しください。'
-    loadBooks(true) // 状態を確実に元へ戻す
-    return false
-  }
-  return true
-}
+// ---------- カードの移動（ドラッグ・Option ＋ 矢印キー） ----------
+const { draggingId, onDragStart, onDragEnd, wasJustDragged, onDrop, moveMessage, onCardMove } =
+  useCardMove({
+    columns,
+    findBook,
+    moveBook,
+    reloadColumn,
+    onAuthError: handleAuthError,
+    onMoveFailed: (message) => {
+      error.value = message
+      loadBooks(true) // 状態を確実に元へ戻す
+    },
+  })
 
 // ---------- 追加/編集/削除モーダル ----------
 const modalOpen = ref(false)
@@ -358,7 +201,7 @@ function openAdd() {
 }
 
 function openEdit(book: Book) {
-  if (justDragged) return // ドラッグ直後のクリックは無視
+  if (wasJustDragged()) return // ドラッグ直後のクリックは無視
   editingBook.value = book
   modalOpen.value = true
 }
@@ -423,7 +266,7 @@ function onBookDeleted() {
       v-else-if="view === 'stats'"
       :stats="stats"
       :failed="statsFailed"
-      @change-year="onStatsYearChange"
+      @change-year="changeStatsYear"
     />
 
     <main v-else-if="view === 'read'">
@@ -448,7 +291,7 @@ function onBookDeleted() {
         v-for="status in BOOK_STATUSES"
         :key="status"
         :status="status"
-        :title="COLUMN_LABELS[status]"
+        :title="STATUS_LABELS[status]"
         :items="columns[status].items"
         :total="columns[status].total"
         :has-more="hasMore(status)"
