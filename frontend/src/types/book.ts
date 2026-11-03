@@ -104,6 +104,7 @@ export interface BookStats {
   finished_in_year: number // 選んだ年の冊数
   finished_by_month: number[] // 選んだ年の 1〜12 月（12 個）
   finished_by_genre: Record<BookGenre, number> // 選んだ年のジャンル別（6 ジャンルすべて）
+  top_authors: { author: string; count: number }[] // 選んだ年によく読んだ著者（多い順に最大 5 人）
 }
 
 // CSV 読み込み（POST /api/books/import）。skipped は自分の本と重なって飛ばす行（CSV の行番号とタイトル）

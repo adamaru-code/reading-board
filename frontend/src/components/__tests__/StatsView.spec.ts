@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import StatsView from '../StatsView.vue'
 import ReadMonthlyChart from '../ReadMonthlyChart.vue'
 import ReadGenreChart from '../ReadGenreChart.vue'
+import ReadAuthorChart from '../ReadAuthorChart.vue'
 import type { BookStats } from '../../types/book'
 
 const stats: BookStats = {
@@ -21,6 +22,10 @@ const stats: BookStats = {
     it_tech: 12,
     other: 7,
   },
+  top_authors: [
+    { author: '夏目漱石', count: 4 },
+    { author: '森鴎外', count: 2 },
+  ],
 }
 const today = new Date(2026, 9, 3) // 2026-10-03
 
@@ -135,5 +140,23 @@ describe('ReadGenreChart（ジャンル別の読了冊数）', () => {
     const wrapper = mount(StatsView, { props: { stats, today } })
     expect(wrapper.findComponent(ReadMonthlyChart).exists()).toBe(true)
     expect(wrapper.findComponent(ReadGenreChart).exists()).toBe(true)
+  })
+
+  it('よく読んだ著者を、多い人の棒を 100% にした長さで並べ、読み上げ用に「名前 N冊」を付ける', () => {
+    const wrapper = mount(StatsView, { props: { stats, today } })
+    const chart = wrapper.findComponent(ReadAuthorChart)
+    expect(chart.find('.chart-title').text()).toBe('2026年 よく読んだ著者')
+    const rows = chart.findAll('.row')
+    expect(rows.map((r) => r.attributes('aria-label'))).toEqual(['夏目漱石 4冊', '森鴎外 2冊'])
+    expect(rows.map((r) => r.find('.bar').attributes('style'))).toEqual([
+      'width: 100%;',
+      'width: 50%;',
+    ])
+  })
+
+  it('著者のある読了本が無ければ「まだありません」', () => {
+    const chart = mount(ReadAuthorChart, { props: { authors: [], year: 2026 } })
+    expect(chart.find('.empty').text()).toBe('まだありません')
+    expect(chart.find('.rows').exists()).toBe(false)
   })
 })

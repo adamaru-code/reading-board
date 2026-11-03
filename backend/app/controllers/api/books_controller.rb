@@ -4,6 +4,8 @@ module Api
 
     # 既定の並び：position 昇順（未設定は後ろ）→ created_at → id（ページ境界を安定させる）
     DEFAULT_ORDER = "position IS NULL, position ASC, created_at ASC, id ASC".freeze
+    # 統計の「よく読んだ著者」に出す人数
+    TOP_AUTHORS = 5
 
     # 各状態に「最初に入った日」（Book#registered_on 等と同じ定義）の SQL
     def self.first_occurred_on_sql(status)
@@ -61,7 +63,8 @@ module Api
     # GET /api/books/stats?year=YYYY
     # 今「読了」の本を数える（統計画面・読了一覧の見出し）。日付は読了日（最初に読了になった日。日本時間）。絞り込みには連動しない
     # - 今年・今月・これまで（finished_this_year / finished_this_month / finished_total）：year に関係なくいつも同じ
-    # - 選んだ年（year。無い・不正なら今年）：その年の冊数・月ごと（1〜12 月の 12 個）・ジャンル別（6 ジャンル、0 冊も含む）
+    # - 選んだ年（year。無い・不正なら今年）：その年の冊数・月ごと（1〜12 月の 12 個）・ジャンル別（6 ジャンル、0 冊も含む）・
+    #   よく読んだ著者（top_authors：上位 TOP_AUTHORS 人。著者が空の本は数えない。#376）
     # - years：選べる年（読了した本がある年＋今年、新しい順）
     def stats
       today = Date.current
@@ -81,7 +84,8 @@ module Api
         finished_in_year: in_year.size,
         finished_by_month: by_month,
         finished_by_genre: Book.genres.keys.index_with(0)
-          .merge(current_user.books.where(id: in_year.keys).group(:genre).count)
+          .merge(current_user.books.where(id: in_year.keys).group(:genre).count),
+        top_authors: top_authors(in_year.keys)
       }
     end
 
@@ -237,6 +241,15 @@ module Api
 
     def dry_run?
       ActiveModel::Type::Boolean.new.cast(params[:dry_run]) == true
+    end
+
+    # 統計：よく読んだ著者。冊数の多い順、同じ冊数なら著者名の順に上位 TOP_AUTHORS 人
+    # （著者の書き方が違えば別の人として数える。著者が空の本は数えない）
+    def top_authors(book_ids)
+      current_user.books.where(id: book_ids).where.not(author: [ nil, "" ]).group(:author).count
+        .sort_by { |author, count| [ -count, author ] }
+        .first(TOP_AUTHORS)
+        .map { |author, count| { author: author, count: count } }
     end
 
     # 統計で表示する年。選べる年（years）に無い値・数字でない値は今年にする

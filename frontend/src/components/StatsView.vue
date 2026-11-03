@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { BookStats } from '../types/book'
 import ReadMonthlyChart from './ReadMonthlyChart.vue'
 import ReadGenreChart from './ReadGenreChart.vue'
+import ReadAuthorChart from './ReadAuthorChart.vue'
 
 // 統計（/stats）：読了冊数（今年・今月・これまで）と、選んだ年の月ごと・ジャンル別の読了冊数のグラフ。
 // 値は親（KanbanBoard.vue）が GET /api/books/stats で取って渡す。年を選ぶと change-year で親に伝え、親が取り直す。
@@ -64,6 +65,7 @@ function onYearChange(event: Event) {
         :current-month="currentMonth"
       />
       <ReadGenreChart :counts="stats.finished_by_genre" :year="stats.year" />
+      <ReadAuthorChart :authors="stats.top_authors" :year="stats.year" />
     </template>
   </main>
 </template>

@@ -520,8 +520,8 @@ module Api
     end
 
     # 読了日（最初に読了になった日）が finished_on の読了本を作る
-    def create_finished_book(finished_on, user: @owner, genre: :other)
-      book = user.books.create!(title: "読了 #{finished_on}", status: :read, genre: genre)
+    def create_finished_book(finished_on, user: @owner, genre: :other, author: nil)
+      book = user.books.create!(title: "読了 #{finished_on}", status: :read, genre: genre, author: author)
       book.status_events.where(status: :read).update_all(occurred_on: finished_on)
       book
     end
@@ -558,6 +558,28 @@ module Api
           { "classic_novel" => 1, "liberal_arts" => 0, "health_body" => 0, "practical" => 0, "other" => 0, "it_tech" => 2 },
           JSON.parse(response.body)["finished_by_genre"]
         )
+      end
+    end
+
+    test "stats は選んだ年のよく読んだ著者を、冊数の多い順（同じなら名前順）に上位 5 人まで返す" do
+      travel_to Date.new(2026, 6, 15) do
+        3.times { |i| create_finished_book(Date.new(2026, 1, i + 1), author: "夏目漱石") }
+        2.times { |i| create_finished_book(Date.new(2026, 2, i + 1), author: "森鴎外") }
+        %w[芥川龍之介 太宰治 宮沢賢治 樋口一葉].each { |name| create_finished_book(Date.new(2026, 3, 1), author: name) }
+        create_finished_book(Date.new(2026, 4, 1))                                  # 著者なし（数えない）
+        create_finished_book(Date.new(2026, 4, 2), author: "")                      # 著者が空（数えない）
+        create_finished_book(Date.new(2025, 12, 31), author: "森鴎外")               # 去年
+        create_finished_book(Date.new(2026, 5, 1), user: users(:other), author: "森鴎外") # 他人の本
+
+        get stats_api_books_url
+        authors = JSON.parse(response.body)["top_authors"]
+        assert_equal [ [ "夏目漱石", 3 ], [ "森鴎外", 2 ] ], authors.first(2).map { |a| [ a["author"], a["count"] ] }
+        # 1 冊ずつの 4 人のうち、名前順の 3 人まで（全部で 5 人）
+        assert_equal 5, authors.size
+        assert_equal %w[芥川龍之介 太宰治 宮沢賢治 樋口一葉].sort.first(3), authors.last(3).map { |a| a["author"] }
+
+        get stats_api_books_url, params: { year: 2025 }
+        assert_equal [ { "author" => "森鴎外", "count" => 1 } ], JSON.parse(response.body)["top_authors"]
       end
     end
 

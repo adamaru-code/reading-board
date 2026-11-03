@@ -44,7 +44,7 @@ export function uniqueTitle(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}`
 }
 
-type BookInput = { title: string; status?: 'want_to_read' | 'reading' | 'read' }
+type BookInput = { title: string; author?: string; status?: 'want_to_read' | 'reading' | 'read' }
 type BookJson = { id: number; title: string }
 
 // API で本を作る（画面の操作を確かめたいテストの、下準備に使う）

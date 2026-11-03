@@ -16,8 +16,8 @@ test.beforeEach(async ({ page }) => {
   read2 = uniqueTitle('E2E-読了2')
   await createBook(page.request, { title: want })
   await createBook(page.request, { title: reading, status: 'reading' })
-  await createBook(page.request, { title: read1, status: 'read' })
-  await createBook(page.request, { title: read2, status: 'read' })
+  await createBook(page.request, { title: read1, author: 'E2E 著者', status: 'read' })
+  await createBook(page.request, { title: read2, author: 'E2E 著者', status: 'read' })
 })
 
 test('キーワードで絞り込むと当てはまる本だけが残り、「✕ クリア」で戻る', async ({ page }) => {
@@ -56,6 +56,9 @@ test('統計に、選んでいる年の読了冊数と月ごとのグラフが�
   await page.goto('/stats')
   await expect(page.getByText(/\d{4}年の読了 2 冊/)).toBeVisible()
   await expect(page.getByRole('heading', { name: /月ごとの読了冊数/ })).toBeVisible()
+  // よく読んだ著者（#376）：同じ著者の 2 冊
+  await expect(page.getByRole('heading', { name: /よく読んだ著者/ })).toBeVisible()
+  await expect(page.getByLabel('E2E 著者 2冊')).toBeVisible()
   // 取れなかったときのお知らせ（role="alert"）は出ない
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
