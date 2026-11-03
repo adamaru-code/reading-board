@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { listAllBooks, updateBook, reorderBooks, getBookStats } from '../api/books'
 import { logout } from '../api/session'
 import { listHiddenTags } from '../api/hiddenTags'
@@ -28,6 +28,7 @@ import BookFormModal from './BookFormModal.vue'
 import AccountModal from './AccountModal.vue'
 import AdminModal from './AdminModal.vue'
 import { useKanbanColumns, READ_LIST_PAGE_SIZE } from '../composables/useKanbanColumns'
+import { keyboardMoveTarget, type MoveDirection } from '../lib/keyboardMove'
 
 // view：board＝3 カラムのボード（/）、read＝読了一覧（/read）。
 // どちらもこの部品が受け持ち、ヘッダ・絞り込み・モーダル・読み込み済みの本を共有する（切り替えても条件が残る）
@@ -274,11 +275,57 @@ async function onDrop(status: BookStatus, index: number) {
 
   const book = findBook(id)
   if (!book) return
+  await moveTo(book, status, index)
+}
 
+// ---------- キーボード（Option ＋ 矢印キー）での並び替え・段の移動 ----------
+// 結果は画面に出さない読み上げ用のお知らせ（aria-live）で伝える。
+// お知らせの場所は最初から置いておく（後から出した aria-live の欄は読まれないことがある）
+const moveMessage = ref('')
+const ANNOUNCE_DELAY_MS = 200
+let announceTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => clearTimeout(announceTimer))
+
+async function onCardMove(book: Book, direction: MoveDirection) {
+  const items = columns[book.status].items
+  const target = keyboardMoveTarget(
+    book.status,
+    items.findIndex((b) => b.id === book.id),
+    items.length,
+    direction,
+  )
+  if ('blocked' in target) {
+    announce(target.blocked)
+    return
+  }
+  const moved = await moveTo(book, target.status, target.index)
+  if (!moved) return
+  // 並び替えでカードの部品が置き直されるとフォーカスが外れるので、同じ本のカードへ戻す（続けて動かせるように）
+  await nextTick()
+  document.querySelector<HTMLElement>(`.card[data-book-id="${book.id}"]`)?.focus()
+  const position =
+    target.status === 'read' ? '' : ` の ${columns[target.status].items.indexOf(book) + 1} 番目`
+  announce(`「${book.title}」を ${COLUMN_LABELS[target.status]}${position}に移しました`)
+}
+
+// 同じ文を続けて伝えても読まれるよう、一度空にしてから入れる。
+// フォーカスをカードへ戻すと VoiceOver はまず「〇〇 を編集」を読むので、少し待ってから入れ、
+// すぐ読む欄（aria-live="assertive"）で割り込ませる（控えめな role="status" だと読まれなかった。#360 の画面確認）
+function announce(message: string) {
+  moveMessage.value = ''
+  clearTimeout(announceTimer)
+  announceTimer = setTimeout(() => {
+    moveMessage.value = message
+  }, ANNOUNCE_DELAY_MS)
+}
+
+// ドラッグ・キーボード共通：本を status の段の index 番目へ移し、サーバーへ保存する。移せたら true
+async function moveTo(book: Book, status: BookStatus, index: number): Promise<boolean> {
+  const id = book.id
   const statusChanged = book.status !== status
   // 読了カラムはキー（読了日など）で並べるため手動並び替えの対象外
   const sortedByKey = status === 'read'
-  if (sortedByKey && !statusChanged) return
+  if (sortedByKey && !statusChanged) return false
 
   // 楽観的更新：カードを移して status と position をローカルに反映（失敗時はサーバーから再取得）。
   // reorder には読み込み済みの分だけ渡す（残りはサーバーが既存順で後ろに詰める）
@@ -292,11 +339,13 @@ async function onDrop(status: BookStatus, index: number) {
       await reorderBooks(targetIds)
     }
   } catch (e) {
-    if (handleAuthError(e)) return
+    if (handleAuthError(e)) return false
     error.value =
       e instanceof ApiError ? e.message : '並び替えに失敗しました。時間をおいて再度お試しください。'
     loadBooks(true) // 状態を確実に元へ戻す
+    return false
   }
+  return true
 }
 
 // ---------- 追加/編集/削除モーダル ----------
@@ -358,6 +407,11 @@ function onBookDeleted() {
       />
     </BoardHeader>
 
+    <!-- キーボードでカードを動かした結果の読み上げ（画面には出さない） -->
+    <p class="visually-hidden" aria-live="assertive" aria-atomic="true">
+      {{ moveMessage }}
+    </p>
+
     <p v-if="loading" class="board-state">読み込み中…</p>
 
     <div v-else-if="error" class="board-state board-error" role="alert">
@@ -407,6 +461,7 @@ function onBookDeleted() {
         @card-dragstart="onDragStart"
         @card-dragend="onDragEnd"
         @drop="onDrop(status, $event)"
+        @card-move="onCardMove"
         @load-more="onLoadMore(status)"
       >
         <template v-if="status === 'read'" #header-actions>

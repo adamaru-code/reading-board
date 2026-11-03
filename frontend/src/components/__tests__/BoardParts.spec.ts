@@ -260,6 +260,24 @@ describe('KanbanColumn', () => {
     expect(wrapper.emitted('open')).toEqual([[items[1]]])
   })
 
+  it('Option ＋ 矢印キーで card-move を伝え、カードの読み上げに操作の案内を添える', async () => {
+    const wrapper = mountColumn()
+    const card = wrapper.findAll('.card')[1]!
+
+    await card.trigger('keydown', { key: 'ArrowDown', altKey: true })
+    await card.trigger('keydown', { key: 'ArrowDown' }) // Option なしは何もしない
+    expect(wrapper.emitted('card-move')).toEqual([[items[1], 'down']])
+
+    expect(describedText(card.element, wrapper.element)).toContain(
+      'Option と矢印キーで移動できます',
+    )
+    // 読了の段は並び替えないので、段の移動だけを案内する
+    const read = mountColumn({ status: 'read' })
+    expect(describedText(read.find('.card').element, read.element)).toContain(
+      'Option と左右の矢印キーで段を移動できます',
+    )
+  })
+
   it('段の題名は見出し（h2）で、段（section）の名前になる', () => {
     const wrapper = mountColumn()
     const heading = wrapper.find('h2')

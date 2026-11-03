@@ -283,7 +283,7 @@ sequenceDiagram
 | 画面/要素 | 主な構成要素 | 使う API | 備考 |
 |---|---|---|---|
 | S1 カンバンボード | 3 カラム（件数付き見出し）、カードリスト、追加ボタン、絞り込み（キーワード/ジャンル/タグ/評価）、読了の並び替え、カラム内 D&D 並び替え | GET /api/books?status=&genre=&q=&tag=&rating=&sort=&dir=&offset=&per_page=、PATCH /api/books/reorder | 絞り込みは AND。カラムごとにページング（20 件＋もっと見る）。読了のキー並び替えはサーバー側、カラム内の手動順は position に保存 |
-| S2 書籍カード | 書影（あれば左に 60×86）、ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作 | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
+| S2 書籍カード | 書影（あれば左に 60×86）、ジャンル/雑誌バッジ、タイトル・著者・★・タグ・日付・所要日数、ドラッグ操作（キーボードは Option ＋ 矢印キー） | PATCH /api/books/:id | ドラッグで status 更新＋状態イベント記録。カラム内ドロップは position 更新 |
 | S3 追加フォーム | ISBN/バーコード登録（書誌＋表紙）、タイトル(必須)・著者・ステータス・ジャンル・形態・評価・メモ・タグ・タグ提案、保存/キャンセル | GET /api/books/lookup、POST /api/books | 成功で該当カラムに追加 |
 | S4 編集フォーム | 表紙欄（ISBN で表紙だけ取得・外す）、全項目入力（種別・タグ含む）、更新/削除/キャンセル | GET /api/books/lookup（表紙欄）、PATCH・DELETE /api/books/:id | 削除は確認の上 |
 | S5 ログイン / 新規登録 / 再設定 | 各フォーム | /api/session、/api/registration、/api/password_reset | §4.3 |
