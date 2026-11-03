@@ -312,23 +312,34 @@ module Api
       assert other.hidden_tags.exists?(name: "共有タグ")
     end
 
-    # 外部 API（openBD）の呼び出しをブロック内だけ固定値に差し替える
+    # 外部 API（openBD）の呼び出しをブロック内だけ固定値に差し替える。問い合わせた回数を返す
+    # （IsbnLookup が取っておいた結果を使うときは呼ばれない。#374）
     def stub_openbd_fetch(result)
-      original = OpenbdClient.method(:fetch)
-      OpenbdClient.define_singleton_method(:fetch) { |*| result }
+      calls = 0
+      original = OpenbdClient.method(:lookup)
+      OpenbdClient.define_singleton_method(:lookup) do |*|
+        calls += 1
+        OpenbdClient::Result.new(result ? :found : :not_found, result)
+      end
       yield
+      calls
     ensure
-      OpenbdClient.define_singleton_method(:fetch, original)
+      OpenbdClient.define_singleton_method(:lookup, original)
     end
 
     # 表紙の取得（Google Books）もブロック内だけ固定値に。本物の Google には問い合わせない
-    # （開発で GOOGLE_BOOKS_API_KEY を設定していても、テストが外に出ないように）
+    # （開発で GOOGLE_BOOKS_API_KEY を設定していても、テストが外に出ないように）。問い合わせた回数を返す
     def stub_google_cover(url)
-      original = GoogleBooksClient.method(:cover_url)
-      GoogleBooksClient.define_singleton_method(:cover_url) { |*, **| url }
+      calls = 0
+      original = GoogleBooksClient.method(:lookup)
+      GoogleBooksClient.define_singleton_method(:lookup) do |*, **|
+        calls += 1
+        GoogleBooksClient::Result.new(url ? :found : :not_found, url)
+      end
       yield
+      calls
     ensure
-      GoogleBooksClient.define_singleton_method(:cover_url, original)
+      GoogleBooksClient.define_singleton_method(:lookup, original)
     end
 
     test "lookup は openBD の結果と形態判定を返す" do
@@ -376,6 +387,24 @@ module Api
       post api_books_url, params: { book: { title: "x", cover_url: "https://evil.example.com/a.jpg" } }
       assert_response :unprocessable_content
       assert_includes JSON.parse(response.body)["errors"], "表紙の画像は不正な値です"
+    end
+
+    test "lookup は同じ ISBN の 2 回目は openBD・Google に問い合わせず、取っておいた結果を返す" do
+      cover = "https://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1"
+      bodies = []
+      openbd_calls = stub_openbd_fetch({ title: "リーダブルコード", author: "Dustin Boswell" }) do
+        google_calls = stub_google_cover(cover) do
+          2.times do
+            get lookup_api_books_url, params: { isbn: "978-4-87311-565-8" }
+            bodies << JSON.parse(response.body)
+          end
+        end
+        assert_equal 1, google_calls
+      end
+      assert_equal 1, openbd_calls
+      assert_equal bodies.first, bodies.last
+      assert_equal cover, bodies.last["cover_url"]
+      assert_equal "リーダブルコード", bodies.last["title"]
     end
 
     test "lookup は不正な ISBN で 422" do

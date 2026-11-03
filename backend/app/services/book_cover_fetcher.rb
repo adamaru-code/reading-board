@@ -1,10 +1,11 @@
 # ISBN があって表紙が無い自分の本に、Google Books の表紙をまとめて付ける（アカウント画面の「表紙」。POST /api/books/fetch_covers）。
 # 1 回の呼び出しで最大 BATCH_SIZE 冊。画面は after_id を進めながら、残りが 0 か止まるまで繰り返す
 # （1 回のリクエストを短くして、待ち時間の上限に当たらないようにするため）。
-# - 見つからなかった本は数えて先へ進む。次に押したときはもう一度探す（列は増やさない）
+# - 見つからなかった本は数えて先へ進む。次に押したときは、7 日たっていればもう一度探す
 # - Google の回数の上限・鍵なし・失敗のときは、残りも同じ理由で失敗するので、そこで止める（止めた本は数えない）
+# - IsbnLookup に取っておいた結果（見つかった 30 日・見つからなかった 7 日）があれば Google に問い合わせない（#374）
 # - Google の 1 分の上限（Queries per minute per user＝100 回。2026-10-15 に管理画面で確認）を超えないよう、
-#   本と本の間を INTERVAL 秒空ける。1 冊で 2 回問い合わせるとき（題名で探す予備。GoogleBooksClient.lookup）は、
+#   Google に問い合わせる本と本の間を INTERVAL 秒空ける（取っておいた結果で済んだ本は空けない）。1 冊で 2 回問い合わせるとき（題名で探す予備。GoogleBooksClient.lookup）は、
 #   その間も GoogleBooksClient::FALLBACK_PAUSE 秒空く（10 冊で最大 20 秒ほど。1 回のリクエストの待ち時間の上限より短い）
 class BookCoverFetcher
   BATCH_SIZE = 10
@@ -30,10 +31,15 @@ class BookCoverFetcher
     not_found = 0
     last_id = after_id.to_i
     stopped = nil
+    asked_google = false
 
-    targets.where("books.id > ?", last_id).limit(BATCH_SIZE).each_with_index do |book, i|
-      sleep(@interval) if i.positive? && @interval.positive?
-      result = GoogleBooksClient.lookup(book.isbn, title: book.title, author: book.author)
+    targets.where("books.id > ?", last_id).limit(BATCH_SIZE).each do |book|
+      result = IsbnLookup.cached_cover(book.isbn)
+      unless result
+        sleep(@interval) if asked_google && @interval.positive?
+        result = IsbnLookup.fetch_cover(book.isbn, title: book.title, author: book.author)
+        asked_google = true
+      end
       case result.status
       when :found
         book.update!(cover_url: result.url)

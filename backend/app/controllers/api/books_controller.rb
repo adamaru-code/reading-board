@@ -130,7 +130,8 @@ module Api
         return render json: { errors: [ I18n.t("api.errors.invalid_isbn") ] }, status: :unprocessable_content
       end
 
-      info = OpenbdClient.fetch(isbn)
+      # 書誌・表紙は IsbnLookup に取っておいた結果があれば使い、無ければ openBD・Google Books に問い合わせる（#374）
+      info = IsbnLookup.bibliography(isbn)
       render json: {
         isbn: isbn,
         found: info.present?,
@@ -138,7 +139,7 @@ module Api
         author: info && info[:author],
         media_type: OpenbdClient.media_type_for(isbn),
         # 表紙は Google Books から（鍵が無い・画像が無いときは nil）。題名・著者は ISBN で見つからないときの予備の探し方に使う
-        cover_url: GoogleBooksClient.cover_url(isbn, title: info && info[:title], author: info && info[:author])
+        cover_url: IsbnLookup.cover(isbn, title: info && info[:title], author: info && info[:author]).url
       }
     end
 

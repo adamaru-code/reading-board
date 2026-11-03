@@ -24,23 +24,31 @@ class OpenbdClient
     isbn.start_with?("491") ? "magazine" : "book"
   end
 
+  # status：:found（info あり）/ :not_found（openBD に無い）/ :error（つながらない・タイムアウトなど）。
+  # 見つからないと失敗を分けるのは、失敗の結果を「見つからない」として取っておかないため（IsbnLookup。#374）
+  Result = Struct.new(:status, :info)
+
   # 該当があれば { title:, author: } を返す。無ければ / 失敗すれば nil
   def self.fetch(isbn)
+    lookup(isbn).info
+  end
+
+  def self.lookup(isbn)
     uri = URI(ENDPOINT)
     uri.query = URI.encode_www_form(isbn: isbn)
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
                                open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
       http.get(uri.request_uri)
     end
-    return nil unless response.is_a?(Net::HTTPSuccess)
+    return Result.new(:error, nil) unless response.is_a?(Net::HTTPSuccess)
 
     record = JSON.parse(response.body)&.first
     summary = record && record["summary"]
-    return nil if summary.blank? || summary["title"].blank?
+    return Result.new(:not_found, nil) if summary.blank? || summary["title"].blank?
 
-    { title: summary["title"], author: summary["author"].presence }
+    Result.new(:found, { title: summary["title"], author: summary["author"].presence })
   rescue StandardError => e
     Rails.logger.warn("openBD lookup failed for #{isbn}: #{e.message}")
-    nil
+    Result.new(:error, nil)
   end
 end

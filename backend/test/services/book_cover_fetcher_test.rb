@@ -25,6 +25,21 @@ class BookCoverFetcherTest < ActiveSupport::TestCase
 
   def isbn(n) = format("97840000000%02d", n)
 
+  test "取っておいた結果（IsbnLookup）がある本は Google に問い合わせない" do
+    cached = @user.books.create!(title: "取ってある", isbn: isbn(1))
+    missing = @user.books.create!(title: "取ってない", isbn: isbn(2))
+    IsbnLookup.create!(isbn: isbn(1), cover_status: "found", cover_url: COVER, cover_checked_at: 1.day.ago)
+    result = nil
+    asked = with_lookup(isbn(2) => :not_found) do
+      result = BookCoverFetcher.new(@user, interval: 0).call
+    end
+    assert_equal [ isbn(2) ], asked
+    assert_equal 1, result.updated
+    assert_equal 1, result.not_found
+    assert_equal COVER, cached.reload.cover_url
+    assert_nil missing.reload.cover_url
+  end
+
   test "ISBN があって表紙が無い本に表紙を付け、見つからない本は数える" do
     hit = @user.books.create!(title: "見つかる", isbn: isbn(1))
     miss = @user.books.create!(title: "見つからない", isbn: isbn(2))

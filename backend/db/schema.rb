@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_03_120000) do
   create_table "book_status_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "book_id", null: false
     t.integer "status", null: false
@@ -67,6 +67,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
     t.index ["code"], name: "index_invitations_on_code", unique: true
     t.index ["inviter_id"], name: "index_invitations_on_inviter_id"
     t.index ["used_by_id"], name: "index_invitations_on_used_by_id"
+  end
+
+  create_table "isbn_lookups", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "isbn", limit: 13, null: false
+    t.string "biblio_status"
+    t.text "title"
+    t.text "author"
+    t.datetime "biblio_checked_at"
+    t.string "cover_status"
+    t.string "cover_url", limit: 500
+    t.datetime "cover_checked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["isbn"], name: "index_isbn_lookups_on_isbn", unique: true
   end
 
   create_table "sessions", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

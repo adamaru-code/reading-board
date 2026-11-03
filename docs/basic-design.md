@@ -166,6 +166,11 @@ erDiagram
         bigint user_id FK "所有者"
         string title
     }
+    isbn_lookups {
+        string isbn "UNIQUE。ユーザーとは結ばない"
+        string biblio_status "openBD の結果"
+        string cover_status "Google Books の結果"
+    }
 ```
 
 - ログインで `sessions` を作成し `token` を署名付き httpOnly Cookie（`session_token`, SameSite=Lax。本番は secure）に保持。フロントは同一オリジン（開発は Vite プロキシ、本番は nginx）なので Cookie が自動送受信される。
