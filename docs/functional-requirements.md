@@ -135,7 +135,7 @@ UC9 招待して登録してもらう:
 | PATCH | `/api/books/:id` | 更新（状態・評価・メモ・種別・タグなど） | 200 / 400 / 404 / 422 |
 | DELETE | `/api/books/:id` | 削除（その本だけに付いていたタグの「隠した候補」も消す） | 204 / 404 |
 | PATCH | `/api/books/reorder` | カラム内の並び順を保存（`{ ids: [...] }` の順に position を振り、同じ状態の残りは既存順で後ろに詰める） | 204 |
-| GET | `/api/books/stats` | 読了冊数。今「読了」の自分の本を数える。`?year=YYYY` で年を選ぶ（無い・不正・読了の無い年なら今年）。返り値は `finished_total`（これまで）/ `finished_this_year` / `finished_this_month`（この 3 つは year に関係なく同じ）/ `years`（選べる年：読了した本がある年＋今年、新しい順）/ `year`（選んだ年）/ `finished_in_year` / `finished_by_month`（選んだ年の 1〜12 月の 12 個）/ `finished_by_genre`（選んだ年のジャンル別。6 ジャンルすべてを enum のキーで）。日付は読了日（最初に読了になった日）で数える（絞り込みには連動しない） | 200 |
+| GET | `/api/books/stats` | 読了冊数。今「読了」の自分の本を数える。`?year=YYYY` で年を選ぶ（無い・不正・読了の無い年なら今年）。返り値は `finished_total`（これまで）/ `finished_this_year` / `finished_this_month`（この 3 つは year に関係なく同じ）/ `years`（選べる年：読了した本がある年＋今年、新しい順）/ `year`（選んだ年）/ `finished_in_year` / `finished_by_month`（選んだ年の 1〜12 月の 12 個）/ `finished_by_genre`（選んだ年のジャンル別。6 ジャンルすべてを enum のキーで）/ `top_authors`（選んだ年によく読んだ著者 `[{ author, count }]`。冊数の多い順、同じなら著者名の文字コード順に上位 5 人。著者が空の本は数えず、書き方が違えば別の人）。日付は読了日（最初に読了になった日）で数える（絞り込みには連動しない） | 200 |
 | GET | `/api/books/export` | 自分の本をすべて CSV で返す（`text/csv`・添付ファイル `reading-board-books-YYYYMMDD.csv`。日付は日本時間の今日。登録順）。列は F21 | 200 / 401 |
 | POST | `/api/books/import` | CSV の本をまとめて登録（F22）。`{ csv: "CSV の文字", dry_run: true\|false }`。dry_run は登録せず `{ to_create, skipped: [{ line, title }] }`、本番は 1 つのトランザクションで登録して `{ created, skipped }` | 200 / 422（間違った行。`errors` に「3 行目：…」） / 401 |
 | GET | `/api/books/missing_covers` | ISBN があって表紙が無い自分の本の冊数 `{ count }`（F19） | 200 / 401 |

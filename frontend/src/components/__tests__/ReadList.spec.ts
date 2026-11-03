@@ -56,6 +56,7 @@ describe('ReadList（読了一覧）', () => {
             it_tech: 0,
             other: 0,
           },
+          top_authors: [],
         },
       },
     })
