@@ -115,6 +115,23 @@ describe('BaseModal', () => {
     wrapper.unmount()
   })
 
+  it('中に autofocus の部品があれば、開いたときにそこへフォーカスを移す（開いたボタンにフォーカスがあっても）', () => {
+    const opener = document.createElement('button')
+    document.body.appendChild(opener)
+    opener.focus()
+
+    const wrapper = mount(BaseModal, {
+      props: { title: 't' },
+      slots: { default: '<button class="before">前</button><input class="title" autofocus />' },
+      attachTo: document.body,
+    })
+    expect(document.activeElement).toBe(wrapper.find('.title').element)
+
+    wrapper.unmount()
+    expect(document.activeElement).toBe(opener)
+    opener.remove()
+  })
+
   it('書籍フォームは Esc では閉じない（入力中の内容を守る）', () => {
     const wrapper = mount(BookFormModal, { props: { book: null } })
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))

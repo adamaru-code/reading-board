@@ -22,12 +22,16 @@ function onKeydown(event: KeyboardEvent) {
   if (dialogEl.value && trapTab(event, dialogEl.value)) event.preventDefault()
 }
 
-// 開いたらフォーカスを枠へ移し、閉じたら開く前の場所（開いたボタンなど）へ戻す
+// 開いたら中の autofocus の部品（タイトル欄など）、無ければ枠へフォーカスを移し、
+// 閉じたら開く前の場所（開いたボタンなど）へ戻す。
+// Chrome は、すでにどこか（クリックしたボタンなど）にフォーカスがあると autofocus を無視するので、ここで移す
 let previouslyFocused: HTMLElement | null = null
 onMounted(() => {
   previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
-  // 中の autofocus（入力欄）が先にフォーカスを取っていれば、そのままにする
-  if (!dialogEl.value?.contains(document.activeElement)) dialogEl.value?.focus()
+  if (!dialogEl.value?.contains(document.activeElement)) {
+    const autofocusEl = dialogEl.value?.querySelector<HTMLElement>('[autofocus]')
+    ;(autofocusEl ?? dialogEl.value)?.focus()
+  }
   window.addEventListener('keydown', onKeydown)
 })
 onBeforeUnmount(() => {
