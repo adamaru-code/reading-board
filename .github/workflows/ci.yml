@@ -113,6 +113,92 @@ jobs:
       - name: Build (type-check + vite build)
         run: npm run build
 
+  # E2E：本物のブラウザ（CI の機械に入っている Chrome）で、本物のアプリをつないで確かめる（frontend/e2e/）。
+  # 手元と同じく MySQL（3306）・Rails（3000、development）・Vite（5173）を起動してから流す。
+  # Rails は毎回新しく起動するので、ログインの回数制限（3 分に 10 回）には当たらない
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: reading_board_development
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      RAILS_ENV: development
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: password
+    steps:
+      - uses: actions/checkout@v7
+
+      # mysql2 gem のネイティブ拡張ビルドに必要
+      - name: Install libmysqlclient
+        run: sudo apt-get update && sudo apt-get install -y libmysqlclient-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.11"
+          bundler-cache: true
+          working-directory: backend
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare database
+        working-directory: backend
+        run: bin/rails db:prepare
+
+      # サーバーは裏で動かしたまま次の手順へ進む（ジョブが終わると止まる）。ログは失敗したときに artifact で見る
+      - name: Start Rails (3000) and Vite (5173)
+        run: |
+          (cd backend && bin/rails server -p 3000 > ../rails.log 2>&1 &)
+          (cd frontend && npm run dev > ../vite.log 2>&1 &)
+
+      # 画面（5173）と、Vite を通した API（未ログインなので 401）が返るまで待つ（最大 2 分）
+      - name: Wait for servers
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:5173/ > /dev/null &&
+               [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/api/session)" = "401" ]; then
+              echo "サーバーが起動しました（${i} 回目）"; exit 0
+            fi
+            sleep 2
+          done
+          echo "サーバーが起動しませんでした"; cat rails.log vite.log; exit 1
+
+      - name: Run E2E tests
+        working-directory: frontend
+        run: npm run test:e2e
+
+      # 失敗したときだけ、画面の写真・操作の記録（trace）・サーバーのログを残す（PR の Checks → Summary から落とせる）
+      - name: Upload results on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results
+          path: |
+            frontend/test-results/
+            rails.log
+            vite.log
+          retention-days: 7
+
   terraform:
     name: Terraform (fmt + validate)
     runs-on: ubuntu-latest
