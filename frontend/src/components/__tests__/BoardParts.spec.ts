@@ -367,6 +367,12 @@ describe('BookCard', () => {
     expect(describedText(plain.find('.card').element, plain.element)).toBe('その他・未分類')
   })
 
+  it('★は塗りを ★、空を ☆ の形で出す（色が分かりにくい人も数えられるように）', () => {
+    const wrapper = mount(BookCard, { props: { book: { ...makeBook(1, 'こころ'), rating: 2 } } })
+    expect(wrapper.find('.card-stars').text()).toBe('★★☆☆☆')
+    expect(wrapper.findAll('.card-stars .off').map((s) => s.text())).toEqual(['☆', '☆', '☆'])
+  })
+
   it('読了までの日数を「N日で読了」、開始日と読了日が同じなら「当日に読了」と出す', () => {
     expect(
       mount(BookCard, { props: { book: readBook(10) } })

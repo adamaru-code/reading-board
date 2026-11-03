@@ -75,7 +75,10 @@ const columnDate = () => {
         role="img"
         :aria-label="`評価 ${book.rating} / 5`"
       >
-        <span v-for="(on, i) in stars()" :key="i" :class="on ? 'on' : 'off'">★</span>
+        <!-- 塗り ★ と空 ☆ を形でも見分ける（色が分かりにくい人のため。#358） -->
+        <span v-for="(on, i) in stars()" :key="i" :class="on ? 'on' : 'off'">{{
+          on ? '★' : '☆'
+        }}</span>
       </div>
       <div v-if="book.tags.length" :id="`${uid}-tags`" class="card-tags">
         <!-- 読み上げ用に「タグ」と、タグの間の「、」を入れる（無いと「名作再読」のようにつながって読まれる） -->

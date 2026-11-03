@@ -219,7 +219,7 @@ async function onCopy() {
 .issued-url {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font: inherit;
   font-size: 12px;
