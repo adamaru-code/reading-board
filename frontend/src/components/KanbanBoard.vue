@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { listAllBooks, updateBook, reorderBooks, getBookStats } from '../api/books'
 import { logout } from '../api/session'
 import { listHiddenTags } from '../api/hiddenTags'
@@ -279,9 +279,12 @@ async function onDrop(status: BookStatus, index: number) {
 }
 
 // ---------- キーボード（Option ＋ 矢印キー）での並び替え・段の移動 ----------
-// 結果は読み上げ用のお知らせ（画面には出さない role="status"）で伝える。
-// お知らせの場所は最初から置いておく（後から出した role="status" は読まれないことがある）
+// 結果は画面に出さない読み上げ用のお知らせ（aria-live）で伝える。
+// お知らせの場所は最初から置いておく（後から出した aria-live の欄は読まれないことがある）
 const moveMessage = ref('')
+const ANNOUNCE_DELAY_MS = 200
+let announceTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => clearTimeout(announceTimer))
 
 async function onCardMove(book: Book, direction: MoveDirection) {
   const items = columns[book.status].items
@@ -305,12 +308,15 @@ async function onCardMove(book: Book, direction: MoveDirection) {
   announce(`「${book.title}」を ${COLUMN_LABELS[target.status]}${position}に移しました`)
 }
 
-// 同じ文を続けて伝えても読まれるよう、一度空にしてから入れる
+// 同じ文を続けて伝えても読まれるよう、一度空にしてから入れる。
+// フォーカスをカードへ戻すと VoiceOver はまず「〇〇 を編集」を読むので、少し待ってから入れ、
+// すぐ読む欄（aria-live="assertive"）で割り込ませる（控えめな role="status" だと読まれなかった。#360 の画面確認）
 function announce(message: string) {
   moveMessage.value = ''
-  nextTick(() => {
+  clearTimeout(announceTimer)
+  announceTimer = setTimeout(() => {
     moveMessage.value = message
-  })
+  }, ANNOUNCE_DELAY_MS)
 }
 
 // ドラッグ・キーボード共通：本を status の段の index 番目へ移し、サーバーへ保存する。移せたら true
@@ -402,7 +408,9 @@ function onBookDeleted() {
     </BoardHeader>
 
     <!-- キーボードでカードを動かした結果の読み上げ（画面には出さない） -->
-    <p class="visually-hidden" role="status">{{ moveMessage }}</p>
+    <p class="visually-hidden" aria-live="assertive" aria-atomic="true">
+      {{ moveMessage }}
+    </p>
 
     <p v-if="loading" class="board-state">読み込み中…</p>
 

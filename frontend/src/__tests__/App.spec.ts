@@ -190,7 +190,11 @@ describe('ボードのカードをキーボード（Option ＋ 矢印キー）�
       await card(id).trigger('keydown', { key, altKey: true })
       await flushPromises()
     }
-    const message = () => wrapper.find('p[role="status"]').text()
+    // お知らせは、フォーカスを戻した 0.2 秒あとに入る（VoiceOver が「〇〇 を編集」を読み始めてから割り込ませる）
+    const message = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      return wrapper.find('p[aria-live="assertive"]').text()
+    }
     return { wrapper, column, titles, card, press, message }
   }
 
@@ -204,7 +208,7 @@ describe('ボードのカードをキーボード（Option ＋ 矢印キー）�
     expect(titles('want_to_read')).toEqual(['B', 'A', 'C'])
     expect(reorder).toHaveBeenCalledWith([2, 1, 3])
     expect(document.activeElement).toBe(card(2).element)
-    expect(message()).toBe('「B」を 読みたい の 1 番目に移しました')
+    expect(await message()).toBe('「B」を 読みたい の 1 番目に移しました')
     wrapper.unmount()
   })
 
@@ -219,7 +223,7 @@ describe('ボードのカードをキーボード（Option ＋ 矢印キー）�
     expect(titles('reading')).toEqual(['B'])
     expect(update).toHaveBeenCalledWith(2, { status: 'reading' })
     expect(reorder).toHaveBeenCalledWith([2])
-    expect(message()).toBe('「B」を 読書中 の 1 番目に移しました')
+    expect(await message()).toBe('「B」を 読書中 の 1 番目に移しました')
     wrapper.unmount()
   })
 
@@ -229,9 +233,9 @@ describe('ボードのカードをキーボード（Option ＋ 矢印キー）�
     const { wrapper, titles, card, press, message } = await mountBoard()
 
     await press(1, 'ArrowLeft')
-    expect(message()).toBe('これより左に段はありません')
+    expect(await message()).toBe('これより左に段はありません')
     await press(1, 'ArrowUp')
-    expect(message()).toBe('いちばん上です')
+    expect(await message()).toBe('いちばん上です')
 
     await card(2).trigger('keydown', { key: 'ArrowUp' })
     await flushPromises()
