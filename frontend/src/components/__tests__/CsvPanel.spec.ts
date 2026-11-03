@@ -32,6 +32,11 @@ describe('CsvPanel（CSV の書き出し・読み込み）', () => {
     const preview = wrapper.find('.import-preview')
     expect(preview.text()).toContain('「books.csv」から 1 冊を新しく足します')
     expect(preview.find('.skipped-list').text()).toBe('3 行目：リーダブルコード')
+    // 読み上げ：前からあるお知らせの欄に短い文が入る（確認の欄はボタンを含むので欄にしない）
+    expect(wrapper.find('[role="status"]').text()).toBe(
+      '1 冊を新しく足します。すでにあるので飛ばす本は 1 冊です。',
+    )
+    expect(preview.attributes('role')).toBeUndefined()
     expect(wrapper.emitted('imported')).toBeUndefined()
   })
 
@@ -46,7 +51,7 @@ describe('CsvPanel（CSV の書き出し・読み込み）', () => {
     await flushPromises()
 
     expect(spy).toHaveBeenLastCalledWith(CSV_TEXT, false)
-    expect(wrapper.find('.done-message').text()).toBe('1 冊を取り込みました。')
+    expect(wrapper.find('[role="status"] .done-message').text()).toBe('1 冊を取り込みました。')
     expect(wrapper.find('.import-preview').exists()).toBe(false)
     expect(wrapper.emitted('imported')).toHaveLength(1)
   })

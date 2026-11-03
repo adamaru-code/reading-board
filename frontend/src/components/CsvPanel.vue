@@ -105,13 +105,22 @@ async function onImport() {
         @change="onFileChange"
       />
 
-      <p v-if="busy" class="csv-text csv-sub" role="status">確認しています…</p>
+      <!-- お知らせの欄（role="status"）は最初から置いておき、中だけを出し入れする（v-if で欄ごと作ると VoiceOver が読まない。#362） -->
+      <div role="status">
+        <p v-if="busy" class="csv-text csv-sub">確認しています…</p>
+        <!-- 読み込み前の確認は中に「取り込む」ボタンがあるので、読み上げ用の短い文を別に置く -->
+        <p v-if="preview && !busy" class="visually-hidden">
+          {{ preview.to_create }} 冊を新しく足します。すでにあるので飛ばす本は
+          {{ preview.skipped.length }} 冊です。
+        </p>
+        <p v-if="created !== null" class="done-message">{{ created }} 冊を取り込みました。</p>
+      </div>
 
       <ul v-if="errors.length" class="form-errors" role="alert">
         <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
       </ul>
 
-      <div v-if="preview" class="import-preview" role="status">
+      <div v-if="preview" class="import-preview">
         <p class="csv-text">
           「{{ fileName }}」から <strong>{{ preview.to_create }} 冊</strong>を新しく足します。
         </p>
@@ -134,10 +143,6 @@ async function onImport() {
           </button>
         </div>
       </div>
-
-      <p v-if="created !== null" class="done-message" role="status">
-        {{ created }} 冊を取り込みました。
-      </p>
     </section>
 
     <div class="modal-actions">

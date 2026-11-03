@@ -82,9 +82,12 @@ onMounted(loadCount)
       日に問い合わせられる回数の上限があり、上限に達したらそこで止めます。
     </p>
 
-    <p v-if="missing !== null" class="covers-count" role="status">
-      ISBN があって表紙が無い本：<strong>{{ missing }} 冊</strong>
-    </p>
+    <!-- お知らせの欄（role="status"）は最初から置いておき、中だけを出し入れする（v-if で欄ごと作ると VoiceOver が読まない。#362） -->
+    <div role="status">
+      <p v-if="missing !== null" class="covers-count">
+        ISBN があって表紙が無い本：<strong>{{ missing }} 冊</strong>
+      </p>
+    </div>
 
     <div class="covers-actions">
       <button type="button" class="btn btn-primary" :disabled="busy || !missing" @click="onFetch">
@@ -96,9 +99,11 @@ onMounted(loadCount)
       <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
     </ul>
 
-    <p v-if="updated !== null && !errors.length" class="done-message" role="status">
-      表紙を付けた本 {{ updated }} 冊・見つからなかった本 {{ notFound }} 冊
-    </p>
+    <div role="status">
+      <p v-if="updated !== null && !errors.length" class="done-message">
+        表紙を付けた本 {{ updated }} 冊・見つからなかった本 {{ notFound }} 冊
+      </p>
+    </div>
     <p v-if="stopMessage" class="stop-message" role="alert">{{ stopMessage }}</p>
 
     <div class="modal-actions">
