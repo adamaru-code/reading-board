@@ -120,7 +120,7 @@ function onYearChange(event: Event) {
 }
 .year-select select {
   padding: 5px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font: inherit;
   color: var(--text);

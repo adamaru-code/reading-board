@@ -86,6 +86,8 @@ describe('ReadList（読了一覧）', () => {
     expect(row.find('.row-author').text()).toBe('夏目 漱石')
     expect(row.find('.genre-badge').text()).toBe('古典・名作小説')
     expect(row.findAll('.row-stars .on')).toHaveLength(4)
+    // 塗り ★ と空 ☆ は形でも見分ける（色が分かりにくい人のため）
+    expect(row.find('.row-stars').text()).toBe('★★★★☆')
     // 「読了日」「で読了」は画面に見せない読み上げ用の文字（visually-hidden）
     expect(row.find('.row-date').text()).toBe('読了日 2026-09-20')
     expect(row.find('.row-days').text()).toBe('10日で読了')

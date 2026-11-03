@@ -8,10 +8,14 @@
   --primary: #0c66e4;
   --danger: #c9372c;
   --star: #f5b301;
+  /* 入力欄・選ぶ欄の枠線。白とのコントラスト 3.23:1（枠で欄の場所が分かるよう、図形の目安 3:1 以上。
+     カード・区切り線などの飾りの線は --border のまま）。#358 */
+  --border-input: #8590a2;
   /* 濃紺グレー：カラム・ジャンルの色と重ならない中立の強調色（雑誌バッジ・絞り込み中の表示）。白とのコントラスト 7.65:1 */
   --slate: #44546f;
   --slate-tint: #eef0f3;
-  --star-empty: #d5d8dd;
+  /* 空の評価（☆）。塗り（★）と形で見分け、色は白とのコントラスト 3.23:1。#358 */
+  --star-empty: #8590a2;
 
   /* カラムごとのアクセント（読みたい＝紫 / 読書中＝ピンク / 読了＝緑）。
      読書中は「今読んでいる」勢いが出る目立つ色。エラーの赤（--danger）・隣の紫と色味が離れたピンクにする */
@@ -65,7 +69,7 @@ h2 {
 .field textarea {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font: inherit;
   box-sizing: border-box;

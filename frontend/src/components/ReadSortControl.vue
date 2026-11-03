@@ -44,7 +44,7 @@ function toggleDir() {
 .sort-control select {
   font-size: 11px;
   padding: 2px 4px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 4px;
   background: var(--surface);
 }

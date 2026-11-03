@@ -122,9 +122,10 @@ function durationText(days: number | null): string {
               role="img"
               :aria-label="book.rating ? `評価 ${book.rating} / 5` : '未評価'"
             >
-              <span v-for="(on, n) in stars(book.rating)" :key="n" :class="on ? 'on' : 'off'"
-                >★</span
-              >
+              <!-- 塗り ★ と空 ☆ を形でも見分ける（BookCard.vue と同じ） -->
+              <span v-for="(on, n) in stars(book.rating)" :key="n" :class="on ? 'on' : 'off'">{{
+                on ? '★' : '☆'
+              }}</span>
               <span v-if="!book.rating" class="no-rating" aria-hidden="true">—</span>
             </span>
             <span :id="detailId(book, 'date')" class="row-date"
@@ -288,7 +289,7 @@ function durationText(days: number | null): string {
 .row-stars .off {
   color: var(--star-empty);
 }
-/* 未評価：評価を付けていないことが分かるよう、薄い灰色の「—」 */
+/* 未評価：評価を付けていないことが分かるよう、空の ☆ と同じ灰色の「—」 */
 .row-stars .no-rating {
   color: var(--star-empty);
 }

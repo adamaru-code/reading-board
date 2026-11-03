@@ -88,7 +88,7 @@ function onKeywordInput() {
 }
 .filter-keyword {
   padding: 7px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font: inherit;
   /* 見出し（小さい灰色の文字）の中に入れても、入力する文字は今までどおりの大きさ・色にする */
@@ -109,7 +109,7 @@ function onKeywordInput() {
 }
 .filter-field select {
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font: inherit;
 }
