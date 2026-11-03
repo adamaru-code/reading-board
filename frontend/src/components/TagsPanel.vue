@@ -107,7 +107,10 @@ async function onConfirmRemove() {
     <ul v-if="errors.length" class="form-errors" role="alert">
       <li v-for="(msg, i) in errors" :key="i">{{ msg }}</li>
     </ul>
-    <p v-if="message" class="done-message" role="status">{{ message }}</p>
+    <!-- お知らせの欄（role="status"）は最初から置いておき、中だけを出し入れする（v-if で欄ごと作ると VoiceOver が読まない。#362） -->
+    <div role="status">
+      <p v-if="message" class="done-message">{{ message }}</p>
+    </div>
 
     <p v-if="loading" class="tags-text tags-sub">読み込み中…</p>
     <p v-else-if="tags.length === 0" class="tags-text tags-sub">まだタグはありません。</p>

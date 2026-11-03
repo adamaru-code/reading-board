@@ -17,6 +17,9 @@ describe('IsbnLookup', () => {
     }
     const spy = vi.spyOn(booksApi, 'lookupBook').mockResolvedValue(result)
     const wrapper = mount(IsbnLookup)
+    // お知らせの欄は照会の前からある（中の文だけを出し入れする。v-if で欄ごと作ると VoiceOver が読まない）
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
+    expect(wrapper.find('[role="status"]').text()).toBe('')
 
     await wrapper.find('#isbn-input').setValue(' 9784480037060 ')
     await wrapper.find('.isbn-row button').trigger('click')
@@ -25,7 +28,7 @@ describe('IsbnLookup', () => {
     expect(spy).toHaveBeenCalledWith('9784480037060')
     expect(wrapper.emitted('start')).toHaveLength(1)
     expect(wrapper.emitted('result')).toEqual([[result]])
-    const banner = wrapper.find('[role="status"]')
+    const banner = wrapper.find('[role="status"] .lookup-result')
     expect(banner.classes()).toContain('lookup-found')
     expect(banner.text()).toContain('書誌情報を取得しました。')
   })
@@ -45,7 +48,7 @@ describe('IsbnLookup', () => {
     await wrapper.find('.isbn-row button').trigger('click')
     await flushPromises()
 
-    const banner = wrapper.find('[role="status"]')
+    const banner = wrapper.find('[role="status"] .lookup-result')
     expect(banner.classes()).toContain('lookup-not-found')
     expect(banner.text()).toContain('該当が見つかりませんでした。')
   })

@@ -28,7 +28,11 @@ describe('AccountModal（パスワード変更）', () => {
       password: 'new-password',
       password_confirmation: 'new-password',
     })
-    expect(wrapper.find('[role="status"]').text()).toContain('パスワードを変更しました')
+    expect(wrapper.find('.done-message').text()).toContain('パスワードを変更しました')
+    // 読み上げ：タブの中に前からあるお知らせの欄に入る（完了の画面は入れ替わりで出るため）
+    expect(wrapper.find('[role="status"]').text()).toBe(
+      'パスワードを変更しました。他の端末ではログアウトされています。',
+    )
   })
 
   it('確認が一致しないと送信せずヒントを出す', async () => {

@@ -138,23 +138,21 @@ onBeforeUnmount(stopScan)
       <video ref="videoEl" class="scan-video" playsinline muted></video>
       <p class="isbn-message">バーコードを枠内に写してください</p>
     </div>
-    <!-- role="status"：読み上げソフトにも結果を伝える -->
-    <p v-if="lookupStatus === 'found'" class="lookup-result lookup-found" role="status">
-      <span aria-hidden="true">✓</span>
-      {{ mode === 'cover' ? '表紙を取得しました。' : '書誌情報を取得しました。' }}
-    </p>
-    <p
-      v-else-if="lookupStatus === 'not_found'"
-      class="lookup-result lookup-not-found"
-      role="status"
-    >
-      <span aria-hidden="true">ℹ</span>
-      {{
-        mode === 'cover'
-          ? 'この ISBN の表紙は見つかりませんでした。'
-          : '該当が見つかりませんでした。タイトルを手入力してください。'
-      }}
-    </p>
+    <!-- お知らせの欄（role="status"）は最初から置いておき、中だけを出し入れする（v-if で欄ごと作ると VoiceOver が読まない。#362） -->
+    <div role="status">
+      <p v-if="lookupStatus === 'found'" class="lookup-result lookup-found">
+        <span aria-hidden="true">✓</span>
+        {{ mode === 'cover' ? '表紙を取得しました。' : '書誌情報を取得しました。' }}
+      </p>
+      <p v-else-if="lookupStatus === 'not_found'" class="lookup-result lookup-not-found">
+        <span aria-hidden="true">ℹ</span>
+        {{
+          mode === 'cover'
+            ? 'この ISBN の表紙は見つかりませんでした。'
+            : '該当が見つかりませんでした。タイトルを手入力してください。'
+        }}
+      </p>
+    </div>
     <p v-if="mode === 'cover' && !lookupStatus" class="isbn-message">
       ISBN で表紙だけを取得します（タイトルなどは変わりません）
     </p>

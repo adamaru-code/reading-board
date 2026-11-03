@@ -123,7 +123,16 @@ async function onCopy() {
           </div>
         </div>
 
-        <div v-if="issued && issued.userId === user.id" class="issued" role="status">
+        <!-- お知らせの欄（role="status"）は最初から置いておき、中だけを出し入れする（v-if で欄ごと作ると VoiceOver が読まない。#362） -->
+        <!-- 発行した欄には入力欄とボタンがあるので、読み上げ用の短い文を別に置く -->
+        <p role="status" class="visually-hidden">
+          {{
+            issued && issued.userId === user.id
+              ? `再設定リンクを発行しました。期限 ${formatDateTime(issued.expiresAt)}`
+              : ''
+          }}
+        </p>
+        <div v-if="issued && issued.userId === user.id" class="issued">
           <input class="issued-url" :value="issued.url" readonly aria-label="再設定リンク" />
           <div class="issued-actions">
             <button type="button" class="btn btn-primary btn-small" @click="onCopy">

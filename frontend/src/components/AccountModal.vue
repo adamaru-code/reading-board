@@ -103,6 +103,14 @@ async function onSubmit() {
   <!-- 幅 460px：パソコンでタブ 5 つが 1 段に収まるように（400px だと文字の形によって 2 段になった。#311） -->
   <BaseModal title="アカウント" :max-width="460" @close="emit('close')">
     <BaseTabs v-model="tab" :tabs="TABS">
+      <!-- お知らせの欄（role="status"）は最初から置いておき、中だけを出し入れする（v-if で欄ごと作ると VoiceOver が読まない。#362） -->
+      <p role="status" class="visually-hidden">
+        {{
+          tab === 'password' && done
+            ? 'パスワードを変更しました。他の端末ではログアウトされています。'
+            : ''
+        }}
+      </p>
       <CsvPanel
         v-if="tab === 'csv'"
         @close="emit('close')"
@@ -160,9 +168,7 @@ async function onSubmit() {
       </form>
 
       <template v-else-if="done">
-        <p class="done-message" role="status">
-          パスワードを変更しました。他の端末ではログアウトされています。
-        </p>
+        <p class="done-message">パスワードを変更しました。他の端末ではログアウトされています。</p>
         <div class="modal-actions">
           <span class="spacer"></span>
           <button type="button" class="btn btn-primary" @click="emit('close')">閉じる</button>
