@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, useId } from 'vue'
+import { ref, watch, useId, computed } from 'vue'
 import type { Book } from '../types/book'
 import { GENRE_LABELS, MEDIA_TYPE_LABELS } from '../types/book'
 
-const props = defineProps<{ book: Book }>()
+// hintId：説明の最後に添える操作の案内（KanbanColumn が「Option と矢印キーで移動できます」を渡す）
+const props = defineProps<{ book: Book; hintId?: string }>()
 
 // 表紙の画像が読み込めなかった（URL が古いなど）ときは、表紙なしのカードとして出す
 const coverBroken = ref(false)
@@ -14,11 +15,13 @@ watch(
   },
 )
 
-// 読み上げ用：カードの名前は「〇〇 を編集」（KanbanColumn が付ける）。ジャンル・著者・評価・タグ・日付は説明として結ぶ
+// 読み上げ用：カードの名前は「〇〇 を編集」（KanbanColumn が付ける）。ジャンル・著者・評価・タグ・日付・操作の案内は説明として結ぶ
 const uid = useId()
-const detailsIds = ['badges', 'author', 'stars', 'tags', 'meta']
-  .map((part) => `${uid}-${part}`)
-  .join(' ')
+const detailsIds = computed(() =>
+  [...['badges', 'author', 'stars', 'tags', 'meta'].map((part) => `${uid}-${part}`), props.hintId]
+    .filter(Boolean)
+    .join(' '),
+)
 
 // 評価（1〜5）を ★ の on/off 配列に変換。未評価は表示しない。
 const stars = () => {

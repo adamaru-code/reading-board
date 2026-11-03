@@ -131,3 +131,113 @@ describe('App（画面の切り替え）', () => {
     expect(emptyTexts()).toEqual(Array(3).fill('まだありません'))
   })
 })
+
+describe('ボードのカードをキーボード（Option ＋ 矢印キー）で動かす', () => {
+  const makeBook = (id: number, title: string, status: string) => ({
+    id,
+    title,
+    author: null,
+    status,
+    genre: 'other',
+    media_type: 'book',
+    rating: null,
+    memo: null,
+    position: id,
+    isbn: null,
+    cover_url: null,
+    tags: [],
+    registered_on: null,
+    started_on: null,
+    finished_on: null,
+    duration_days: null,
+    created_at: '2026-09-01T00:00:00Z',
+    updated_at: '2026-09-01T00:00:00Z',
+  })
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    resetAuthForTest()
+    vi.spyOn(sessionApi, 'fetchCurrentUser').mockResolvedValue(owner)
+    vi.spyOn(hiddenTagsApi, 'listHiddenTags').mockResolvedValue([])
+    vi.spyOn(booksApi, 'listAllBooks').mockResolvedValue([])
+    // 読みたい：A・B・C の順。ほかの段は空
+    const want = [
+      makeBook(1, 'A', 'want_to_read'),
+      makeBook(2, 'B', 'want_to_read'),
+      makeBook(3, 'C', 'want_to_read'),
+    ]
+    vi.spyOn(booksApi, 'listBooks').mockImplementation(async (params) => {
+      const items = params?.status === 'want_to_read' ? want : []
+      return {
+        items,
+        pagination: { page: 1, per_page: 20, total: items.length, total_pages: 1 },
+      } as never
+    })
+  })
+
+  async function mountBoard() {
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/')
+    const wrapper = mount(App, { global: { plugins: [router] }, attachTo: document.body })
+    await flushPromises()
+    const column = (status: string) => wrapper.find(`section[data-status="${status}"]`)
+    const titles = (status: string) =>
+      column(status)
+        .findAll('.card-title')
+        .map((t) => t.text())
+    const card = (id: number) => wrapper.find(`.card[data-book-id="${id}"]`)
+    const press = async (id: number, key: string) => {
+      await card(id).trigger('keydown', { key, altKey: true })
+      await flushPromises()
+    }
+    const message = () => wrapper.find('p[role="status"]').text()
+    return { wrapper, column, titles, card, press, message }
+  }
+
+  it('Option ＋ ▲ で段の中を 1 つ上へ移し、並び順を保存して、フォーカスをそのカードに戻す', async () => {
+    const reorder = vi.spyOn(booksApi, 'reorderBooks').mockResolvedValue()
+    const { wrapper, titles, card, press, message } = await mountBoard()
+
+    ;(card(2).element as HTMLElement).focus()
+    await press(2, 'ArrowUp')
+
+    expect(titles('want_to_read')).toEqual(['B', 'A', 'C'])
+    expect(reorder).toHaveBeenCalledWith([2, 1, 3])
+    expect(document.activeElement).toBe(card(2).element)
+    expect(message()).toBe('「B」を 読みたい の 1 番目に移しました')
+    wrapper.unmount()
+  })
+
+  it('Option ＋ ▶ で右の段の一番上へ移し、ステータスを保存する', async () => {
+    const update = vi.spyOn(booksApi, 'updateBook').mockResolvedValue({} as never)
+    const reorder = vi.spyOn(booksApi, 'reorderBooks').mockResolvedValue()
+    const { wrapper, titles, press, message } = await mountBoard()
+
+    await press(2, 'ArrowRight')
+
+    expect(titles('want_to_read')).toEqual(['A', 'C'])
+    expect(titles('reading')).toEqual(['B'])
+    expect(update).toHaveBeenCalledWith(2, { status: 'reading' })
+    expect(reorder).toHaveBeenCalledWith([2])
+    expect(message()).toBe('「B」を 読書中 の 1 番目に移しました')
+    wrapper.unmount()
+  })
+
+  it('端では動かさず、理由を伝える。Option なしの矢印キーでは何もしない', async () => {
+    const reorder = vi.spyOn(booksApi, 'reorderBooks').mockResolvedValue()
+    const update = vi.spyOn(booksApi, 'updateBook').mockResolvedValue({} as never)
+    const { wrapper, titles, card, press, message } = await mountBoard()
+
+    await press(1, 'ArrowLeft')
+    expect(message()).toBe('これより左に段はありません')
+    await press(1, 'ArrowUp')
+    expect(message()).toBe('いちばん上です')
+
+    await card(2).trigger('keydown', { key: 'ArrowUp' })
+    await flushPromises()
+    expect(titles('want_to_read')).toEqual(['A', 'B', 'C'])
+    expect(reorder).not.toHaveBeenCalled()
+    expect(update).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+})

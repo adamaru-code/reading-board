@@ -3,6 +3,7 @@ import { ref, useId, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import type { Book, BookStatus } from '../types/book'
 import BookCard from './BookCard.vue'
+import { moveDirection, type MoveDirection } from '../lib/keyboardMove'
 
 // ボードの 1 カラム（読みたい / 読書中 / 読了）：見出し・件数・カード一覧・「もっと見る」・ドロップ先。
 // 見出しの右（読了カラムの並び替えなど）は header-actions スロットに親が入れる。titleTo を渡すと見出し（名前と件数）がその画面へのリンクになる
@@ -26,12 +27,22 @@ const emit = defineEmits<{
   'card-dragstart': [event: DragEvent, book: Book]
   'card-dragend': []
   drop: [index: number] // このカラムの何番目に落とされたか（移動中のカード自身は数えない）
+  'card-move': [book: Book, direction: MoveDirection] // Option ＋ 矢印キー（キーボードでの並び替え・段の移動）
   'load-more': []
 }>()
 // 見出しのリンクの吹き出しと、リンクを結ぶ id（読み上げで説明として読まれる）
 const tooltipId = useId()
 // 段（section）の名前を見出しから取る（読み上げで「読みたい、領域」のように伝わる）
 const headingId = useId()
+// カードの読み上げに添える操作の案内（画面には出さない。hidden でも aria-describedby からは読まれる）
+const moveHintId = useId()
+
+function onCardKeydown(event: KeyboardEvent, book: Book) {
+  const direction = moveDirection(event)
+  if (!direction) return
+  event.preventDefault()
+  emit('card-move', book, direction)
+}
 
 const dragOver = ref(false)
 const sectionEl = ref<HTMLElement | null>(null)
@@ -107,13 +118,21 @@ function onDrop(event: DragEvent) {
         role="button"
         tabindex="0"
         :aria-label="`${book.title} を編集`"
+        :hint-id="moveHintId"
+        :data-book-id="book.id"
         :class="{ dragging: draggingId === book.id }"
         @dragstart="emit('card-dragstart', $event, book)"
         @dragend="emit('card-dragend')"
         @click="emit('open', book)"
         @keydown.enter="emit('open', book)"
         @keydown.space.prevent="emit('open', book)"
+        @keydown="onCardKeydown($event, book)"
       />
+      <span :id="moveHintId" hidden>{{
+        status === 'read'
+          ? 'Option と左右の矢印キーで段を移動できます'
+          : 'Option と矢印キーで移動できます'
+      }}</span>
       <p v-if="items.length === 0" class="column-empty">
         {{ filtered ? '当てはまる本はありません' : 'まだありません' }}
       </p>
