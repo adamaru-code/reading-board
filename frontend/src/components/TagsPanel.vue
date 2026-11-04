@@ -239,49 +239,11 @@ async function onConfirmRemove() {
 }
 .form-errors {
   margin: 0 0 10px;
-  padding: 10px 12px 10px 28px;
-  background: #ffeceb;
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  color: var(--danger);
-  font-size: 13px;
 }
 .done-message {
   margin: 0 0 10px;
   font-size: 13px;
   font-weight: 600;
   color: var(--col-read-strong);
-}
-.btn {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  cursor: pointer;
-}
-.btn-small {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-ghost {
-  background: var(--surface);
-  border-color: var(--border);
-}
-.modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.spacer {
-  flex: 1;
 }
 </style>

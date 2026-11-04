@@ -259,16 +259,6 @@ async function onConfirmDelete() {
 </template>
 
 <style scoped>
-.form-errors {
-  margin: 0 0 16px;
-  padding: 10px 12px 10px 28px;
-  background: #ffeceb;
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  color: var(--danger);
-  font-size: 13px;
-}
-
 /* 2 項目を横に並べる行（ジャンル｜ステータス、形態｜評価） */
 .field-row {
   display: grid;
@@ -280,43 +270,10 @@ async function onConfirmDelete() {
   font-size: 11px;
   margin-left: 6px;
 }
-.modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.spacer {
-  flex: 1;
-}
-.btn {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-ghost {
-  background: var(--surface);
-  border-color: var(--border);
-}
 /* キャンセル：確認ダイアログ（ConfirmDialog.vue）の「キャンセル」と同じ見た目 */
 .btn-cancel {
   background: var(--bg);
   border-radius: 8px;
   padding: 8px 18px;
-}
-.btn-danger {
-  background: var(--surface);
-  border-color: var(--danger);
-  color: var(--danger);
 }
 </style>

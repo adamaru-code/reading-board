@@ -35,9 +35,7 @@ const tab = ref<(typeof TABS)[number]['key']>('invitations')
   display: flex;
   align-items: center;
   margin-top: 20px;
-}
-.spacer {
-  flex: 1;
+  gap: normal; /* 全体の .modal-actions のすき間を付けない（今までどおり） */
 }
 .btn-close {
   border: 1px solid var(--border);

@@ -150,18 +150,16 @@ function onKeydown(event: KeyboardEvent) {
   font: inherit;
   cursor: pointer;
 }
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
 .btn-ghost {
   background: var(--bg);
+  border-color: transparent; /* 全体の .btn-ghost の灰色の枠線を付けない */
 }
 /* 削除ボタン：柔らかい赤の背景＋黒系の文字（文字とのコントラスト比は約 6:1） */
 .btn-danger {
   background: #f28b82;
   color: var(--text);
   font-weight: 600;
+  border-color: transparent; /* 全体の .btn-danger の赤い枠線を付けない */
 }
 .btn-danger:hover:not(:disabled) {
   background: #ec7369;

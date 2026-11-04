@@ -131,12 +131,6 @@ onMounted(loadCount)
 }
 .form-errors {
   margin: 10px 0 0;
-  padding: 10px 12px 10px 28px;
-  background: #ffeceb;
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  color: var(--danger);
-  font-size: 13px;
 }
 .done-message {
   margin: 10px 0 0;
@@ -150,33 +144,5 @@ onMounted(loadCount)
   border-radius: 6px;
   background: var(--slate-tint);
   font-size: 13px;
-}
-.btn {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-ghost {
-  background: var(--surface);
-  border-color: var(--border);
-}
-.modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.spacer {
-  flex: 1;
 }
 </style>
