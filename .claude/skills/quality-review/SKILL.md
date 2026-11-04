@@ -100,6 +100,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
     - **直し方**：`bundle update brakeman --conservative`（ほかの gem は変えない。`Gemfile.lock` の 1 行だけ）を**別の Issue・PR で先にマージ**し、作業中のブランチに `git merge main` で取り込んで CI をやり直す（作業の PR に関係ない変更を混ぜない。#232）
   - 脆弱性の情報は日々更新される。CI で毎回実行し、見つかったら小さな PR で直す
     - **関係ない PR の CI が、新しく公開された脆弱性で落ちる**ことがある（2026-10-29、画面だけの PR #298 で bundler-audit が crass・net-ssh で失敗）。見分け方：`gh run view <run番号> --log-failed` に `Name:` `Version:` `Solution: update to …` が出る。直し方は Brakeman と同じ：その gem だけ `bundle update <gem> --conservative` を**別の Issue・PR**（#300）で先にマージ → 作業中のブランチに `git merge origin/main` → CI をやり直す。手元の Rails は起動し直すまで古い版のまま動く
+    - **Rails 本体の弱点のときは**、Dependabot の PR もお知らせも来ないことがある（2026-11-05、Rails 8.1.4 の actionpack など 20 件以上・危険度「高い」を含む。GitHub のお知らせは 0 件のままだった）。Rails 本体は CLAUDE.md の決まりで**変更点を説明して相談**してから、`cd backend && bundle update rails --patch --conservative`（Rails の部品だけ。`Gemfile.lock` の Rails の行以外が変わっていないか `git diff` で見る）→ `bin/bundler-audit check --update` で 0 件。マージしたら手元で `bundle install` と Rails の起動し直し（動いている Rails は古い版のまま。PR #391）
+    - **弱点のために部品を上げたら、直ったことだけでなく次も伝える**：残りの弱点（bundler-audit・`gh api repos/adamaru-code/reading-board/dependabot/alerts -q '[.[] | select(.state=="open")] | length'`）・ほかに変わった部品（`git diff Gemfile.lock`）・新しい版はあるが弱点ではない部品（`bundle outdated --only-explicit --strict`）。伝えなかったら「直し以外はどうなりましたか」と聞かれ、調べたら別のお知らせ（minimatch #21）が増えていた（2026-11-05）
 - [ ] テストが通る（`bin/rails test` または RSpec）
 - [ ] Rails の宛先名の確認（`ActionDispatch::HostAuthorization`・`config.hosts`）をテストするときは、偽のリクエストに **`HTTP_HOST` を付ける**（`Rack::MockRequest.env_for(url, "HTTP_HOST" => …)`。付けないと、許可した名前でも 403 になる。本物のリクエストには必ず付いている。#161）
 - [ ] `define_singleton_method` で `Net::HTTP.start` などを差し替えるとき、**差し替えた処理の中の self は差し替え先（`Net::HTTP`）になり、テストの補助メソッドを呼べない**（NoMethodError になり、失敗が nil に隠れる）。応答は**先に作ってローカル変数で渡す**（`backend/test/services/google_books_client_test.rb`。2026-09-30）
@@ -157,7 +159,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 
 - [ ] スタイルの当て方が無秩序に混在していない（scoped CSS / ユーティリティの方針が一貫）
 - [ ] 命名（コンポーネント PascalCase / 関数・変数 camelCase / 型 PascalCase）が一貫
-- [ ] 同じ値・同じ見た目を複数の部品に書いていない（定数は `src/lib/`（例：`PASSWORD_MIN_LENGTH`）、繰り返す見た目は共通部品へ）。モーダルの CSS の重複は既知の課題（#159）
+- [ ] 同じ値・同じ見た目を複数の部品に書いていない（定数は `src/lib/`（例：`PASSWORD_MIN_LENGTH`）、繰り返す見た目は共通部品へ）。モーダルのボタン・エラー表示（`.btn`・`.btn-primary`・`.btn-ghost`・`.btn-danger`・`.btn-small`・`.modal-actions`・`.spacer`・`.form-errors`）は `style.css` にある。部品に同じ CSS を書き足さない（2026-11-05、PR #393）
+- [ ] **CSS を全体（`style.css`）にまとめるときは、値の違う部品にも効く**ことに気をつける。部品の scoped CSS が書いていない値（例：確認ダイアログの `.btn-ghost` は背景だけ → 全体の灰色の枠線が付く）が新しく効くので、部品の側で打ち消す（`border-color: transparent` など）。確かめ方：まとめる**前と後**に本物の Chrome ですべての画面を開き、ボタンなどの `getComputedStyle` の値（色・枠線・角丸・余白など）を記録して比べ、違い 0 にする（PR #393 は 15 場面・169 要素・22 項目。scratchpad に記録のスクリプトを作った）
 - [ ] 見出しと行など、**文字の大きさが違う要素どうしで列をそろえる**ときは、列の幅を `em`（その要素の文字の大きさが基準）ではなく `rem` や `px` の**共通の値**（CSS 変数など）にし、両方で同じものを使う。`em` だと文字の小さい見出しの列が狭くなり、見出しが値からずれる（例：`ReadList.vue` の `--read-columns`。PR #211 で発生）。この種のずれは jsdom のテストでは見つからないので、画面で確認する（ui-check-steps）
 - [ ] **一覧の高さを低く切らない**（`max-height` で中だけスクロールさせる場合）。Mac はスクロールバーがふだん隠れていて、続きがあると気づけない。画面の高さに合わせて伸ばし（`60vh` など）、切れるときは次の行が半分見えるようにする（タグの管理で 320px にして「確認用A が無い」と言われた。2026-10-04、PR #270）
 - [ ] **スマホの幅（375px・390px）とタブレット（768px）でも撮って確かめる**（要件 3.5）。横スクロールが 0 でも、ヘッダが画面の半分を占める・文字が途中で折れる・ボタンがはみ出す、は数では分からない（2026-10-29 に初めて確かめて 5 つ見つかった。撮り方は [ui-check-steps](../ui-check-steps/SKILL.md) §4）
@@ -165,6 +168,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **並びを組み替えたら（スマホ用に部品を分けるなど）、パソコンの見た目が変わっていないかを数で比べる**：直す前（`git stash push frontend`。読み込み直しに数秒待つ）と後で、部品の左端・上端を `getBoundingClientRect()` で出して比べる。画像のファイルの比較（`cmp`）は撮るたびに違うので使わない。`display: contents` で箱を外したら、間隔（`gap`）が変わりやすい（PR #298 で 16px → 24px になり、`order` と `margin-left: -8px` で戻した）
 - [ ] **日本語の折り返しは `word-break: auto-phrase`（`style.css` の body。Chrome 119+）で言葉のまとまりごとにしているが、Chrome の区切り（機械学習）は間違えることがある**（幅 420px で「間／違った」「1／行」と折れた）。説明文を足したら、使う幅（420・375px など）で撮って確かめ、変なところで折れたら CSS ではなく**言い回しを変える**（「誤りのある行」。2026-11-02、PR #314）
 - [ ] 1 部品が大きくなりすぎていない（目安 300 行）。大きくなったら、役割ごとに composable（`src/composables/`）へ分ける。分けたあとは E2E で「壊していない」を確かめる（`KanbanBoard.vue` を 534 → 377 行に。useBoardFilters・useBookStats・useCardMove。2026-11-03、PR #371）
+  - **300 行は目安で、決まりではない**。部品を分ける・まとめるなどの整理（使う人から見た変化が無い作業）は、始める前に**何のためか（読みやすさ・壊しにくさ・同じものを何度も書かない）と、かかる時間・効き目の大きさ**を説明してから進める。説明しないまま「次は分ける」と進め、「やる理由はなんですか」と聞かれた。説明したら、効き目の小さいボード・読了一覧は分けないことになった（2026-11-05）
 - [ ] **同じクラスの要素を足したら、今ある CSS の選び方が新しい要素にも効かないかを見る**。月ごとのグラフに前の年の棒（`.bar.previous`）を足したら、今月を濃い緑にする `.month.current .bar` が前の年の棒にも効いた → `.bar.now` に限る。jsdom のテストでは色は分からないので、本物の画面で撮るか `getComputedStyle(…).backgroundColor` を出して確かめる（2026-11-03、PR #379）
 - [ ] **グラフに棒・線を足したら、本物の画面で撮って「数字がどれのものか」見分けられるかを見る**。2 本並べた棒の上の数字（選んだ年）が、背の高い灰色の棒（前の年）の数字に見えた → 数字を緑の棒の真上へ `translateX` でずらした（2026-11-03、PR #379）
 
@@ -182,6 +186,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
   - E2E 専用のアカウント `e2e@example.com`（管理者）は global-setup で作り直し、global-teardown で、登録で作る `e2e-new@example.com` とともに本ごと消す。パスワード変更のテストは、使い回しているログインのまま変えて API で元に戻す（変更はほかの端末のログインだけを消すので、ほかのテストに影響しない。#394）。ログインは auth.setup で 1 回だけ（ログイン状態を使い回す）。**1 回流すとログインを 3 回使うので、続けて流すのは 3 分に 3 回まで**（当たったら「ログインの回数制限に当たりました」で止まる。3 分待つか Rails を起動し直す。CI は毎回新しい Rails なので当たらない）。招待からの新規登録は 1 時間に 10 回までなので、続けて流すのは 1 時間に 10 回まで
   - **CI の E2E が落ちたら**、PR の Checks →「Summary」の Artifacts にある `e2e-results`（画面の写真・操作の記録 trace・rails.log・vite.log）を落として見る。手元の失敗は `frontend/test-results/`（`npx playwright show-trace <trace.zip>`）
   - **指し方は、開いている画面（`page.getByRole('dialog')`）の中に絞り、ボタンは `exact: true`**。ページ全体で `getByLabel('タイトル')` と探すとボードの上のキーワード欄（「タイトル・著者・メモで絞り込み」）にも、`getByRole('button', { name: '追加' })` はタグ候補のボタン（「〇〇をタグに追加」）にも当たる（strict mode violation。2026-11-03、PR #367）
+  - **ボタンを押したあとは、処理が終わった印（お知らせの文など）を待ってから確かめる**。押した直後は処理中の表示で、たとえばタグの名前を変える欄の「『b』と 1 つにまとめます」にも b が入っていて、「b の行」が 2 つに当たってすぐ落ちた。また 1 つの画面に `role="status"` の欄が複数あることがある（アカウントの画面はパスワード用とタグ用）ので、`.done-message` など中身で絞る（2026-11-05、PR #395）
   - **こちらで流すときは `| tail` でまとめず、ファイルに書き出す**（`npx playwright test --reporter=list > <scratchpad>/e2e.log 2>&1`）。`| tail` は終わるまで何も出ないので、止まっているのか動いているのか分からない（最初の 1 回は 5 分出ず止めた）。Mac には `timeout` コマンドが無い（exit 127）。長く待つときは Bash の `run_in_background` や Monitor を使う（2026-11-03）
   - E2E の型チェックは `tsconfig.e2e.json`（`moduleResolution: "bundler"`。`nodenext` だと `import './support'` に拡張子を求められる）。vitest は `src/**/__tests__/*.spec.ts` だけを読むので、`e2e/*.spec.ts` と混ざらない
 - [ ] テンプレートのイベントで、引数を取る関数を `@click="fn"` と書いていない（イベントオブジェクトが第 1 引数に入る。`@click="fn()"` と書く。vue-tsc が検出する）
