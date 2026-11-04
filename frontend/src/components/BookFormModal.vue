@@ -22,6 +22,7 @@ import type {
 import ConfirmDialog from './ConfirmDialog.vue'
 import BaseModal from './BaseModal.vue'
 import IsbnLookup from './IsbnLookup.vue'
+import BookCoverField from './BookCoverField.vue'
 import TagInput from './TagInput.vue'
 
 // book が渡されれば編集モード、null なら新規追加モード
@@ -55,33 +56,19 @@ const form = reactive({
 const tags = ref<string[]>([...(props.book?.tags ?? [])])
 const tagInputRef = ref<InstanceType<typeof TagInput> | null>(null)
 
-// 書影：ISBN と表紙画像の URL（Google Books）
+// 書影：ISBN と表紙画像の URL（Google Books）。表紙の欄の表示・表紙だけの取得は BookCoverField.vue
 const isbn = ref(props.book?.isbn ?? '')
 const coverUrl = ref<string | null>(props.book?.cover_url ?? null)
-// 表紙の画像が読み込めなかった（URL が古いなど）ときは表紙なしとして表示する
-const coverBroken = ref(false)
-
-function setCover(url: string | null) {
-  coverUrl.value = url
-  coverBroken.value = false
-}
 
 // 追加時の ISBN 照会の結果（照会・カメラ読取は IsbnLookup.vue）。取れた項目だけ反映し、形態・ISBN・表紙は常に反映
 function onLookupResult(result: BookLookupResult) {
   form.media_type = result.media_type
   isbn.value = result.isbn
-  setCover(result.cover_url)
+  coverUrl.value = result.cover_url
   if (result.found) {
     if (result.title) form.title = result.title
     if (result.author) form.author = result.author
   }
-}
-
-// 編集時の「表紙」欄：表紙と ISBN だけを変える（タイトルなどは変えない）。表紙が見つからなければ今の表紙のまま
-function onCoverResult(result: BookLookupResult) {
-  if (!result.cover_url) return
-  isbn.value = result.isbn
-  setCover(result.cover_url)
 }
 
 const errors = ref<string[]>([])
@@ -167,33 +154,14 @@ async function onConfirmDelete() {
       />
 
       <!-- 表紙：編集時は ISBN から表紙だけ取得できる。追加時は照会で表紙が取れたときだけ表示 -->
-      <div v-if="isEdit || coverUrl" class="field">
-        <span class="field-label">表紙</span>
-        <div class="cover-field">
-          <img
-            v-if="coverUrl && !coverBroken"
-            :src="coverUrl"
-            alt="表紙"
-            class="cover-preview"
-            referrerpolicy="no-referrer"
-            @error="coverBroken = true"
-          />
-          <div v-else class="cover-preview cover-empty">表紙なし</div>
-          <div class="cover-actions">
-            <IsbnLookup
-              v-if="isEdit"
-              mode="cover"
-              :initial-isbn="isbn"
-              @start="errors = []"
-              @result="onCoverResult"
-              @error="errors = $event"
-            />
-            <button v-if="coverUrl" type="button" class="cover-remove" @click="setCover(null)">
-              表紙を外す
-            </button>
-          </div>
-        </div>
-      </div>
+      <BookCoverField
+        v-if="isEdit || coverUrl"
+        v-model:isbn="isbn"
+        v-model:cover-url="coverUrl"
+        :lookup="isEdit"
+        @start="errors = []"
+        @error="errors = $event"
+      />
 
       <label class="field">
         <span class="field-label">タイトル<span class="required">必須</span></span>
@@ -306,48 +274,6 @@ async function onConfirmDelete() {
   display: grid;
   grid-template-columns: 1fr 1fr; /* 半分ずつの幅 */
   gap: 12px;
-}
-/* 表紙欄：左に表紙（カードと同じ 60×86）、右に ISBN での取得と「表紙を外す」 */
-.cover-field {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 10px;
-  background: var(--bg);
-  border-radius: 8px;
-}
-.cover-preview {
-  width: 60px;
-  height: 86px;
-  flex: none;
-  object-fit: cover;
-  border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.35);
-}
-.cover-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: none;
-  border: 1px dashed var(--border);
-  background: var(--surface);
-  color: var(--text-sub);
-  font-size: 11px;
-}
-.cover-actions {
-  flex: 1;
-  min-width: 0;
-}
-.cover-remove {
-  margin-top: 8px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text-sub);
-  font: inherit;
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
 }
 .required {
   color: var(--danger);
