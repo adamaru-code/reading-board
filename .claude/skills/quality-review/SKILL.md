@@ -178,8 +178,8 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **テンプレートの先頭にコメントがある部品**（`BookCard.vue` など）は、テストの `wrapper.element` が外側の入れ物になる。`wrapper.find('.card').element` のように中の要素を取る（2026-11-03、PR #353）
 - [ ] 画面に見せない文字（`visually-hidden`）も `.text()` に入る。読み上げ用の言葉を足したら、文字を比べているテストの期待値も直す（2026-11-03、PR #353）
 - [ ] **E2E テスト（Playwright、`frontend/e2e/`）**：本物の Chrome で、本物のアプリ（Vite 5173 → Rails 3000 → MySQL）を操作して確かめる。手元はサーバーを起動して `cd frontend && npm run test:e2e`、CI はジョブ「E2E (Playwright)」で PR ごとに流れる（2026-11-03、#367・#369）
-  - **画面の流れ（ログイン・本の追加 / 編集 / 削除・カードの移動・絞り込み・読了一覧・統計・CSV）を変えたら、E2E を流す**。新しい画面・流れを作ったら E2E にも足す（下準備の本は `support.ts` の `createBook` で API から作る）
-  - E2E 専用のアカウント `e2e@example.com` は global-setup で作り直し、global-teardown で本ごと消す。ログインは auth.setup で 1 回だけ（ログイン状態を使い回す）。**1 回流すとログインを 3 回使うので、続けて流すのは 3 分に 3 回まで**（当たったら「ログインの回数制限に当たりました」で止まる。3 分待つか Rails を起動し直す。CI は毎回新しい Rails なので当たらない）
+  - **画面の流れ（ログイン・本の追加 / 編集 / 削除・カードの移動・絞り込み・読了一覧・統計・CSV・パスワード変更・タグの管理・招待と登録・パスワード再設定）を変えたら、E2E を流す**。新しい画面・流れを作ったら E2E にも足す（下準備の本は `support.ts` の `createBook` で API から作る）
+  - E2E 専用のアカウント `e2e@example.com`（管理者）は global-setup で作り直し、global-teardown で、登録で作る `e2e-new@example.com` とともに本ごと消す。パスワード変更のテストは、使い回しているログインのまま変えて API で元に戻す（変更はほかの端末のログインだけを消すので、ほかのテストに影響しない。#394）。ログインは auth.setup で 1 回だけ（ログイン状態を使い回す）。**1 回流すとログインを 3 回使うので、続けて流すのは 3 分に 3 回まで**（当たったら「ログインの回数制限に当たりました」で止まる。3 分待つか Rails を起動し直す。CI は毎回新しい Rails なので当たらない）。招待からの新規登録は 1 時間に 10 回までなので、続けて流すのは 1 時間に 10 回まで
   - **CI の E2E が落ちたら**、PR の Checks →「Summary」の Artifacts にある `e2e-results`（画面の写真・操作の記録 trace・rails.log・vite.log）を落として見る。手元の失敗は `frontend/test-results/`（`npx playwright show-trace <trace.zip>`）
   - **指し方は、開いている画面（`page.getByRole('dialog')`）の中に絞り、ボタンは `exact: true`**。ページ全体で `getByLabel('タイトル')` と探すとボードの上のキーワード欄（「タイトル・著者・メモで絞り込み」）にも、`getByRole('button', { name: '追加' })` はタグ候補のボタン（「〇〇をタグに追加」）にも当たる（strict mode violation。2026-11-03、PR #367）
   - **こちらで流すときは `| tail` でまとめず、ファイルに書き出す**（`npx playwright test --reporter=list > <scratchpad>/e2e.log 2>&1`）。`| tail` は終わるまで何も出ないので、止まっているのか動いているのか分からない（最初の 1 回は 5 分出ず止めた）。Mac には `timeout` コマンドが無い（exit 127）。長く待つときは Bash の `run_in_background` や Monitor を使う（2026-11-03）

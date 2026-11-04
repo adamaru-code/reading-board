@@ -1,6 +1,6 @@
 // E2E を流す前に 1 回だけ動く：サーバーが動いているかを確かめ、E2E 専用のアカウントを作り直す
 import { randomBytes } from 'node:crypto'
-import { E2E_EMAIL, railsRunner } from './support'
+import { DESTROY_E2E_USERS, E2E_EMAIL, railsRunner } from './support'
 
 async function checkServers() {
   const hint = [
@@ -25,8 +25,8 @@ export default async function globalSetup() {
   const password = randomBytes(16).toString('hex')
   railsRunner(
     `ActiveRecord::Base.transaction do
-       User.find_by(email: "${E2E_EMAIL}")&.destroy!
-       User.create!(email: "${E2E_EMAIL}", password: ENV.fetch("E2E_PASSWORD"))
+       ${DESTROY_E2E_USERS}
+       User.create!(email: "${E2E_EMAIL}", password: ENV.fetch("E2E_PASSWORD"), admin: true)
      end`,
     { E2E_PASSWORD: password },
   )
