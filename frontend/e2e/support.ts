@@ -6,8 +6,12 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
-// E2E 専用のアカウント。開発用 DB のほかのアカウント（owner など）には触れない
+// E2E 専用のアカウント（管理者。招待・ユーザーの画面も使う）。開発用 DB のほかのアカウント（owner など）には触れない
 export const E2E_EMAIL = 'e2e@example.com'
+// 招待リンクからの新規登録で作るアカウント（admin.spec.ts）。global-setup・global-teardown で消す
+export const E2E_NEW_EMAIL = 'e2e-new@example.com'
+// E2E が作るアカウント全部を消す Ruby（global-setup・global-teardown で使う）
+export const DESTROY_E2E_USERS = `User.where(email: ["${E2E_EMAIL}", "${E2E_NEW_EMAIL}"]).find_each(&:destroy!)`
 // ログイン状態（Cookie）の保存先。.gitignore 済み
 export const STORAGE_STATE = path.join(here, '.auth', 'user.json')
 
@@ -44,7 +48,12 @@ export function uniqueTitle(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}`
 }
 
-type BookInput = { title: string; author?: string; status?: 'want_to_read' | 'reading' | 'read' }
+type BookInput = {
+  title: string
+  author?: string
+  status?: 'want_to_read' | 'reading' | 'read'
+  tags?: string[]
+}
 type BookJson = { id: number; title: string }
 
 // API で本を作る（画面の操作を確かめたいテストの、下準備に使う）
