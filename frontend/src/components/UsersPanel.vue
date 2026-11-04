@@ -243,27 +243,4 @@ async function onCopy() {
 .issued-actions .user-meta {
   margin: 0;
 }
-.btn {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.btn-small {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-ghost {
-  background: var(--surface);
-  border-color: var(--border);
-}
 </style>

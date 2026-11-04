@@ -241,15 +241,6 @@ async function onSubmit() {
   gap: 6px;
   font-size: 13px;
 }
-.form-errors {
-  margin: 0 0 16px;
-  padding: 10px 12px 10px 28px;
-  background: #ffeceb;
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  color: var(--danger);
-  font-size: 13px;
-}
 .field-hint {
   margin: -6px 0 0;
   font-size: 12px;
@@ -258,36 +249,9 @@ async function onSubmit() {
 .done-message {
   font-size: 14px;
 }
-.modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.spacer {
-  flex: 1;
-}
-.btn {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font: inherit;
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-ghost {
-  background: var(--surface);
-  border-color: var(--border);
-}
 .btn-danger {
   background: var(--danger);
   color: #fff;
+  border-color: transparent; /* 全体の .btn-danger の枠線を付けない（赤く塗る） */
 }
 </style>
