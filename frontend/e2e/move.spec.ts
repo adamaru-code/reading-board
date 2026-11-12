@@ -35,6 +35,11 @@ test('Option ＋ ▲ で段の中を 1 つ上へ、Option ＋ ▶ で右の段�
   await page.keyboard.press('Alt+ArrowRight')
   await expect(titlesIn(page, 'want_to_read')).toHaveText([A, C])
   await expect(titlesIn(page, 'reading')).toHaveText([B])
+  // カードは保存を待たずに先に動く。保存が終わってから出るお知らせを待ってから読み込み直す
+  // （待たないと、CI の機械が遅いときに保存の前に読み込み直して、元の並びが出た。#402）
+  await expect(page.locator('[aria-live="assertive"]')).toHaveText(
+    `「${B}」を 読書中 の 1 番目に移しました`,
+  )
 
   await page.reload()
   await expect(titlesIn(page, 'want_to_read')).toHaveText([A, C])
@@ -42,10 +47,15 @@ test('Option ＋ ▲ で段の中を 1 つ上へ、Option ＋ ▶ で右の段�
 })
 
 test('ドラッグで別の段へ移し、読み込み直しても残る', async ({ page }) => {
+  // ドラッグはお知らせを出さないので、並び順の保存（reorder）の返事を待ってから読み込み直す（#402）
+  const saved = page.waitForResponse(
+    (r) => r.url().includes('/api/books/reorder') && r.request().method() === 'PATCH',
+  )
   await page.locator('.card', { hasText: C }).dragTo(page.locator('section[data-status="reading"]'))
 
   await expect(titlesIn(page, 'reading')).toHaveText([C])
   await expect(titlesIn(page, 'want_to_read')).toHaveText([A, B])
+  expect((await saved).ok()).toBe(true)
   await page.reload()
   await expect(titlesIn(page, 'reading')).toHaveText([C])
 })

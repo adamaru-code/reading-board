@@ -187,6 +187,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
   - **CI の E2E が落ちたら**、PR の Checks →「Summary」の Artifacts にある `e2e-results`（画面の写真・操作の記録 trace・rails.log・vite.log）を落として見る。手元の失敗は `frontend/test-results/`（`npx playwright show-trace <trace.zip>`）
   - **指し方は、開いている画面（`page.getByRole('dialog')`）の中に絞り、ボタンは `exact: true`**。ページ全体で `getByLabel('タイトル')` と探すとボードの上のキーワード欄（「タイトル・著者・メモで絞り込み」）にも、`getByRole('button', { name: '追加' })` はタグ候補のボタン（「〇〇をタグに追加」）にも当たる（strict mode violation。2026-11-03、PR #367）
   - **ボタンを押したあとは、処理が終わった印（お知らせの文など）を待ってから確かめる**。押した直後は処理中の表示で、たとえばタグの名前を変える欄の「『b』と 1 つにまとめます」にも b が入っていて、「b の行」が 2 つに当たってすぐ落ちた。また 1 つの画面に `role="status"` の欄が複数あることがある（アカウントの画面はパスワード用とタグ用）ので、`.done-message` など中身で絞る（2026-11-05、PR #395）
+  - **画面が保存を待たずに先に動く操作（カードの移動など、楽観的更新）のあとに `page.reload()` するときは、保存が終わった印を待つ**（キーボードの移動は読み上げのお知らせ、ドラッグは `page.waitForResponse` で `PATCH /api/books/reorder` の返事）。待たないと、手元では通るのに CI の機械が遅いときだけ、保存の前に読み込み直して元の並びが出て落ちる（関係ない Dependabot の PR #400 で発生。2026-11-13、PR #403）
   - **こちらで流すときは `| tail` でまとめず、ファイルに書き出す**（`npx playwright test --reporter=list > <scratchpad>/e2e.log 2>&1`）。`| tail` は終わるまで何も出ないので、止まっているのか動いているのか分からない（最初の 1 回は 5 分出ず止めた）。Mac には `timeout` コマンドが無い（exit 127）。長く待つときは Bash の `run_in_background` や Monitor を使う（2026-11-03）
   - E2E の型チェックは `tsconfig.e2e.json`（`moduleResolution: "bundler"`。`nodenext` だと `import './support'` に拡張子を求められる）。vitest は `src/**/__tests__/*.spec.ts` だけを読むので、`e2e/*.spec.ts` と混ざらない
 - [ ] テンプレートのイベントで、引数を取る関数を `@click="fn"` と書いていない（イベントオブジェクトが第 1 引数に入る。`@click="fn()"` と書く。vue-tsc が検出する）
