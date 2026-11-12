@@ -35,9 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # mysql2 gem のネイティブ拡張ビルドに必要
+      # mysql2 gem のネイティブ拡張ビルドに必要。CI の機械（Ubuntu 26.04）には最初から入っているので、そのときは入れない。
+      # 入れ直すと MySQL 本体まで上がり、テスト用の MySQL（service）と 3306 がぶつかって dpkg が失敗する（#404）
       - name: Install libmysqlclient
-        run: sudo apt-get update && sudo apt-get install -y libmysqlclient-dev
+        run: dpkg -s libmysqlclient-dev > /dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libmysqlclient-dev)
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -60,9 +61,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # mysql2 gem のネイティブ拡張ビルドに必要
+      # mysql2 gem のネイティブ拡張ビルドに必要。CI の機械（Ubuntu 26.04）には最初から入っているので、そのときは入れない。
+      # 入れ直すと MySQL 本体まで上がり、テスト用の MySQL（service）と 3306 がぶつかって dpkg が失敗する（#404）
       - name: Install libmysqlclient
-        run: sudo apt-get update && sudo apt-get install -y libmysqlclient-dev
+        run: dpkg -s libmysqlclient-dev > /dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libmysqlclient-dev)
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -141,9 +143,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # mysql2 gem のネイティブ拡張ビルドに必要
+      # mysql2 gem のネイティブ拡張ビルドに必要。CI の機械（Ubuntu 26.04）には最初から入っているので、そのときは入れない。
+      # 入れ直すと MySQL 本体まで上がり、テスト用の MySQL（service）と 3306 がぶつかって dpkg が失敗する（#404）
       - name: Install libmysqlclient
-        run: sudo apt-get update && sudo apt-get install -y libmysqlclient-dev
+        run: dpkg -s libmysqlclient-dev > /dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libmysqlclient-dev)
 
       - uses: ruby/setup-ruby@v1
         with:
