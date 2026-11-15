@@ -327,6 +327,7 @@ CLAUDE.md「Dependabot の PR」の決まり（minor・patch は CI が通れば
   ```
   Docker（Linux）でビルドするときも同じ（Mac の `node_modules` が Linux 用に置き換わるため）
 - [ ] **@types/node は、動かす Node.js と同じ major にする**。Node.js の版は 3 か所にあるので、上げるときはそろえる：`.github/workflows/ci.yml` の `node-version`・`infra/templates/user_data.sh.tftpl` の `node:<版>-slim`・README の前提（Mac は Homebrew で自動で上がる）。どの版が LTS かは `https://raw.githubusercontent.com/nodejs/Release/main/schedule.json` で確かめる（2026-11-02、Mac 26・CI と本番 24 だった → PR #337）
+- [ ] **major（`4.x → 5.0`）をマージしたら、README・docs に書いた版を探して直す**：`grep -rn "<部品の名前> \?[0-9]" README.md docs`（例：`grep -rn "vue-router \?[0-9]" README.md docs`）。Dependabot の PR は `package.json` などしか変えないので、文書の版が古いまま残る（2026-11-15、#324 で vue-router を 5 にしたが docs/tech-stack.md は「vue-router 4」のままだった → PR #419）
 - [ ] **`dependabot.yml` の `groups` には必ず `update-types: [minor, patch]` を付ける**。`patterns: ["*"]` だけだと major もまとめの PR に入り、1 つずつ相談できない（2026-11-02、#318 に major 3 つ → PR #335）
 - [ ] **アラートの直った版が新しい major だけで、使う側の部品が古い major を指定しているとき**は、`overrides` で無理に上げない（作り手が試していない組み合わせになる）。開発用の部品だけで、外から入力が届かないなら、理由を書いて閉じる（`dismissed_reason=tolerable_risk`。いつでも開き直せる）。理由は判断の記録として残る（2026-11-02、minimatch #20）
   ```bash
