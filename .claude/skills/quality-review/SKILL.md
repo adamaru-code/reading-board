@@ -114,6 +114,7 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **不具合を直したら、足したテストを直す前のコードで流し、落ちることを確かめる**（落ちないテストは不具合を見つけられない）：`git stash push <直したファイル>` → `bin/rails test <テスト>` → `git stash pop`（2026-10-05、PR #282 で 3 件落ちることを確認）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 - [ ] `bin/rails runner` で確認用データを作るときは、**途中で止まっても半端に残らないように**、`ActiveRecord::Base.transaction do … end` で包むか、止まったらまず何ができたかを読み直す。`ENV.fetch("PWFILE")` を渡し忘れ、アカウントと本は作られたのにパスワードの保存だけ失敗した（2026-10-29）
+- [ ] **runner のスクリプトは、書く前に列・メソッドの名前を確かめる**（`backend/db/schema.rb`・`app/models`・使う controller の SQL）。思い込みで書いて 3 回失敗した：`ActiveRecord::Base.connection.migration_context`（正しくは `connection_pool.migration_context`）・`User#role`（無い。`admin` の真偽）・`book_status_events.to_status`（正しくは `status`）。**本番に送るものは、手元の開発用 DB で先に 1 回流す**（2026-11-15。本番での読み方は docs/aws-deploy-guide.md §7）
 - [ ] **データを直すマイグレーション**は、`db:migrate` の前に**確認用データ（直す対象・直さない対象・重なる場合）を作ってから**試す。流した後でも `bin/rails runner 'require Rails.root.join("db/migrate/<ファイル>").to_s; ActiveRecord::Migration.suppress_messages { <クラス>.new.up }'` で何度でも試せる。確認用データは最後に消す（2026-10-02、PR #246 で先に流してしまい、runner で試し直した）
 
 ---
@@ -346,6 +347,7 @@ CLAUDE.md「Dependabot の PR」の決まり（minor・patch は CI が通れば
 
 - **`path` という名前の変数を使わない**。zsh では `path` がコマンドを探す場所（`PATH`）と結び付いているので、`while read verb path` などと書くと、その中で `sed` などが「command not found」になる（2026-10-04）。`route` などほかの名前にする **2026-11-01 にも、計測のスクリプトで `local name=$1 path=$2` と書いて同じ失敗をした**（curl・sort・wc が見つからなくなり、測った値が全部 0 ms）。zsh の関数の引数を受ける変数は `url` `target` などにする
 - **zsh では `[ "$a" \> "$b" ]`（文字の大小の比べ）が使えない**（`condition expected: >`）。`until` で待つコマンドに入れたら、条件がいつまでも成り立たず、CI が終わっても待ち続けた（2026-11-13）。文字の大小を比べるときは、zsh の `[[ "$a" > "$b" ]]`（二重のかっこ）を使う。**待つコマンドは、裏で動かす前に、条件の部分だけを 1 回流して期待どおりの値が出るかを確かめる**。待たせているあいだにユーザーに聞かれたら、まず出力のファイルを読み、止まっていれば止めて（TaskStop）やり直す
+- **`gh pr checks <番号> --watch` は、全部が終わる前に戻ることがある**（2026-11-15、PR #409 で E2E が `pending` のまま戻った。push 直後で、まだ始まっていないジョブを数えていない）。戻ったら結果をそのまま信じず、`until ! gh pr checks <番号> | grep -q -E "pending|queued|in_progress"; do sleep 10; done` で全部が終わるまで待ってから、5 つとも `pass` かを見る。`sleep 30 && …` のように sleep をつないで待つ書き方は、こちらの道具で止められる（until で条件を待つか、裏で動かす）
 - `grep --include=*.vue` のような `*` は**引用符で囲む**（`--include='*.vue'`）。囲まないと zsh が先に展開しようとして「no matches found」で止まる（2026-10-05 にも同じ失敗をした。grep を書いたら `*` の周りを見直す）
 - 探す文字に `` ` ``（バッククォート）を入れるときは、模様を**一重引用符**で囲む。二重引用符の中の `` `q` `` はコマンドとして実行され、「command not found: q」になって模様が壊れる（2026-10-05）
 - Mac の `sed` で `sed: RE error: illegal byte sequence` と出たら、日本語などをバイトのまま読む **`LC_ALL=C`** を付ける（`LC_ALL=C sed -i '' '/AIza/d' ~/.zsh_history`）。zsh の履歴ファイルは日本語を独自の形で保存しているので、そのままでは読めない。止まったときはファイルは変わっていない（2026-10-15）
