@@ -56,7 +56,7 @@ https://github.com/user-attachments/assets/4d3efe78-97a5-4f85-9e2a-b648c244d28d
 - 書誌（タイトル・著者）：[openBD](https://openbd.jp) から取得する
 - 表紙の画像：[Google Books API](https://developers.google.com/books) から取得する。画像そのものはアプリに保存せず、URL だけを保存して、表示のたびにブラウザが Google のサーバーから読み込む。表紙はログインした人だけが見られる
 - この README の画像・動画には、表紙を写していない（表紙は出版社などの著作物のため）
-- 未対応：Google Books の表示の決まり（[ブランドの指針](https://developers.google.com/books/branding)）が求める「powered by Google」の表示と、本ごとの Google Books のページへのリンクは、まだアプリに無い。対応は [#428](https://github.com/adamaru-code/reading-board/issues/428) で管理する
+- 対応しないと決めたこと：Google Books の表示の決まり（[ブランドの指針](https://developers.google.com/books/branding)）が求める「powered by Google」の表示と、本ごとの Google Books のページへのリンクは、アプリに付けていない。個人利用のみで一般公開しないため（決まりは知ったうえでの判断）。一般公開するときは対応する（やり方は [#428](https://github.com/adamaru-code/reading-board/issues/428) に記録）
 
 ## 技術スタック
 
