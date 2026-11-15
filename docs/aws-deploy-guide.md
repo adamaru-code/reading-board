@@ -380,7 +380,7 @@ aws sts get-caller-identity
 
 ### 5.2 予定表（plan）を見る
 
-Terraform の準備をします（初回や、久しぶりに使うときだけ。何度やっても害はありません）。
+Terraform の準備をします（初回・久しぶりに使うとき・**Dependabot が AWS の部品（`hashicorp/aws`）を上げたあと**に必要です。何度やっても害はないので、起動の前に毎回やってかまいません）。
 
 ```bash
 terraform -chdir=/Users/ada/RaiseTech/reading-board/infra init
@@ -449,7 +449,14 @@ terraform -chdir=/Users/ada/RaiseTech/reading-board/infra output -raw admin_emai
 terraform -chdir=/Users/ada/RaiseTech/reading-board/infra output -raw admin_password_command
 ```
 
-→ `aws ssm get-parameter --region ap-northeast-1 --name /reading-board/admin_password --with-decryption …` のような 1 行のコマンドが出ます。**その 1 行をそのままコピーしてターミナルに貼って実行**すると、パスワードが表示されます。
+→ `aws ssm get-parameter` で始まり `--output text` で終わる 1 行のコマンドが出ます。**`aws` から `--output text` までを 1 行まるごとコピーしてターミナルに貼って実行**すると、パスワードが表示されます。
+
+- 出てきた 1 行は最後に改行が無いので、`--output text%` のように、すぐ後ろにターミナルの印（`%`）がくっついて見えることがあります。`%` はコピーしません。
+- 迷ったら、出てくるものと同じ次の 1 行をコピーして実行しても同じです（2026-11-15、「出てきた 1 行とはどこまで？」と聞かれた）。
+
+```bash
+aws ssm get-parameter --region ap-northeast-1 --name /reading-board/admin_password --with-decryption --query Parameter.Value --output text
+```
 
 - 管理者のパスワードは**起動のたびに新しくなります**。毎回この手順で確認してください。
 - 管理者以外のユーザー（招待で登録した人）のパスワードは、前回のまま引き継がれます。
@@ -529,6 +536,23 @@ git_ref = "feature/xx-branch-name"
 
 **安全のための設定（`config.hosts` など）を変えたとき**は、「使える」ことに加えて「**断るべきものが断られる**」ことまで確かめます。AI に「知らない宛先名で 403 になるか、EC2 の中から確かめて」と頼んでください（#161 では、正しい宛先名 → `401`（通過）、`Host: evil.example.com` → `403` を確認しました）。
 
+**新しい表や、データを直すマイグレーションを足したとき**は、AI に「本番の DB で、表ができたか・中身がどうなったか確かめて」と頼みます。AI は次のやり方で、本番の Rails の中で Ruby の小さなスクリプト（`bin/rails runner`）を動かして読みます（SSH は使わず、SSM の send-command で EC2 にコマンドを送ります）。
+
+```bash
+cd /Users/ada/RaiseTech/reading-board/infra
+ID=$(terraform output -raw instance_id)
+CHECK_RB=/path/to/check.rb               # 読みたいことを書いた Ruby のファイル（AI が作業用のフォルダに作る）
+B64=$(base64 < "$CHECK_RB" | tr -d '\n')
+CMD=$(aws ssm send-command --instance-ids "$ID" --document-name AWS-RunShellScript \
+  --parameters "commands=[\"echo $B64 | base64 -d > /tmp/check.rb && docker cp /tmp/check.rb reading-board-api:/tmp/check.rb && docker exec reading-board-api bin/rails runner /tmp/check.rb 2>&1 | head -40\"]" \
+  --query Command.CommandId --output text)
+aws ssm get-command-invocation --command-id "$CMD" --instance-id "$ID" --query StandardOutputContent --output text   # 数秒待ってから
+```
+
+- スクリプトは **base64（文字だけの形）にして送る**。そのまま送ると、引用符や日本語が途中で崩れる
+- **書く前に、使う列の名前を `backend/db/schema.rb` とモデルで確かめ、手元の開発用 DB で 1 回流してから**本番に送る。2026-11-15 に確かめずに書いて、本番で 3 回失敗した（`migration_context` は `connection` ではなく `connection_pool` にある・`users` に `role` は無く `admin`・状態の記録は `book_status_events.status`）
+- 本番のデータを**変える**スクリプト（確認用の本を足す・消すなど）は、何をするかを先にユーザーに伝え、確認が終わったら必ず元に戻して、読み直して見せる
+
 ---
 
 ## 8. うまくいかないとき
@@ -540,6 +564,7 @@ git_ref = "feature/xx-branch-name"
 | `ExpiredToken` | 期限付きの鍵（一時的な認証情報）が切れた | このプロジェクトの設定では通常出ない。出たら、環境変数 `AWS_SESSION_TOKEN` などが残っていないか AI に調べてもらう |
 | `/up` が 10 分以上 `502` / `504` のまま | EC2 の中でアプリの組み立てに失敗している | AI に「EC2 の構築ログを見て」と頼む（[infra/README.md](../infra/README.md) の「構築ログの確認」のコマンドを使う） |
 | アプリを開くと `Blocked hosts` / `403` と出る、または `/up` だけ `200` でログインできない | 本番の Rails が「知らない宛先名」として断っている（`config.hosts`）。`APP_HOSTS` に EC2 の名前が入っていない | AI に「EC2 の APP_HOSTS と構築ログを見て」と頼む（構築ログに `APP_HOSTS=ec2-…` が出ているか確認する。[infrastructure.md](infrastructure.md) §1.1） |
+| `Required plugins are not installed`（`plan` などで出る） | Dependabot が AWS の部品（`hashicorp/aws`）の版を上げ、手元に新しい版がまだ入っていない（2026-11-15） | `terraform -chdir=/Users/ada/RaiseTech/reading-board/infra init` を実行してから、もう一度同じコマンドを実行する（5.2） |
 | `Error acquiring the state lock` | 前の Terraform が途中で止まり、「実行中」の印が残った | 他のターミナルで Terraform が動いていないか確認し、AI に相談する（印を無理に外すと state が壊れることがある） |
 | `up.sh` / `down.sh` が途中でエラーになった | 通信の途切れ・AWS 側の一時的な問題 | **もう一度同じコマンドを実行する**。Terraform は state を見て、残りの分だけ作る（消す） |
 | 予算アラートのメールが来た・停止を忘れた | 起動したままになっている | すぐに `down.sh`（6.1）→ 消し忘れ確認（6.2） |
