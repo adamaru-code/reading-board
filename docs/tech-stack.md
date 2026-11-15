@@ -45,6 +45,7 @@
 | `npm run build` | `vue-tsc -b`（型チェック）→ `vite build`（バンドル） | 本番ビルド。成果物は `frontend/dist/` に出力 |
 | `npm run preview` | ビルド成果物をローカル配信 | 本番ビルドの動作確認 |
 | `npm test` | vitest でテストを実行 | 開発・CI |
+| `npm run test:coverage` | vitest でテストを実行し、カバレッジ（どの行・分かれ道が動いたか）を測る。結果は `frontend/coverage/index.html` | 開発（測るだけ。CI では測らない） |
 | `npm run test:e2e` | Playwright で E2E テストを実行（MySQL・Rails・Vite を先に起動しておく） | 開発・CI |
 | `npm run lint` | ESLint で書き方をチェック（`lint:fix` で自動修正） | 開発・CI |
 | `npm run format` | Prettier で整形（`format:check` は確認のみ） | 開発・CI（CI は確認のみ） |
@@ -56,5 +57,6 @@
 - 依存管理: **Bundler**（`backend/Gemfile`）
 - セットアップ: `bundle install` → `bin/rails server` で起動（ポートは [CLAUDE.md](../CLAUDE.md) §8 参照）
 - チェック: `bin/rails test`・`bin/rubocop`・`bin/brakeman`・`bin/bundler-audit`（まとめて `bin/ci` でも実行可）
+- カバレッジ: `COVERAGE=1 bin/rails test`（SimpleCov。結果は `backend/coverage/index.html`。測るだけで合格条件は付けない）
 - 時刻: アプリの「今日」・時刻は日本時間（`config.time_zone = "Tokyo"`）。DB への保存は UTC（Rails の標準）。API の日時は `+09:00` 付きで返す
 - 本番: `backend/Dockerfile`（Rails 8 標準）でコンテナ化。秘密鍵は `SECRET_KEY_BASE` 環境変数（[インフラ設計](infrastructure.md) §1.1）

@@ -20,6 +20,10 @@ mise.local.toml
 *.log
 tmp/
 
+# テストのカバレッジの結果（COVERAGE=1 bin/rails test・npm run test:coverage で作られる）
+backend/coverage/
+frontend/coverage/
+
 # Bundler のローカル設定（マシン固有。mysql2 のビルドパス等）
 backend/.bundle/
 

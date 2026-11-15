@@ -48,3 +48,8 @@ group :development, :test do
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 end
+
+group :test do
+  # テストのカバレッジ（どの行・分かれ道が動いたか）。COVERAGE=1 bin/rails test のときだけ測る（test_helper.rb）
+  gem "simplecov", require: false
+end

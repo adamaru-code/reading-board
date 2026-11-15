@@ -133,6 +133,18 @@ cd frontend && npm run lint      # 書き方チェック（ESLint）
 cd frontend && npm run format    # 見た目の自動整形（Prettier）。確認だけなら npm run format:check
 ```
 
+### テストのカバレッジ（どの行がテストで動いたか）
+
+テストを流したときに、コードのどの行・分かれ道（if の両側など）が動いたかを測る。テストが足りない場所を一覧で見つけるためのもので、**測るだけ**（何 % 以上という合格条件は付けていない。CI でも測らない）。
+
+```bash
+cd backend && COVERAGE=1 bin/rails test   # SimpleCov。結果は backend/coverage/index.html
+cd frontend && npm run test:coverage      # @vitest/coverage-v8。結果は frontend/coverage/index.html（端末の表は 100% のファイルを省く）
+```
+
+- 結果のフォルダ（`coverage/`）はコミットしない（`.gitignore` 済み）
+- フロントの `src/api/` の通信の関数・ドラッグ操作・カメラでの読み取りは、vitest（jsdom）では動かないので割合が低く出る。通信とドラッグは E2E で確かめている
+
 CI（GitHub Actions）で PR ごとに上記すべてと `npm run build`・Terraform の fmt / validate・下の E2E テストを実行する（ジョブは 5 つ）。backend はまとめて `bin/ci` でも実行できる。
 
 ### E2E テスト（Playwright）
