@@ -1,4 +1,15 @@
 ENV["RAILS_ENV"] ||= "test"
+
+# テストのカバレッジ（どの行・分かれ道が動いたか）。COVERAGE=1 bin/rails test のときだけ測り、coverage/index.html に出す。
+# アプリのコードを読み込む前に始める必要がある。テストは並列（fork した worker）で動くので、worker の結果もまとめる
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start "rails" do
+    enable_coverage :branch
+    enable_for_subprocesses true
+  end
+end
+
 require_relative "../config/environment"
 require "rails/test_help"
 
