@@ -31,7 +31,25 @@ https://github.com/user-attachments/assets/4d3efe78-97a5-4f85-9e2a-b648c244d28d
 - 表紙のまとめて取得（アカウント画面）：ISBN があって表紙が無い本に、Google Books の表紙をまとめて付ける
 - ログイン、招待制の新規登録、パスワード変更・管理者発行の再設定リンク・アカウント削除
 
-詳細は [docs/requirements.md](docs/requirements.md) と [docs/functional-requirements.md](docs/functional-requirements.md)。
+詳細は下の「ドキュメント」の一覧から。
+
+## ドキュメント
+
+要件定義から設計・インフラまでを `docs/` にまとめている（開発の流れの順）。
+
+| 段階 | ドキュメント | 内容 |
+|---|---|---|
+| 要件定義 | [要件定義書（概要）](docs/requirements.md) | 目的・スコープ・非機能要件・制約・将来の拡張 |
+| 要件定義 | [機能要件](docs/functional-requirements.md) | できること・使い方の流れ・API の仕様 |
+| 要件定義 | [技術スタック](docs/tech-stack.md) | 使った技術と選んだ理由・開発環境 |
+| 設計 | [基本設計](docs/basic-design.md) | 画面遷移図・ER 図・データの流れ（Mermaid の図） |
+| 設計 | [画面設計](docs/screen-design.md) | 画面と部品（S1〜S9）の表示項目・操作・スマホでの見え方 |
+| 設計 | [データベース設計](docs/database-design.md) | テーブル・カラム・制約・enum |
+| 設計 | [複数ユーザー対応](docs/multi-user.md) | 招待制の登録・パスワード再設定などの設計メモ |
+| インフラ | [インフラ設計](docs/infrastructure.md) | AWS の構成案の比較・決めたこと・費用・安全の設計 |
+| インフラ | [AWS 手順書](docs/aws-deploy-guide.md) | 起動・確認・停止の手順（はじめての人向け） |
+| インフラ | [infra/README.md](infra/README.md) | Terraform のコマンドの早見表 |
+| 開発の運用 | [main ブランチの保護](docs/branch-protection.md) | main への直接の push などを GitHub で禁止する設定 |
 
 ## 外部のデータ（書誌・表紙）
 
