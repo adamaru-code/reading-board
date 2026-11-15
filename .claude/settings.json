@@ -1,5 +1,29 @@
 {
   "permissions": {
     "defaultMode": "default"
+  },
+  "language": "japanese",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"ユーザーに見える文章（作業の途中の一言・報告・手順・表）はすべて日本語で書く（CLAUDE.md §0）。英語の通知やログを読んだ直後も日本語。\"}}'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"ユーザーに見える文章（作業の途中の一言・報告・手順・表）はすべて日本語で書く（CLAUDE.md §0）。英語の通知やログを読んだ直後も日本語。\"}}'"
+          }
+        ]
+      }
+    ]
   }
 }
