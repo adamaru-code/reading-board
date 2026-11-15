@@ -160,6 +160,7 @@ Dependabot（`.github/dependabot.yml`）が、部品の新しい版や弱点を�
    - minor・patch（`1.2.3 → 1.2.4` / `1.3.0`）：CI が通れば squash merge してよい
    - **major（`1.x → 2.0`）や Rails・Vue・Vite 本体**：作りが変わることがあるので、変更点を説明して**ユーザーと相談**してから
 3. **1 つずつ**マージする（同時にいくつもマージすると `Gemfile.lock` などがぶつかる。Dependabot が自動で作り直すのを待つ）
+   - 作り直しを待てないとき（`@dependabot rebase` に何分たっても反応が無い）や、main で CI を直したあとで PR の CI が古いときは、`gh pr update-branch <番号>` で今の main を取り込み、CI をやり直す。マージする前に、**新しい head の CI** で通ったかを確かめる（`gh run list --branch <PR のブランチ> --limit 3 --json headSha,conclusion` の 1 行目が今の head か。古い結果が残っていると、すぐに「通った」と見える。2026-11-13、#398〜#401）
 4. マージしたら、手元も合わせる：`git pull` → `cd backend && bundle install` / `cd frontend && npm install` → 動いている Rails・Vite は起動し直す
 5. 作業中のブランチの CI が、関係ない部品の弱点で落ちたときは、まず Dependabot の PR が来ていないか見る（来ていれば、それを先にマージして `git merge origin/main`）
 
