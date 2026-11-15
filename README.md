@@ -40,6 +40,27 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 | テスト・lint | minitest・RuboCop・Brakeman・bundler-audit / vitest・Playwright（E2E）・ESLint・Prettier |
 | インフラ | AWS（EC2 ＋ RDS ＋ CloudFront）/ Terraform（[infra/README.md](infra/README.md)） |
 
+### 初級編との技術の違い
+
+RaiseTech の課題の条件「初級編とは異なる技術スタックを使う」に沿って選んだ。選んだ理由は [docs/tech-stack.md](docs/tech-stack.md) §1。
+
+| 役割 | 初級編 | このアプリ |
+|---|---|---|
+| 画面の仕組み（UI ライブラリ） | React | **Vue 3** |
+| 見た目（CSS） | Tailwind CSS | **素の CSS**（部品ごとの scoped CSS ＋ 共通の `style.css`） |
+| サーバーの言語・フレームワーク | Java + Spring Boot | **Ruby + Ruby on Rails 8**（API モード） |
+| サーバーの部品の管理・組み立て | Gradle | **Bundler**（組み立ての工程なし） |
+| データベース | PostgreSQL | **MySQL 8** |
+| 画面の言語・組み立ての道具 | TypeScript + Vite | TypeScript + Vite（同じ。Vite は Vue 公式の標準の道具。型の安全のため TypeScript を続けて使う） |
+| インフラ | — | **AWS（EC2 ＋ RDS ＋ CloudFront）を Terraform で構築** |
+
+## 公開中の URL
+
+（提出するときに書き足す）
+
+- アプリは招待制で、見るにはログインが要る。**審査用のログイン情報は課題の提出欄に書く**（このリポジトリは公開なので、ここには書かない）
+- AWS は費用を抑えるため、審査などで見てもらう期間だけ起動している。止めると URL は使えなくなり、次に起動したときは別の URL になる（[AWS 手順書](docs/aws-deploy-guide.md) の 5.7）
+
 ## 構成
 
 画面（Vue の SPA）は `/api/*` を呼ぶだけで、開発では Vite、本番では nginx が Rails に転送する。どちらもブラウザから見て同じオリジンなので、CORS の設定は要らない。
