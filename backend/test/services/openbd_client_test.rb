@@ -36,6 +36,62 @@ class OpenbdClientTest < ActiveSupport::TestCase
     Net::HTTP.define_singleton_method(:start, original)
   end
 
+  # 200 の応答（本文つき）を作る。差し替えた処理の中では補助メソッドを呼べないので、先に作ってローカル変数で渡す
+  def ok_response(body)
+    response = Net::HTTPOK.new("1.1", "200", "OK")
+    json = body.is_a?(String) ? body : body.to_json
+    response.define_singleton_method(:body) { json }
+    response
+  end
+
+  test "lookup は見つかったら :found と題名・著者を返し、ISBN で問い合わせる" do
+    requested = nil
+    # openBD の本物の返事の形（2026-11-15 に確認）：[{ "onix": …, "hanmoto": …, "summary": { … } }]
+    response = ok_response([ { summary: { isbn: "9784873115658", title: "リーダブルコード", author: "Boswell,Dustin" } } ])
+    replacement = lambda do |*_args, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:get) { |path| requested = path; nil }
+      block.call(http)
+      response
+    end
+    with_http_start(replacement) do
+      result = OpenbdClient.lookup("9784873115658")
+      assert_equal :found, result.status
+      assert_equal({ title: "リーダブルコード", author: "Boswell,Dustin" }, result.info)
+    end
+    assert_equal "/v1/get?isbn=9784873115658", requested
+  end
+
+  test "lookup は著者が空なら著者を nil にする" do
+    response = ok_response([ { summary: { title: "表現者クライテリオン", author: "" } } ])
+    with_http_start(->(*_args, **_options, &_block) { response }) do
+      assert_equal({ title: "表現者クライテリオン", author: nil }, OpenbdClient.lookup("4910000000000").info)
+    end
+  end
+
+  test "lookup は openBD に無い（[null]）・題名が空なら :not_found" do
+    # 無い ISBN のときの openBD の本物の返事は [null]（2026-11-15 に確認）
+    missing = ok_response("[null]")
+    no_title = ok_response([ { summary: { title: "", author: "x" } } ])
+    with_http_start(->(*_args, **_options, &_block) { missing }) do
+      assert_equal OpenbdClient::Result.new(:not_found, nil), OpenbdClient.lookup("9784000000000")
+    end
+    with_http_start(->(*_args, **_options, &_block) { no_title }) do
+      assert_equal :not_found, OpenbdClient.lookup("9784000000000").status
+    end
+  end
+
+  test "lookup はエラーの応答・壊れた JSON なら :error（例外にしない）" do
+    server_error = Net::HTTPInternalServerError.new("1.1", "500", "Internal Server Error")
+    broken = ok_response("<html>メンテナンス中</html>")
+    with_http_start(->(*_args, **_options, &_block) { server_error }) do
+      assert_equal OpenbdClient::Result.new(:error, nil), OpenbdClient.lookup("9784873115658")
+    end
+    with_http_start(->(*_args, **_options, &_block) { broken }) do
+      assert_equal :error, OpenbdClient.lookup("9784873115658").status
+    end
+  end
+
   test "fetch は接続・読み取りのタイムアウトを指定し、タイムアウトしたら nil を返す" do
     received = nil
     with_http_start(->(*_args, **options, &_block) { received = options; raise Net::ReadTimeout }) do
