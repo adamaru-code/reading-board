@@ -112,6 +112,11 @@ description: reading-board プロジェクトのコードレビュー / PR 前�
 - [ ] **「◯◯は入らない・変わらない」を確かめる（否定の）テストでは、その◯◯を必ず用意する**。他人の本を作らずに「他人の本は入らない」と書くと、何も確かめていないのに通る（`export` のテスト。2026-10-04、PR #264 で作ってから確かめ直した）
 - [ ] **一覧・絞り込みのテストの期待値は、fixture（`test/fixtures/*.yml` の初期データ）の本も数に入れる**。作った本だけで `assert_equal [ five.id, four.id ]` と書いたら、fixture の ★4 の本（`readable_code`）も当たって落ちた。`assert_includes` / `assert_not_includes` で「入る本・入らない本」を確かめ、fixture の本もどちらかに入れる（`books_controller_test.rb` の rating。2026-10-05、PR #284）
 - [ ] **不具合を直したら、足したテストを直す前のコードで流し、落ちることを確かめる**（落ちないテストは不具合を見つけられない）：`git stash push <直したファイル>` → `bin/rails test <テスト>` → `git stash pop`（2026-10-05、PR #282 で 3 件落ちることを確認）
+  - 本物のファイルを書き換えるコマンドが許可されないときは、**壊した写しを scratchpad に作って読み込む**：`sed -e '<壊し方>' app/services/x.rb > <scratchpad>/x_broken.rb` → `PARALLEL_WORKERS=1 mise exec -- ruby -Itest -e "require './test/test_helper'; X; load '<scratchpad>/x_broken.rb'; require './test/services/x_test.rb'"`（先に `X` と書いて元を読み込ませてから、写しで上書きする）。本物は変わらない（2026-11-15、PR #417 で 2 つ落ちるのを確認）
+- [ ] **カバレッジ**（`COVERAGE=1 bin/rails test`・`npm run test:coverage`）は**測るだけ**で、合格条件にしない（#415）
+  - SimpleCov は**前の回の結果と合わさる**（少し前の `coverage/` が残っていると足し合わせる）。並列あり・なしなどで比べるときは、比べる前に `coverage/` が無いことを確かめる。並列のテストは `enable_for_subprocesses true` で worker の結果がまとまる（親はテストを流さないので、まとまらなければ 0% 近くになる）
+  - vitest の端末の表は **100% のファイルを省く**。全部は `frontend/coverage/index.html`
+  - 低い所が本当の抜けか見分ける：`src/api/` の通信の関数・ドラッグは vitest では動かないが E2E で通っている。テストで丸ごと差し替えている関数（`OpenbdClient.lookup` など）は、その中身が一度も動いていないことがある（#417 で足した）
 - [ ] マイグレーションは可逆（`change` で書けない場合は `up`/`down`）
 - [ ] `bin/rails runner` で確認用データを作るときは、**途中で止まっても半端に残らないように**、`ActiveRecord::Base.transaction do … end` で包むか、止まったらまず何ができたかを読み直す。`ENV.fetch("PWFILE")` を渡し忘れ、アカウントと本は作られたのにパスワードの保存だけ失敗した（2026-10-29）
 - [ ] **runner のスクリプトは、書く前に列・メソッドの名前を確かめる**（`backend/db/schema.rb`・`app/models`・使う controller の SQL）。思い込みで書いて 3 回失敗した：`ActiveRecord::Base.connection.migration_context`（正しくは `connection_pool.migration_context`）・`User#role`（無い。`admin` の真偽）・`book_status_events.to_status`（正しくは `status`）。**本番に送るものは、手元の開発用 DB で先に 1 回流す**（2026-11-15。本番での読み方は docs/aws-deploy-guide.md §7）
@@ -348,6 +353,8 @@ CLAUDE.md「Dependabot の PR」の決まり（minor・patch は CI が通れば
 
 - **`path` という名前の変数を使わない**。zsh では `path` がコマンドを探す場所（`PATH`）と結び付いているので、`while read verb path` などと書くと、その中で `sed` などが「command not found」になる（2026-10-04）。`route` などほかの名前にする **2026-11-01 にも、計測のスクリプトで `local name=$1 path=$2` と書いて同じ失敗をした**（curl・sort・wc が見つからなくなり、測った値が全部 0 ms）。zsh の関数の引数を受ける変数は `url` `target` などにする
 - **zsh では `[ "$a" \> "$b" ]`（文字の大小の比べ）が使えない**（`condition expected: >`）。`until` で待つコマンドに入れたら、条件がいつまでも成り立たず、CI が終わっても待ち続けた（2026-11-13）。文字の大小を比べるときは、zsh の `[[ "$a" > "$b" ]]`（二重のかっこ）を使う。**待つコマンドは、裏で動かす前に、条件の部分だけを 1 回流して期待どおりの値が出るかを確かめる**。待たせているあいだにユーザーに聞かれたら、まず出力のファイルを読み、止まっていれば止めて（TaskStop）やり直す
+- **zsh では `$ev[0]` のように変数のすぐ後ろに `[` を書くと、配列の添字と読まれる**（`jq ".hooks.$ev[0]"` が `.hooks..` になって壊れた）。jq に値を渡すときは `jq --arg e "$ev" '.hooks[$e][0]'` と書く（2026-11-15）
+- **`gh pr merge` の直後の `gh pr list` は、マージした PR をまだ数えていることがある**（反映の遅れ）。「残り 1 件」と出たら、すぐ `gh pr view <番号> --json state` で読み直してから伝える（2026-11-15、#419）
 - **`gh pr checks <番号> --watch` は、全部が終わる前に戻ることがある**（2026-11-15、PR #409 で E2E が `pending` のまま戻った。push 直後で、まだ始まっていないジョブを数えていない）。戻ったら結果をそのまま信じず、`until ! gh pr checks <番号> | grep -q -E "pending|queued|in_progress"; do sleep 10; done` で全部が終わるまで待ってから、5 つとも `pass` かを見る。`sleep 30 && …` のように sleep をつないで待つ書き方は、こちらの道具で止められる（until で条件を待つか、裏で動かす）
 - `grep --include=*.vue` のような `*` は**引用符で囲む**（`--include='*.vue'`）。囲まないと zsh が先に展開しようとして「no matches found」で止まる（2026-10-05 にも同じ失敗をした。grep を書いたら `*` の周りを見直す）
 - 探す文字に `` ` ``（バッククォート）を入れるときは、模様を**一重引用符**で囲む。二重引用符の中の `` `q` `` はコマンドとして実行され、「command not found: q」になって模様が壊れる（2026-10-05）
