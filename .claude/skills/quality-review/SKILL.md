@@ -291,6 +291,7 @@ cd infra && terraform fmt -check && terraform validate
 - [ ] **CI が `fail` でも、まず中身を見る**。ジョブが実行する機械を待ったまま（queued）取り消されると、テストを 1 つも流さずに `fail` と出る（2026-10-05、文章だけの PR #286 で Backend (Rails test) が 15 分 queued → cancelled）
   - 見分け方：`gh run view <run番号> --json jobs -q '.jobs[] | {name, conclusion, steps: (.steps | length)}'` で `conclusion` が `cancelled`・`steps` が `0`
   - 直し方：コードは変えず `gh run rerun <run番号> --failed` でやり直す。`failure`（テストが落ちた）なら `gh run view <run番号> --log-failed` で原因を見る
+- [ ] **CI がテストより前の準備の手順で落ちたら、CI の機械（`ubuntu-latest`）が新しくなっていないかを見る**。2026-11-13、Ubuntu 26.04 になった機械には MySQL と `libmysqlclient-dev` が最初から入っていて、「Install libmysqlclient」の `apt-get install` が MySQL 本体まで上げ、テスト用の MySQL（service）と 3306 がぶつかって `dpkg: error processing package mysql-server (--configure)`・exit code 100 で落ちた（MySQL を使わない lint のジョブは通る）。見分け方：`gh run view <run番号> --json jobs -q '.jobs[] | select(.conclusion=="failure") | .steps[] | select(.conclusion=="failure") | .name'` で落ちた手順の名前を見る。直し方：入っていれば入れない（`dpkg -s libmysqlclient-dev || (sudo apt-get update && sudo apt-get install -y libmysqlclient-dev)`。PR #405）。すべての PR の CI が落ちるので、作業中の PR より先に別の Issue・PR で直す
 - [ ] **CI が 5 分以上 queued のままなら、GitHub の状況を確かめてユーザーに伝える**（待つだけにしない。2026-10-05、障害を伝えないまま待ち続け、ユーザーに「時間かかりすぎではないですか？」と聞かれた）
   ```bash
   curl -s https://www.githubstatus.com/api/v2/components.json | python3 -c "import json,sys; [print(c['name'], c['status']) for c in json.load(sys.stdin)['components'] if 'Actions' in c['name']]"
@@ -344,6 +345,7 @@ CLAUDE.md「Dependabot の PR」の決まり（minor・patch は CI が通れば
 ### コマンドを書くときの注意（このプロジェクトのシェルは zsh）
 
 - **`path` という名前の変数を使わない**。zsh では `path` がコマンドを探す場所（`PATH`）と結び付いているので、`while read verb path` などと書くと、その中で `sed` などが「command not found」になる（2026-10-04）。`route` などほかの名前にする **2026-11-01 にも、計測のスクリプトで `local name=$1 path=$2` と書いて同じ失敗をした**（curl・sort・wc が見つからなくなり、測った値が全部 0 ms）。zsh の関数の引数を受ける変数は `url` `target` などにする
+- **zsh では `[ "$a" \> "$b" ]`（文字の大小の比べ）が使えない**（`condition expected: >`）。`until` で待つコマンドに入れたら、条件がいつまでも成り立たず、CI が終わっても待ち続けた（2026-11-13）。文字の大小を比べるときは、zsh の `[[ "$a" > "$b" ]]`（二重のかっこ）を使う。**待つコマンドは、裏で動かす前に、条件の部分だけを 1 回流して期待どおりの値が出るかを確かめる**。待たせているあいだにユーザーに聞かれたら、まず出力のファイルを読み、止まっていれば止めて（TaskStop）やり直す
 - `grep --include=*.vue` のような `*` は**引用符で囲む**（`--include='*.vue'`）。囲まないと zsh が先に展開しようとして「no matches found」で止まる（2026-10-05 にも同じ失敗をした。grep を書いたら `*` の周りを見直す）
 - 探す文字に `` ` ``（バッククォート）を入れるときは、模様を**一重引用符**で囲む。二重引用符の中の `` `q` `` はコマンドとして実行され、「command not found: q」になって模様が壊れる（2026-10-05）
 - Mac の `sed` で `sed: RE error: illegal byte sequence` と出たら、日本語などをバイトのまま読む **`LC_ALL=C`** を付ける（`LC_ALL=C sed -i '' '/AIza/d' ~/.zsh_history`）。zsh の履歴ファイルは日本語を独自の形で保存しているので、そのままでは読めない。止まったときはファイルは変わっていない（2026-10-15）
