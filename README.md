@@ -5,6 +5,10 @@ RaiseTech の学習成果物として、**Ruby on Rails（API）+ Vue 3 + MySQL*
 
 ## 画面
 
+紹介動画（1 分）：ISBN で本を追加 → カードをドラッグして読書中へ → ジャンルで絞り込み → 統計（年の切り替え）。
+
+https://github.com/user-attachments/assets/4d3efe78-97a5-4f85-9e2a-b648c244d28d
+
 ボード：カードをドラッグして状態（読みたい・読書中・読了）を変える。上の欄でキーワード・ジャンル・タグ・評価を絞り込む。
 
 ![ボード画面：読みたい・読書中・読了の 3 列に本のカードが並ぶ](docs/images/board.png)
